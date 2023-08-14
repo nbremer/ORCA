@@ -44,13 +44,15 @@ const CENTRAL_RADIUS = 50//50
 const canvas = document.getElementById("canvas")
 const context = canvas.getContext("2d")
 
+context.lineJoin = "bevel" 
+
 /////////////////////////////////////////////////////////////////////
 ///////////////////////////// Set Sizes /////////////////////////////
 /////////////////////////////////////////////////////////////////////
 
 //Sizes
-const DEFAULT_WIDTH = 1500
-const DEFAULT_HEIGHT = 1500 //DEFAULT_WIDTH * ASPECT_RATIO
+const DEFAULT_WIDTH = 1600
+const DEFAULT_HEIGHT = 1600 //DEFAULT_WIDTH * ASPECT_RATIO
 // const MARGIN = 100
 // const INNER_WIDTH = DEFAULT_WIDTH - 2*MARGIN
 // const INNER_HEIGHT = DEFAULT_HEIGHT - 2*MARGIN
@@ -204,32 +206,32 @@ function createFullVisual(values) {
                 repo.y -= d.y
             })// forEach
 
+            d.fx = null
+            d.fy = null
+
             // Find the new position of the author node in a ring around the central node
             let author_arc = d.max_radius * 2 + author_padding
             // translate this distance to an angle
             let author_angle = (author_arc / RADIUS_AUTHOR)/2
-            d.x = d.fx = central_repo.fx + RADIUS_AUTHOR * cos(angle + author_angle - PI/2)
-            d.y = d.fy = central_repo.fy + RADIUS_AUTHOR * sin(angle + author_angle - PI/2)
+            d.x = central_repo.fx + RADIUS_AUTHOR * cos(angle + author_angle - PI/2)
+            d.y = central_repo.fy + RADIUS_AUTHOR * sin(angle + author_angle - PI/2)
             angle += author_angle * 2
 
-            // Add the new author position to all it's connected single-degree repos
-            d.connected_single_repo.forEach(repo => {
-                repo.x += d.x
-                repo.y += d.y
+            // d.fx = d.x
+            // d.fy = d.y
 
-                // Just in case
-                repo.fx = repo.x
-                repo.fy = repo.y
-            })// forEach
+            // // Add the new author position to all it's connected single-degree repos
+            // d.connected_single_repo.forEach(repo => {
+            //     repo.x += d.x
+            //     repo.y += d.y
+
+            //     // Just in case
+            //     repo.fx = repo.x
+            //     repo.fy = repo.y
+            // })// forEach
 
             // 
         })// forEach
-
-    // return (context, WIDTH, HEIGHT) => {
-
-    //     console.log("Finished Drawing")
-
-    // }// sketch
 
     /////////////////////////////////////////////////////////////////
     ////////////////////// Run Force Simulation /////////////////////
@@ -240,19 +242,22 @@ function createFullVisual(values) {
             d3.forceLink()
                 .id(d => d.id)
                 // .distance(50)
-                // .distance(d => scale_link_distance(d.target.degree))
+                .distance(d => scale_link_distance(d.target.degree) * 5)
                 // .strength(d => scale_link_strength(d.source.degree))
         )
         .force("collide",
             d3.forceCollide()
-                .radius(d => d.r + (d.padding ? d.padding : Math.max(d.r, 15)))
+                .radius(d => {
+                    let r = d.max_radius ? d.max_radius : d.r
+                    return r + (d.padding ? d.padding : Math.max(r/2, 15))
+                })
                 .strength(0)
         )
-        // .force("charge",
-        //     d3.forceManyBody()
-        //         // .strength(d => scale_node_charge(d.d))
-        //         // .distanceMax(WIDTH / 3)
-        // )
+        .force("charge",
+            d3.forceManyBody()
+                // .strength(d => scale_node_charge(d.id))
+                // .distanceMax(WIDTH / 3)
+        )
         // .force("x", d3.forceX().x(d => d.focusX).strength(0.08)) //0.1
         // .force("y", d3.forceY().y(d => d.focusY).strength(0.08)) //0.1
         // .force("center", d3.forceCenter(0,0))
@@ -283,15 +288,15 @@ function createFullVisual(values) {
 
         // Only use the links that are not going to the central node
         simulation.force("link")
-            .links(links_central)
-            // .links(links_central.filter(d => d.target !== central_repo.id))
+            // .links(links_central)
+            .links(links_central.filter(d => d.target !== central_repo.id))
         // simulation.force("link").links(links)
 
         //Manually "tick" through the network
         let n_ticks = 300
         for (let i = 0; i < n_ticks; ++i) {
             simulation.tick()
-            simulationPlacementConstraints(nodes_central)
+            // simulationPlacementConstraints(nodes_central)
             //Ramp up collision strength to provide smooth transition
             simulation.force("collide").strength(Math.pow(i / n_ticks, 2) * 0.7)
         }//for i
@@ -327,6 +332,18 @@ function createFullVisual(values) {
             context.save()
             context.translate(WIDTH / 2, HEIGHT / 2)
 
+            nodes
+            .filter(d => d.id !== central_repo.id)
+            .forEach(d => {
+                // Add the new author position to all it's connected single-degree repos
+                if(d.connected_single_repo) {
+                    d.connected_single_repo.forEach(repo => {
+                        repo.x += d.x
+                        repo.y += d.y
+                    })// forEach
+                }
+            })// forEach
+
             // Draw all the links as lines
             links.forEach(l => {
                 if(l.source.x !== undefined && l.target.x !== undefined) {
@@ -350,6 +367,7 @@ function createFullVisual(values) {
             nodes
                 .filter(d => d.id !== central_repo.id)
                 .forEach(d => {
+                
                     context.shadowBlur = Math.max(3, d.r * 0.2) * SF
                     context.shadowColor = "#f7f7f7"//d.color
                     context.fillStyle = d.color
@@ -368,17 +386,16 @@ function createFullVisual(values) {
                     // context.globalAlpha = 1
                 })// forEach
 
-            // Draw the central node
-            context.fillStyle = context.strokeStyle = COLOR_REPO_MAIN
-            drawNode(context, 0, 0, SF, CENTRAL_RADIUS * 0.85)
-
-            context.lineWidth = 3 * SF
-            context.beginPath()
-            context.moveTo(CENTRAL_RADIUS * SF, 0)
-            context.arc(0, 0, CENTRAL_RADIUS * SF, 0, TAU)
-            context.globalAlpha = 0.3
-            context.stroke()
-            context.globalAlpha = 1
+            // // Draw the central node
+            // context.fillStyle = context.strokeStyle = COLOR_REPO_MAIN
+            // drawNode(context, 0, 0, SF, CENTRAL_RADIUS * 0.85)
+            // context.lineWidth = 3 * SF
+            // context.beginPath()
+            // context.moveTo(CENTRAL_RADIUS * SF, 0)
+            // context.arc(0, 0, CENTRAL_RADIUS * SF, 0, TAU)
+            // context.globalAlpha = 0.3
+            // context.stroke()
+            // context.globalAlpha = 1
 
             // Draw the name above each node
             context.fillStyle = "#4d4950"
