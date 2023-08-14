@@ -32,6 +32,7 @@ let max = Math.max
 let authors
 let repos
 let nodes = [], links
+let central_repo
 
 // Settings
 const CENTRAL_RADIUS = 50//50
@@ -155,8 +156,6 @@ document.fonts.ready.then(() => {
 /////////////////////////////////////////////////////////////////////
 
 function createFullVisual(values) {
-
-
     /////////////////////////////////////////////////////////////////
     //////////////////////// Data Preparation ///////////////////////
     /////////////////////////////////////////////////////////////////
@@ -164,146 +163,77 @@ function createFullVisual(values) {
     authors = values[0]
     repos = values[1]
     links = values[2]
+    prepareData(authors, repos, links)
 
-    authors.forEach(d => {
-        d.author_name = d.author_name_top
-        
-        d.color = COLOR_AUTHOR
-        
-        delete d.author_name_top
-    })// forEach
+    /////////////////////////////////////////////////////////////////
+    //////////////// Run Force Simulation per Author ////////////////
+    /////////////////////////////////////////////////////////////////
+    // Run a force simulation for per author for all the repos that are not shared between other authors
+    // Like a little cloud of repos around them
+    singleAuthorForceSimulation()
 
-    repos.forEach(d => {
-        d.repo = d.base_repo_original
-        d.forks = +d.repo_forks
-        d.stars = +d.repo_stars
-        d.createdAt = formatDate(d.repo_createdAt)
-        d.updatedAt = formatDate(d.repo_updatedAt)
+    /////////////////////////////////////////////////////////////////
+    ///////////////////// Position Author Nodes /////////////////////
+    /////////////////////////////////////////////////////////////////
+    // Position the authors in a ring around the central repo
+    // Taking into account the max_radius that came from the force simulation run already
 
-        // Get the substring until the slash
-        d.owner = d.repo.substring(0, d.repo.indexOf("/"))
-        // Get the substring after the slash
-        d.name = d.repo.substring(d.repo.indexOf("/") + 1)
+    // Place the central repo in the middle
+    central_repo.x = central_repo.fx = 0 //WIDTH / 2
+    central_repo.y = central_repo.fy = 0 //HEIGHT / 2
 
-        d.color = COLOR_REPO
+    // Get the sum of all the author nodes' max_radius
+    let sum_radius = nodes
+        .filter(d => d.type === "author")
+        .reduce((acc, curr) => acc + curr.max_radius * 2, 0)
+    // Take padding into account between the author nodes
+    const author_padding = 30
+    sum_radius += authors.length * author_padding
+    // This sum should be the circumference of the circle around the central node, what radius belongs to this -> 2*pi*R
+    const RADIUS_AUTHOR = sum_radius / TAU
 
-        delete d.base_repo_original
-        delete d.repo_forks
-        delete d.repo_stars
-        // delete d.repo_createdAt
-        // delete d.repo_updatedAt
-    })// forEach
+    // Fix the author nodes in a ring around the central node
+    // const angle = TAU / (nodes.filter(d => d.type === "author").length)
+    let angle = 0
+    nodes
+        .filter(d => d.type === "author")
+        .forEach((d,i) => {
+            // Subtract the author node position from all it's connected single-degree repos
+            d.connected_single_repo.forEach(repo => {
+                repo.x -= d.x
+                repo.y -= d.y
+            })// forEach
 
-    links.forEach(d => {
-        // Source
-        d.author_name = d.author_name_top
-        // Target
-        d.repo = d.base_repo_original
+            // Find the new position of the author node in a ring around the central node
+            let author_arc = d.max_radius * 2 + author_padding
+            // translate this distance to an angle
+            let author_angle = (author_arc / RADIUS_AUTHOR)/2
+            d.x = d.fx = central_repo.fx + RADIUS_AUTHOR * cos(angle + author_angle - PI/2)
+            d.y = d.fy = central_repo.fy + RADIUS_AUTHOR * sin(angle + author_angle - PI/2)
+            angle += author_angle * 2
 
-        // Metadata of the "link"
-        d.commit_count = +d.commit_count
-        d.commit_sec_min = formatDateUnix(d.commit_sec_min)
-        d.commit_sec_max = formatDateUnix(d.commit_sec_max)
+            // Add the new author position to all it's connected single-degree repos
+            d.connected_single_repo.forEach(repo => {
+                repo.x += d.x
+                repo.y += d.y
 
-        // Get the substring until the slash
-        d.owner = d.base_repo_original.substring(0, d.base_repo_original.indexOf("/"))
-        // Get the substring after the slash
-        d.name = d.base_repo_original.substring(d.base_repo_original.indexOf("/") + 1)
+                // Just in case
+                repo.fx = repo.x
+                repo.fy = repo.y
+            })// forEach
 
-        delete d.base_repo_original
-        delete d.author_name_top
-    })// forEach
+            // 
+        })// forEach
 
-    console.log(authors[0])
-    console.log(repos[0])
-    console.log(links[0])
+    // return (context, WIDTH, HEIGHT) => {
 
+    //     console.log("Finished Drawing")
 
-    ////////////////////////// Create Nodes /////////////////////////
-    // Combine the authors and repos into one variable to become the nodes
-    authors.forEach((d,i) => {
-        nodes.push({
-            id: d.author_name, type: "author", label: d.author_name, data: d
-        })
-    })// forEach
-    repos.forEach((d,i) => {
-        nodes.push({
-            id: d.repo, type: "repo", label: d.name, data: d
-        })
-    })// forEach
-
-    // Add the index of the node to the links
-    links.forEach(d => {
-        d.source = nodes.find(n => n.id === d.author_name).id
-        d.target = nodes.find(n => n.id === d.repo).id
-    })// forEach
-
-    // Find the degree of each node
-    nodes.forEach(d => {
-        d.degree = links.filter(l => l.source === d.id || l.target === d.id).length
-        // d.in_degree = links.filter(l => l.target === d.id).length
-        // d.out_degree = links.filter(l => l.source === d.id).length
-    })// forEach
-
-    // Sort the nodes by type and id (author name)
-    nodes.sort((a,b) => {
-        if(a.type === b.type) {
-            if(a.id.toLowerCase() < b.id.toLowerCase()) return -1
-            else if(a.id.toLowerCase() > b.id.toLowerCase()) return 1
-            else return 0
-        } else {
-            if(a.type === "author") return -1
-            else return 1
-        }
-    })// sort
-
-    // Which is the central repo, the one that connects everyone (the one with the highest degree)
-    const central_repo = nodes.find(d => d.type === "repo" && d.degree === d3.max(nodes.filter(d => d.type === "repo"), d => d.degree))
-
-    central_repo.r = CENTRAL_RADIUS
-    central_repo.padding = CENTRAL_RADIUS * 0.5
-    central_repo.special_type = "central"
-
-    // Set scales
-    scale_repo_radius.domain(d3.extent(repos, d => d.stars))
-    scale_author_radius.domain(d3.extent(links.filter(l => l.target === central_repo.id), d => d.commit_count))
-    // console.log(scale_author_radius.domain())
-
-    nodes.forEach((d,i) => {
-        d.index = i
-        d.data.index = i
-
-        // If this node is an "author", find the number of commits they have on the central repo node
-        if(d.type === "author") {
-            d.data.commit_count_central = links.find(l => l.source === d.id && l.target === central_repo.id).commit_count
-            d.r = scale_author_radius(d.data.commit_count_central)
-        }     
-        else {
-            d.r = scale_repo_radius(d.data.stars)
-        }// else 
-
-        d.color = d.data.color
-    })// forEach
-    central_repo.color = COLOR_REPO_MAIN
-
-    // console.log(nodes)
+    // }// sketch
 
     /////////////////////////////////////////////////////////////////
     ////////////////////// Run Force Simulation /////////////////////
     /////////////////////////////////////////////////////////////////
-
-    central_repo.x = central_repo.fx = 0 //WIDTH / 2
-    central_repo.y = central_repo.fy = 0 //HEIGHT / 2
-
-    // Fix the author nodes in a ring around the central node
-    const RADIUS_AUTHOR = 400
-    const angle = TAU / (nodes.filter(d => d.type === "author").length)
-    nodes
-        .filter(d => d.type === "author")
-        .forEach((d,i) => {
-            d.x = d.fx = central_repo.fx + RADIUS_AUTHOR * cos(i * angle - PI/2)
-            d.y = d.fy = central_repo.fy + RADIUS_AUTHOR * sin(i * angle - PI/2)
-        })// forEach
 
     let simulation = d3.forceSimulation()
         .force("link",
@@ -361,7 +291,7 @@ function createFullVisual(values) {
         let n_ticks = 300
         for (let i = 0; i < n_ticks; ++i) {
             simulation.tick()
-            simulationPlacementConstraints()
+            simulationPlacementConstraints(nodes_central)
             //Ramp up collision strength to provide smooth transition
             simulation.force("collide").strength(Math.pow(i / n_ticks, 2) * 0.7)
         }//for i
@@ -375,58 +305,8 @@ function createFullVisual(values) {
             })// forEach
         // })
 
-        // Now run another simulation per author to show the links to nodes that are only connected to it
-        nodes
-            .filter(d => d.type === "author")
-            .forEach(d => {
-                // Find all the nodes that are connected to this one with a degree of one, including the author node itself
-                let nodes_author = nodes.filter(n => links.find(l => l.source === d.id && l.target === n.id && n.degree === 1) || n.id === d.id)
-                // Get the links between this node and nodes_author
-                let links_author = links.filter(l => l.source === d.id && nodes_author.find(n => n.id === l.target))
-
-                // Let the nodes start on the location of the author node
-                nodes_author.forEach(n => {
-                    n.x = d.fx
-                    n.y = d.fy
-                })// forEach
-
-                let simulation = d3.forceSimulation()
-                    .force("link",
-                        d3.forceLink()
-                            .id(d => d.id)
-                            .strength(0)
-                    )
-                    .force("collide",
-                        d3.forceCollide()
-                            .radius(d => d.r + 2)
-                            .strength(0)
-                    )
-                    .force("x", d3.forceX().x(d.fx).strength(0.1))
-                    .force("y", d3.forceY().y(d.fy).strength(0.1))
-
-                simulation
-                    .nodes(nodes_author)
-                    .stop()
-                    // .on("tick", ticked)
-        
-                // Only use the links that are not going to the central node
-                simulation.force("link").links(links_author)
-
-                //Manually "tick" through the network
-                let n_ticks = 300
-                for (let i = 0; i < n_ticks; ++i) {
-                    simulation.tick()
-                    //Ramp up collision strength to provide smooth transition
-                    simulation.force("collide").strength(Math.pow(i / n_ticks, 2) * 0.7)
-                }//for i
-                drawQuick()
-        
-
-
-            })// forEach
-
         /////////////////////////////////////////////////////////////
-        function simulationPlacementConstraints() {
+        function simulationPlacementConstraints(nodes) {
             // Make sure the "repo" nodes cannot be placed farther away from the center than RADIUS_AUTHOR
             nodes.forEach(d => {
                 if(d.type === "repo") {
@@ -523,14 +403,260 @@ function createFullVisual(values) {
     }// sketch
 }// createFullVisual
 
+/////////////////////////////////////////////////////////////////////
+///////////////////// Data Preparation Functions ////////////////////
+/////////////////////////////////////////////////////////////////////
+
+function prepareData(authors, repos, links) {
+    /////////////////////////////////////////////////////////////
+    ///////////////////// Initial Data Prep /////////////////////
+    /////////////////////////////////////////////////////////////
+    authors.forEach(d => {
+        d.author_name = d.author_name_top
+        
+        d.color = COLOR_AUTHOR
+        
+        delete d.author_name_top
+    })// forEach
+
+    repos.forEach(d => {
+        d.repo = d.base_repo_original
+        d.forks = +d.repo_forks
+        d.stars = +d.repo_stars
+        d.createdAt = formatDate(d.repo_createdAt)
+        d.updatedAt = formatDate(d.repo_updatedAt)
+
+        // Get the substring until the slash
+        d.owner = d.repo.substring(0, d.repo.indexOf("/"))
+        // Get the substring after the slash
+        d.name = d.repo.substring(d.repo.indexOf("/") + 1)
+
+        d.color = COLOR_REPO
+
+        delete d.base_repo_original
+        delete d.repo_forks
+        delete d.repo_stars
+        // delete d.repo_createdAt
+        // delete d.repo_updatedAt
+    })// forEach
+
+    links.forEach(d => {
+        // Source
+        d.author_name = d.author_name_top
+        // Target
+        d.repo = d.base_repo_original
+
+        // Metadata of the "link"
+        d.commit_count = +d.commit_count
+        d.commit_sec_min = formatDateUnix(d.commit_sec_min)
+        d.commit_sec_max = formatDateUnix(d.commit_sec_max)
+
+        // Get the substring until the slash
+        d.owner = d.base_repo_original.substring(0, d.base_repo_original.indexOf("/"))
+        // Get the substring after the slash
+        d.name = d.base_repo_original.substring(d.base_repo_original.indexOf("/") + 1)
+
+        delete d.base_repo_original
+        delete d.author_name_top
+    })// forEach
+
+    // console.log(authors[0])
+    // console.log(repos[0])
+    // console.log(links[0])
+
+    ////////////////////////// Create Nodes /////////////////////////
+    // Combine the authors and repos into one variable to become the nodes
+    authors.forEach((d,i) => {
+        nodes.push({
+            id: d.author_name, type: "author", label: d.author_name, data: d
+        })
+    })// forEach
+    repos.forEach((d,i) => {
+        nodes.push({
+            id: d.repo, type: "repo", label: d.name, data: d
+        })
+    })// forEach
+
+    // Add the index of the node to the links
+    links.forEach(d => {
+        d.source = nodes.find(n => n.id === d.author_name).id
+        d.target = nodes.find(n => n.id === d.repo).id
+    })// forEach
+
+    ///////////// Calculate visual settings of Nodes ////////////
+    // Find the degree of each node
+    nodes.forEach(d => {
+        d.degree = links.filter(l => l.source === d.id || l.target === d.id).length
+        // d.in_degree = links.filter(l => l.target === d.id).length
+        // d.out_degree = links.filter(l => l.source === d.id).length
+    })// forEach
+
+    // Sort the nodes by type and id (author name)
+    nodes.sort((a,b) => {
+        if(a.type === b.type) {
+            if(a.id.toLowerCase() < b.id.toLowerCase()) return -1
+            else if(a.id.toLowerCase() > b.id.toLowerCase()) return 1
+            else return 0
+        } else {
+            if(a.type === "author") return -1
+            else return 1
+        }
+    })// sort
+
+    // Which is the central repo, the one that connects everyone (the one with the highest degree)
+    central_repo = nodes.find(d => d.type === "repo" && d.degree === d3.max(nodes.filter(d => d.type === "repo"), d => d.degree))
+
+    central_repo.r = CENTRAL_RADIUS
+    central_repo.padding = CENTRAL_RADIUS * 0.5
+    central_repo.special_type = "central"
+
+    // Set scales
+    scale_repo_radius.domain(d3.extent(repos, d => d.stars))
+    scale_author_radius.domain(d3.extent(links.filter(l => l.target === central_repo.id), d => d.commit_count))
+    // console.log(scale_author_radius.domain())
+
+    // Determine some visual settings for the nodes
+    nodes.forEach((d,i) => {
+        d.index = i
+        d.data.index = i
+
+        // If this node is an "author", find the number of commits they have on the central repo node
+        if(d.type === "author") {
+            d.data.commit_count_central = links.find(l => l.source === d.id && l.target === central_repo.id).commit_count
+            d.r = scale_author_radius(d.data.commit_count_central)
+        }     
+        else {
+            d.r = scale_repo_radius(d.data.stars)
+        }// else 
+
+        d.color = d.data.color
+    })// forEach
+    central_repo.color = COLOR_REPO_MAIN
+    
+}// function prepareData
 
 /////////////////////////////////////////////////////////////////////
-////////////////////////// Helper Functions /////////////////////////
+/////////////////// Force Simulation | Per Author ///////////////////
 /////////////////////////////////////////////////////////////////////
 
-function mod (x, n) { return ((x % n) + n) % n }
+// Run a force simulation for per author for all the repos that are not shared between other authors
+// Like a little cloud of repos around them
+function singleAuthorForceSimulation() {
+    // First fix the author nodes in the center - this is only temporarily
+    nodes
+        .filter(d => d.type === "author")
+        .forEach((d,i) => {
+                d.x = d.fx = 0
+                d.y = d.fy = 0
 
-function sq(x) { return x * x }
+                // For testing
+                // Place the authors in a grid of 10 columns
+                d.x = -WIDTH/4 + (i % 8) * 140
+                d.y = -HEIGHT/4 + Math.floor(i / 8) * 150
+                d.fx = d.x
+                d.fy = d.y
+            })// forEach
+
+    // Next run a force simulation to place all the single-degree repositories
+    nodes
+        .filter(d => d.type === "author")
+        .forEach(d => {
+            // Find all the nodes that are connected to this one with a degree of one, including the author node itself
+            let nodes_to_author = nodes.filter(n => links.find(l => l.source === d.id && l.target === n.id && n.degree === 1) || n.id === d.id)
+
+            // If there are no nodes connected to this one, skip it
+            // if(nodes_to_author.length <= 1) return
+
+            // Save the list of repositories that are connected to this author (with a degree of one)
+            d.connected_single_repo = nodes_to_author.filter(n => n.type === "repo")
+
+            // Get the links between this node and nodes_to_author
+            let links_author = links.filter(l => l.source === d.id && nodes_to_author.find(n => n.id === l.target))
+
+            // Let the nodes start on the location of the author node
+            nodes_to_author.forEach(n => {
+                n.x = d.fx + Math.random() * (Math.random() > 0.5 ? 1 : -1)
+                n.y = d.fy + Math.random() * (Math.random() > 0.5 ? 1 : -1)
+            })// forEach
+
+            /////////////////////////////////////////////////////////
+            /////////////////////// Simulation //////////////////////
+            /////////////////////////////////////////////////////////
+            // Define the simulation
+            let simulation = d3.forceSimulation()
+                .force("link",
+                    // There are links, but they have no strength
+                    d3.forceLink()
+                        .id(d => d.id)
+                        .strength(0)
+                )
+                .force("collide",
+                    // Use a non-overlap, but let it start out at strength 0
+                    d3.forceCollide()
+                        .radius(n => n.id === d.id ? d.r + Math.min(14,Math.max(10, d.r)) : n.r + Math.max(2, n.r * 0.2))
+                        .strength(0)
+                )
+                // .force("charge",
+                //     d3.forceManyBody()
+                //         .strength(-20)
+                //         // .distanceMax(WIDTH / 3)
+                // )
+                // Keep the repo nodes want to stay close to the author node
+                // so they try to spread out evenly around it
+                .force("x", d3.forceX().x(d.fx).strength(0.1))
+                .force("y", d3.forceY().y(d.fy).strength(0.1))
+
+            simulation
+                .nodes(nodes_to_author)
+                .stop()
+                // .on("tick", ticked)
+    
+            simulation.force("link").links(links_author)
+
+            //Manually "tick" through the network
+            let n_ticks = 200
+            for (let i = 0; i < n_ticks; ++i) {
+                simulation.tick()
+                //Ramp up collision strength to provide smooth transition
+                simulation.force("collide").strength(Math.pow(i / n_ticks, 2) * 0.8)
+            }//for i
+            // Draw the result
+            drawAuthorBubbles(nodes_to_author, links_author)
+
+            // Determine the farthest distance of the nodes to the author node
+            d.max_radius = d3.max(nodes_to_author, n => Math.sqrt((n.x - d.x)**2 + (n.y - d.y)**2))
+            d.max_radius = Math.max(d.max_radius, d.r)
+            // See this as the new "author node" radius that includes all of it's single-degree repos
+
+        })// forEach
+
+    function drawAuthorBubbles(nodes, links) {
+            context.save()
+            context.translate(WIDTH / 2, HEIGHT / 2)
+
+            // Draw all the links as lines
+            links.forEach(l => {
+                if(l.source.x !== undefined && l.target.x !== undefined) {
+                    calculateEdgeCenters(l, 0.8)
+                    calculateLinkGradient(context, l)
+                    context.strokeStyle = l.gradient 
+                } else context.strokeStyle = COLOR_LINK
+                context.lineWidth = scale_link_width(l.commit_count) * SF
+                drawLine(context, l, SF)
+            })// forEach
+
+            // Draw all the nodes as circles
+            nodes
+                .filter(d => d.id !== central_repo.id)
+                .forEach(d => {
+                    context.fillStyle = d.color
+                    let r = d.r //d.type === "author" ? 10 : d.r
+                    drawNode(context, d.x, d.y, SF, r)
+                })// forEach
+
+            context.restore()
+    }// function drawAuthorBubbles
+}// function singleAuthorForceSimulation
 
 /////////////////////////////////////////////////////////////////////
 /////////////////////// Node Drawing Functions //////////////////////
@@ -542,6 +668,7 @@ function drawNode(context, x, y, SF, r = 10, begin = true) {
     context.moveTo((x+r) * SF, y * SF)
     context.arc(x * SF, y * SF, r * SF, 0, TAU)
     if(begin) context.fill()
+    // if(begin) { context.lineWidth = 1.5 * SF; context.stroke() }
 }//function drawNode
 
 /////////////////////////////////////////////////////////////////////
@@ -566,13 +693,13 @@ function drawCircleArc(context, line, SF) {
 }//function drawCircleArc
 
 /////////////////////// Calculate Line Centers //////////////////////
-function calculateEdgeCenters(l, size = 2, sign) {
+function calculateEdgeCenters(l, size = 2, sign = true) {
 
     //Find a good radius
-    l.r = Math.sqrt(sq(l.target.x - l.source.x) + sq(l.target.y - l.source.y)) * size //2 //Can run from >= 0.5
+    l.r = Math.sqrt(sq(l.target.x - l.source.x) + sq(l.target.y - l.source.y)) * size //Can run from > 0.5
     //Find center of the arc function
     let centers = findCenters(l.r, { x: l.source.x, y: l.source.y }, { x: l.target.x, y: l.target.y })
-    l.sign = sign !== undefined ? sign : l.sign
+    l.sign = sign
     l.center = l.sign ? centers.c2 : centers.c1
 
     /////////////// Calculate center for curved edges ///////////////
@@ -611,7 +738,7 @@ function calculateLinkGradient(context, l) {
     // l.gradient.addColorStop(1, l.target.color)
 
     // Incorporate opacity into gradient
-    createGradient(l, l.target.special_type ? 0.2 : 0.4)
+    createGradient(l, l.target.special_type ? 0.2 : 0.5)
 
     function createGradient(l, alpha) {
         let col
@@ -623,16 +750,29 @@ function calculateLinkGradient(context, l) {
         col = d3.rgb(l.target.color)
         color_rgb_target = "rgba(" + col.r + "," + col.g + "," + col.b + "," + alpha + ")"
 
+        // console.log(l.source.x, l.source.y, l.target.x, l.target.y)
         if(l.source.x !== undefined && l.target.x !== undefined) {
-            l.gradient = context.createLinearGradient(l.source.x, l.source.y, l.target.x, l.target.y)
-            l.gradient.addColorStop(0, color_rgb_source)
+            l.gradient = context.createLinearGradient(l.source.x * SF, l.source.y * SF, l.target.x * SF, l.target.y * SF)
+
+            // Distance between source and target
+            let dist = Math.sqrt(sq(l.target.x - l.source.x) + sq(l.target.y - l.source.y))
+            // What percentage is the source's radius of the total distance
+            let perc = l.source.r / dist
+            // Let the starting color be at perc, so it starts changing color right outside the radius of the source node
+            l.gradient.addColorStop(perc, color_rgb_source)
             l.gradient.addColorStop(1, color_rgb_target)
         }
         else l.gradient = COLOR_LINK
     }//function createGradient
 }//function calculateLinkGradient
 
+/////////////////////////////////////////////////////////////////////
+////////////////////////// Helper Functions /////////////////////////
+/////////////////////////////////////////////////////////////////////
 
+function mod (x, n) { return ((x % n) + n) % n }
+
+function sq(x) { return x * x }
 
 /////////////////////////////////////////////////////////////////////
 ////////////////////////////// Save PNG /////////////////////////////
