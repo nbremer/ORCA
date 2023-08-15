@@ -1,14 +1,32 @@
-// During what time of its existence has the author been involved
+
 // Fraction of commits
-// More than X or X% of the commits - Not trying to say that "the more commits is better"
-
-//Possible: use similarity of tags to put repos closer together or give colors to themes
-// Look how long ago it was that the author was last active in the repo - link opacity?
-
-// Get list of tags to Adam
 
 // Central node a star-like shape of authors in points?
 
+// During what time of its existence has the author been involved
+// Make it clear where the start of the yellow arc is, where is the start/end
+// Switch the blue and yellow around in the contract
+
+// Give the repos their full name (owner/name) in the label
+
+// Look into SAT solver for label placement
+// Look into Cynthia Brewer paper for label
+
+// Hover for environment (rust, ruby, javascript, etc)
+
+// Mark the time they were a Mozilla employee along the yellow arc
+// those people are already paid to do this
+
+// Add title and intro (summary)
+// Mozilla/pdfjs has time period
+// Top contributors by count are these people
+//These people have also contributed to X other repos
+// Tiny histogram of the number of people that have done Y commits
+
+// A tiny mark for everyone else (like pebbles on the outside)
+
+// Adam will get me a list of all the emails of the people that have contributed to the repo
+// Give him back the list of "chosen" emails 
 
 /////////////////////////////////////////////////////////////////////
 ///////////////////////////// CONSTANTS /////////////////////////////
@@ -122,6 +140,11 @@ const scale_link_width = d3.scaleLinear()
     .domain([1,10,200])
     .range([1,2,5])
     // .clamp(true)
+
+// The scale for between which min and max date the author has been involved in the central repo
+const scale_involved_range = d3.scaleLinear()
+    .range([0, TAU])
+    // .range([0 - PI/2, TAU - PI/2])
 
 /////////////////////////////////////////////////////////////////////
 /////////////////////////////// START ///////////////////////////////
@@ -312,6 +335,7 @@ function createFullVisual(values) {
             // context.stroke()
         })// forEach
 
+        /////////////////////////////////////////////////////////////
         // Draw all the nodes as circles
         nodes
             // .filter(d => d.id !== central_repo.id)
@@ -333,8 +357,40 @@ function createFullVisual(values) {
                 context.globalAlpha = 1
 
                 // context.globalAlpha = 1
+
+                // Draw a tiny arc inside the author node to show how long they've been involved in the central repo's existence, based on their first and last commit
+
+
+                if(d.type === "author") {
+                    // Check that the angle is not too small
+                    let angle = scale_involved_range(d.data.link_central.commit_sec_max) - scale_involved_range(d.data.link_central.commit_sec_min)
+                    console.log(angle)
+                    // console.log(d.data, d.data.link_central.commit_sec_min, d.data.link_central.commit_sec_max)
+                    const arc = d3.arc()
+                        .innerRadius((d.r + 2) * SF)
+                        .outerRadius((d.r + 2 + 3) * SF)
+                        .startAngle(scale_involved_range(d.data.link_central.commit_sec_min))
+                        .endAngle(scale_involved_range(d.data.link_central.commit_sec_max))
+                        .context(context)
+
+
+
+                    context.save()
+                    context.translate(d.x * SF, d.y * SF)
+                    context.beginPath()
+                    arc()
+                    
+                    context.lineWidth = 2 * SF
+                    context.strokeStyle = COLOR_BACKGROUND
+                    // context.stroke()
+                    context.fillStyle = COLOR_REPO_MAIN
+                    context.fill()
+                    context.restore()
+                }// if
+
             })// forEach
 
+        /////////////////////////////////////////////////////////////
         // Draw the name above each node
         context.fillStyle = "#4d4950"
         context.strokeStyle = COLOR_BACKGROUND
@@ -356,6 +412,9 @@ function createFullVisual(values) {
             }// if
 
             if(d.type === "author") {
+                context.textAlign = "center"
+                context.textBaseline = "middle"
+
                 // // Draw each line of the author
                 // // Centered on the author node
                 // let n = d.data.author_lines.length
@@ -389,9 +448,16 @@ function createFullVisual(values) {
                 // renderText(context, d.id, 0, 0, 1.25 * SF)
 
                 context.restore()
+            } else if(d.id === central_repo.id) {
+                context.textAlign = "center"
+                context.textBaseline = "middle"
+                renderText(context, `${d.data.owner}/`, d.x * SF, (d.y - 0.6 * 12) * SF, 1.25 * SF)
+                renderText(context, d.label, d.x * SF, (d.y + 0.6 * 12) * SF, 1.25 * SF)
             } else {
                 context.textAlign = "center"
-                renderText(context, d.label, d.x * SF, d.y * SF, 1.25 * SF)
+                context.textBaseline = "bottom"
+                renderText(context, `${d.data.owner}/`, d.x * SF, (d.y - d.r - 1.1 * 12) * SF, 1.25 * SF)
+                renderText(context, d.label, d.x * SF, (d.y - d.r) * SF, 1.25 * SF)
             }// else
 
         })// forEach
@@ -417,6 +483,7 @@ function prepareData(authors, repos, links) {
         
         d.color = COLOR_AUTHOR
 
+        // Determine across how many lines to split the author name
         setAuthorFont(context);
         [d.author_lines, d.author_max_width] = getLines(context, d.author_name, MAX_AUTHOR_WIDTH);
         
@@ -440,8 +507,8 @@ function prepareData(authors, repos, links) {
         delete d.base_repo_original
         delete d.repo_forks
         delete d.repo_stars
-        // delete d.repo_createdAt
-        // delete d.repo_updatedAt
+        delete d.repo_createdAt
+        delete d.repo_updatedAt
     })// forEach
 
     links.forEach(d => {
@@ -465,8 +532,8 @@ function prepareData(authors, repos, links) {
     })// forEach
 
     // console.log(authors[0])
-    // console.log(repos[0])
-    // console.log(links[0])
+    console.log(repos[0])
+    console.log(links[0])
 
     ////////////////////////// Create Nodes /////////////////////////
     // Combine the authors and repos into one variable to become the nodes
@@ -513,7 +580,7 @@ function prepareData(authors, repos, links) {
     // Set scales
     scale_repo_radius.domain(d3.extent(repos, d => d.stars))
     scale_author_radius.domain(d3.extent(links.filter(l => l.target === central_repo.id), d => d.commit_count))
-    // console.log(scale_author_radius.domain())
+    scale_involved_range.domain([central_repo.data.createdAt, central_repo.data.updatedAt])
 
     // Determine some visual settings for the nodes
     nodes.forEach((d,i) => {
@@ -522,8 +589,10 @@ function prepareData(authors, repos, links) {
 
         // If this node is an "author", find the number of commits they have on the central repo node
         if(d.type === "author") {
-            d.data.commit_count_central = links.find(l => l.source === d.id && l.target === central_repo.id).commit_count
-            d.r = scale_author_radius(d.data.commit_count_central)
+            let link_to_central = links.find(l => l.source === d.id && l.target === central_repo.id)
+            d.data.link_central = link_to_central
+            // d.data.commit_count_central = link_to_central.commit_count
+            d.r = scale_author_radius(d.data.link_central.commit_count)
         }     
         else {
             d.r = scale_repo_radius(d.data.stars)
@@ -829,7 +898,7 @@ function calculateLinkGradient(context, l) {
 /////////////////////////// Font Functions //////////////////////////
 /////////////////////////////////////////////////////////////////////
 
-///////////// To get around Node.js font weight bug /////////////
+////////////////////// Different Font Settings //////////////////////
 function setFont(context, font_size, font_weight, font_style = "normal") {
     context.font = `${font_weight} ${font_style} ${font_size}px ${FONT_FAMILY}`
 }//function setFont
@@ -912,7 +981,7 @@ function getLines(context, text, max_width, balance = true) {
     return [lines, max_length]
 }//function getLines
 
-//////////// Split a string into 2 balanced sections ////////////
+////////////// Split a string into 2 balanced sections //////////////
 function splitSpring(text) {
     let len = text.length
     
