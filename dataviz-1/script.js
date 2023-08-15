@@ -37,6 +37,7 @@ let central_repo
 // Settings
 const CENTRAL_RADIUS = 50
 let RADIUS_AUTHOR
+const MAX_AUTHOR_WIDTH = 50
 
 /////////////////////////////////////////////////////////////////////
 /////////////////////////// Create Canvas ///////////////////////////
@@ -44,8 +45,6 @@ let RADIUS_AUTHOR
 
 const canvas = document.getElementById("canvas")
 const context = canvas.getContext("2d")
-
-context.lineJoin = "round" 
 
 /////////////////////////////////////////////////////////////////////
 ///////////////////////////// Set Sizes /////////////////////////////
@@ -141,6 +140,14 @@ let promises = []
 promises.push(d3.csv(`data/${REPOSITORY}/authorInfo-PDFjs.csv`))
 promises.push(d3.csv(`data/${REPOSITORY}/baseRepoInfo-PDFjs.csv`))
 promises.push(d3.csv(`data/${REPOSITORY}/links-PDFjs.csv`))
+
+///////////////////////// Read in the fonts /////////////////////////
+
+const FONT_FAMILY = "Atkinson Hyperlegible"
+document.fonts.load(`normal 400 10px "${FONT_FAMILY}"`)
+document.fonts.load(`italic 400 10px "${FONT_FAMILY}"`)
+document.fonts.load(`normal 700 10px "${FONT_FAMILY}"`)
+document.fonts.load(`italic 700 10px "${FONT_FAMILY}"`)
 
 document.fonts.ready.then(() => {
     Promise.all(promises).then(values => {
@@ -330,11 +337,40 @@ function createFullVisual(values) {
 
         // Draw the name above each node
         context.fillStyle = "#4d4950"
-        context.font = `${12 * SF}px sans-serif`
+        context.strokeStyle = COLOR_BACKGROUND
+        context.lineWidth = 2 * SF
         context.textAlign = "center"
-        context.textBaseline = "bottom"
+        context.textBaseline = "middle"
+        // context.textBaseline = "bottom"
         nodes_central.forEach(d => {
-            context.fillText(d.label, d.x * SF, (d.y - d.r) * SF)
+            if(d.type === "author") {
+                setAuthorFont(context, SF)
+            } else {
+                setRepoFont(context, SF)
+            }// else
+
+            if(d.id === central_repo.id) {
+                font_weight = 700
+                font_size = 16
+                context.font = `${font_weight} ${font_size * SF}px ${FONT_FAMILY}`
+            }// if
+
+            if(d.type === "author") {
+                // Draw each line of the author
+                // Centered on the author node
+                let n = d.data.author_lines.length
+                let label_line_height = 1.2
+                let font_size = 12
+                d.data.author_lines.forEach((l,i) => {
+                    let x = d.x * SF
+                    // Let the y-position be the center of the author node
+                    let y = (d.y - (n - 1) * font_size * label_line_height / 2 + i * font_size * label_line_height) * SF
+                    renderText(context, l,x, y, 1.25 * SF)
+                })
+            } else {
+                renderText(context, d.label, d.x * SF, d.y * SF, 1.25 * SF)
+            }// else
+
         })// forEach
 
         context.restore()
@@ -348,6 +384,7 @@ function createFullVisual(values) {
 ///////////////////// Data Preparation Functions ////////////////////
 /////////////////////////////////////////////////////////////////////
 
+////////////////// Prepare the data for the visual //////////////////
 function prepareData(authors, repos, links) {
     /////////////////////////////////////////////////////////////
     ///////////////////// Initial Data Prep /////////////////////
@@ -356,6 +393,9 @@ function prepareData(authors, repos, links) {
         d.author_name = d.author_name_top
         
         d.color = COLOR_AUTHOR
+
+        setAuthorFont(context);
+        [d.author_lines, d.author_max_width] = getLines(context, d.author_name, MAX_AUTHOR_WIDTH);
         
         delete d.author_name_top
     })// forEach
@@ -655,7 +695,7 @@ function positionAuthorNodes() {
 /////////////////////// Node Drawing Functions //////////////////////
 /////////////////////////////////////////////////////////////////////
 
-// Draw a circle
+/////////////////////////// Draw a circle ///////////////////////////
 function drawNode(context, x, y, SF, r = 10, begin = true) {
     if(begin) context.beginPath()
     context.moveTo((x+r) * SF, y * SF)
@@ -758,6 +798,115 @@ function calculateLinkGradient(context, l) {
         else l.gradient = COLOR_LINK
     }//function createGradient
 }//function calculateLinkGradient
+
+/////////////////////////////////////////////////////////////////////
+/////////////////////////// Font Functions //////////////////////////
+/////////////////////////////////////////////////////////////////////
+
+///////////// To get around Node.js font weight bug /////////////
+function setFont(context, font_size, font_weight, font_style = "normal") {
+    context.font = `${font_weight} ${font_style} ${font_size}px ${FONT_FAMILY}`
+}//function setFont
+
+function setRepoFont(context, SF = 1, font_size = 12) {
+    setFont(context, font_size * SF, 400, "normal")
+}//function setRepoFont
+
+function setAuthorFont(context, SF = 1, font_size = 12) {
+    setFont(context, font_size * SF, 700, "italic")
+}//function setAuthorFont
+
+//////////////// Add tracking (space) between letters ///////////////
+function renderText(context, text, x, y, letterSpacing = 0) {
+    //Based on http://jsfiddle.net/davidhong/hKbJ4/        
+    let characters = String.prototype.split.call(text, '')
+    let index = 0
+    let current
+    let currentPosition = x
+    let alignment = context.textAlign
+
+    let start_position
+    let end_position
+
+    let totalWidth = 0
+    for (let i = 0; i < characters.length; i++) {
+        totalWidth += context.measureText(characters[i]).width + letterSpacing
+    }//for i
+
+    if (alignment === "right") {
+        currentPosition = x - totalWidth
+    } else if (alignment === "center") {
+        currentPosition = x - (totalWidth / 2)
+    }//else if
+    
+    context.textAlign = "left"
+    start_position = currentPosition
+    while (index < text.length) {
+        current = characters[index++]
+        context.fillText(current, currentPosition, y)
+        currentPosition += context.measureText(current).width + letterSpacing
+    }//while
+    end_position = currentPosition - (context.measureText(current).width/2)
+    context.textAlign = alignment
+
+    return [start_position, end_position]
+}//function renderText
+
+////////////// Split string into sections for wrapping //////////////
+//From: https://stackoverflow.com/questions/2936112
+function getLines(context, text, max_width, balance = true) {
+    let words = text.split(" ")
+    let lines = []
+    let currentLine = words[0]
+
+    for (let i = 1; i < words.length; i++) {
+        let word = words[i]
+        let width = context.measureText(currentLine + " " + word).width
+        if (width < max_width) {
+            currentLine += " " + word
+        } else {
+            lines.push(currentLine)
+            currentLine = word
+        }//else
+    }//for i
+    lines.push(currentLine)
+
+    //Now that we know how many lines are needed, split those of 2 lines into better balanced sections
+    if(balance && lines.length === 2) {
+        lines = splitSpring(text)
+    }//if
+
+    //Figure out the maximum width of all the lines
+    let max_length = 0
+    lines.forEach(l => {
+        let width = context.measureText(l).width
+        if(width > max_length) max_length = width
+    })//forEach
+
+    return [lines, max_length]
+}//function getLines
+
+//////////// Split a string into 2 balanced sections ////////////
+function splitSpring(text) {
+    let len = text.length
+    
+    //Find the index of all spaces
+    let indices = []
+    for(let i = 0; i < text.length; i++) {
+        if (text[i] === " ") indices.push(i)
+    }//for i
+
+    //Which space is the closes to the middle
+    let diff = indices.map(d => Math.abs(len/2 - d))
+    let min_value = Math.min(...diff)
+    let ind = indices[diff.indexOf(min_value)]
+
+    //Split the string at the "most-middle" space
+    let str1 = text.substr(0, ind)
+    let str2 = text.substr(ind)
+
+    return [str1.trim(), str2.trim()]
+}//function splitSpring
 
 /////////////////////////////////////////////////////////////////////
 ////////////////////////// Helper Functions /////////////////////////
