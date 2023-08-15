@@ -35,7 +35,8 @@ let nodes = [], links
 let central_repo
 
 // Settings
-const CENTRAL_RADIUS = 50//50
+const CENTRAL_RADIUS = 50
+let RADIUS_AUTHOR
 
 /////////////////////////////////////////////////////////////////////
 /////////////////////////// Create Canvas ///////////////////////////
@@ -44,36 +45,33 @@ const CENTRAL_RADIUS = 50//50
 const canvas = document.getElementById("canvas")
 const context = canvas.getContext("2d")
 
-context.lineJoin = "bevel" 
+context.lineJoin = "round" 
 
 /////////////////////////////////////////////////////////////////////
 ///////////////////////////// Set Sizes /////////////////////////////
 /////////////////////////////////////////////////////////////////////
 
 //Sizes
-const DEFAULT_WIDTH = 1600
-const DEFAULT_HEIGHT = 1600 //DEFAULT_WIDTH * ASPECT_RATIO
-// const MARGIN = 100
-// const INNER_WIDTH = DEFAULT_WIDTH - 2*MARGIN
-// const INNER_HEIGHT = DEFAULT_HEIGHT - 2*MARGIN
+const DEFAULT_SIZE = 1300
 let SF, WIDTH, HEIGHT
 
 // Resize function
 function resize() {
-
     // Screen pixel ratio
     let PIXEL_RATIO = window.devicePixelRatio
 
     // Screen sizes
     let width =  window.innerWidth
     let height = window.innerHeight
+    // Take the smaller of the two
+    let size = min(width, height)
 
     WIDTH = round(width * PIXEL_RATIO)
     HEIGHT = round(height * PIXEL_RATIO)
 
     // Set the scale factor
-    SF = WIDTH / DEFAULT_WIDTH
-    // console.log("SF:", SF)
+    SF = (size * PIXEL_RATIO) / DEFAULT_SIZE
+    console.log("SF:", SF)
 
     // Size the canvas
     canvas.width = WIDTH
@@ -106,7 +104,7 @@ const scale_repo_radius = d3.scaleSqrt()
 
 // Based on the number of commits to the central repo
 const scale_author_radius = d3.scaleSqrt()
-    .range([4, 30])
+    .range([8, 30])
 
 // const scale_node_opacity = d3.scaleLinear()
 //     .domain([1,7])
@@ -177,64 +175,16 @@ function createFullVisual(values) {
     /////////////////////////////////////////////////////////////////
     ///////////////////// Position Author Nodes /////////////////////
     /////////////////////////////////////////////////////////////////
-    // Position the authors in a ring around the central repo
-    // Taking into account the max_radius that came from the force simulation run already
-
     // Place the central repo in the middle
     central_repo.x = central_repo.fx = 0 //WIDTH / 2
     central_repo.y = central_repo.fy = 0 //HEIGHT / 2
 
-    // Get the sum of all the author nodes' max_radius
-    let sum_radius = nodes
-        .filter(d => d.type === "author")
-        .reduce((acc, curr) => acc + curr.max_radius * 2, 0)
-    // Take padding into account between the author nodes
-    const author_padding = 30
-    sum_radius += authors.length * author_padding
-    // This sum should be the circumference of the circle around the central node, what radius belongs to this -> 2*pi*R
-    const RADIUS_AUTHOR = sum_radius / TAU
-
-    // Fix the author nodes in a ring around the central node
-    // const angle = TAU / (nodes.filter(d => d.type === "author").length)
-    let angle = 0
-    nodes
-        .filter(d => d.type === "author")
-        .forEach((d,i) => {
-            // Subtract the author node position from all it's connected single-degree repos
-            d.connected_single_repo.forEach(repo => {
-                repo.x -= d.x
-                repo.y -= d.y
-            })// forEach
-
-            d.fx = null
-            d.fy = null
-
-            // Find the new position of the author node in a ring around the central node
-            let author_arc = d.max_radius * 2 + author_padding
-            // translate this distance to an angle
-            let author_angle = (author_arc / RADIUS_AUTHOR)/2
-            d.x = central_repo.fx + RADIUS_AUTHOR * cos(angle + author_angle - PI/2)
-            d.y = central_repo.fy + RADIUS_AUTHOR * sin(angle + author_angle - PI/2)
-            angle += author_angle * 2
-
-            // d.fx = d.x
-            // d.fy = d.y
-
-            // // Add the new author position to all it's connected single-degree repos
-            // d.connected_single_repo.forEach(repo => {
-            //     repo.x += d.x
-            //     repo.y += d.y
-
-            //     // Just in case
-            //     repo.fx = repo.x
-            //     repo.fy = repo.y
-            // })// forEach
-
-            // 
-        })// forEach
+    // Place the author nodes in a circle around the central repo
+    // Taking into account the max_radius of single-degree repos around them
+    positionAuthorNodes()
 
     /////////////////////////////////////////////////////////////////
-    ////////////////////// Run Force Simulation /////////////////////
+    ///////////// Run Force Simulation for Shared Repos /////////////
     /////////////////////////////////////////////////////////////////
 
     let simulation = d3.forceSimulation()
@@ -262,151 +212,66 @@ function createFullVisual(values) {
         // .force("y", d3.forceY().y(d => d.focusY).strength(0.08)) //0.1
         // .force("center", d3.forceCenter(0,0))
 
-        // Keep the nodes that are an "author" or a repo that has a degree > 1 (and is thus commited to by more than one author)
-        let nodes_central = nodes.filter(d => d.type === "author" || (d.type === "repo" && d.degree > 1))
-        // Only keep the links that have the nodes that are in the nodes_central array
-        let links_central = links.filter(d => nodes_central.find(n => n.id === d.source) && nodes_central.find(n => n.id === d.target))
+    // Keep the nodes that are an "author" or a repo that has a degree > 1 (and is thus commited to by more than one author)
+    let nodes_central = nodes.filter(d => d.type === "author" || (d.type === "repo" && d.degree > 1))
+    // Only keep the links that have the nodes that are in the nodes_central array
+    let links_central = links.filter(d => nodes_central.find(n => n.id === d.source) && nodes_central.find(n => n.id === d.target))
 
-        // Perform the simulation
-        simulation
-            .nodes(nodes_central)
-            .stop()
-            // .on("tick", ticked)
+    // Perform the simulation
+    simulation
+        .nodes(nodes_central)
+        .stop()
+        // .on("tick", ticked)
 
-        // function ticked() {
-        //     simulationPlacementConstraints()
-        //     drawQuick()
-        // }
+    // function ticked() {
+    //     simulationPlacementConstraints()
+    //     drawQuick()
+    // }
 
-        // // ramp up collision strength to provide smooth transition
-        // let transitionTime = 3000
-        // let t = d3.timer(function (elapsed) {
-        //     let dt = elapsed / transitionTime
-        //     simulation.force("collide").strength(0.1 + dt ** 2 * 0.6)
-        //     if (dt >= 1.0) t.stop()
-        // })
+    // // ramp up collision strength to provide smooth transition
+    // let transitionTime = 3000
+    // let t = d3.timer(function (elapsed) {
+    //     let dt = elapsed / transitionTime
+    //     simulation.force("collide").strength(0.1 + dt ** 2 * 0.6)
+    //     if (dt >= 1.0) t.stop()
+    // })
 
-        // Only use the links that are not going to the central node
-        simulation.force("link")
-            // .links(links_central)
-            .links(links_central.filter(d => d.target !== central_repo.id))
-        // simulation.force("link").links(links)
+    // Only use the links that are not going to the central node
+    simulation.force("link")
+        .links(links_central)
+        // .links(links_central.filter(d => d.target !== central_repo.id))
+    // simulation.force("link").links(links)
 
-        //Manually "tick" through the network
-        let n_ticks = 300
-        for (let i = 0; i < n_ticks; ++i) {
-            simulation.tick()
-            // simulationPlacementConstraints(nodes_central)
-            //Ramp up collision strength to provide smooth transition
-            simulation.force("collide").strength(Math.pow(i / n_ticks, 2) * 0.7)
-        }//for i
-        drawQuick()
+    //Manually "tick" through the network
+    let n_ticks = 300
+    for (let i = 0; i < n_ticks; ++i) {
+        simulation.tick()
+        simulationPlacementConstraints(nodes_central)
+        //Ramp up collision strength to provide smooth transition
+        simulation.force("collide").strength(Math.pow(i / n_ticks, 2) * 0.7)
+    }//for i
 
-        // Once it's done, fix the positions of the nodes used in the simulation
-        // simulation.on("end", () => {
-            nodes_central.forEach(d => {
-                d.fx = d.x
-                d.fy = d.y
-            })// forEach
-        // })
+    // Once it's done, fix the positions of the nodes used in the simulation
+    // simulation.on("end", () => {
+        nodes_central.forEach(d => {
+            d.fx = d.x
+            d.fy = d.y
+        })// forEach
+    // })
 
-        /////////////////////////////////////////////////////////////
-        function simulationPlacementConstraints(nodes) {
-            // Make sure the "repo" nodes cannot be placed farther away from the center than RADIUS_AUTHOR
-            nodes.forEach(d => {
-                if(d.type === "repo") {
-                    const dist = Math.sqrt(d.x ** 2 + d.y ** 2)
-                    if(dist > RADIUS_AUTHOR * 0.8) {
-                        d.x = d.x / dist * RADIUS_AUTHOR * 0.8
-                        d.y = d.y / dist * RADIUS_AUTHOR * 0.8
-                    }//if
+    /////////////////////////////////////////////////////////////
+    function simulationPlacementConstraints(nodes) {
+        // Make sure the "repo" nodes cannot be placed farther away from the center than RADIUS_AUTHOR
+        nodes.forEach(d => {
+            if(d.type === "repo") {
+                const dist = Math.sqrt(d.x ** 2 + d.y ** 2)
+                if(dist > RADIUS_AUTHOR * 0.8) {
+                    d.x = d.x / dist * RADIUS_AUTHOR * 0.8
+                    d.y = d.y / dist * RADIUS_AUTHOR * 0.8
                 }//if
-            })// forEach
-        }// simulationPlacementConstraints
-
-        function drawQuick() {
-            // context.clearRect(0, 0, WIDTH, HEIGHT)
-            context.fillStyle = COLOR_BACKGROUND
-            context.fillRect(0, 0, WIDTH, HEIGHT)
-
-            context.save()
-            context.translate(WIDTH / 2, HEIGHT / 2)
-
-            nodes
-            .filter(d => d.id !== central_repo.id)
-            .forEach(d => {
-                // Add the new author position to all it's connected single-degree repos
-                if(d.connected_single_repo) {
-                    d.connected_single_repo.forEach(repo => {
-                        repo.x += d.x
-                        repo.y += d.y
-                    })// forEach
-                }
-            })// forEach
-
-            // Draw all the links as lines
-            links.forEach(l => {
-                if(l.source.x !== undefined && l.target.x !== undefined) {
-                    calculateLinkGradient(context, l)
-                    calculateEdgeCenters(l, 1)
-                    context.strokeStyle = l.gradient 
-                } else context.strokeStyle = COLOR_LINK
-
-                let line_width = scale_link_width(l.commit_count)
-                // if(l.target.id === central_repo.id) line_width *= 2
-                context.lineWidth = line_width * SF
-                drawLine(context, l, SF)
-
-                // context.beginPath()
-                // context.moveTo(l.source.x * SF, l.source.y * SF)
-                // context.lineTo(l.target.x * SF, l.target.y * SF)
-                // context.stroke()
-            })// forEach
-
-            // Draw all the nodes as circles
-            nodes
-                .filter(d => d.id !== central_repo.id)
-                .forEach(d => {
-                
-                    context.shadowBlur = Math.max(3, d.r * 0.2) * SF
-                    context.shadowColor = "#f7f7f7"//d.color
-                    context.fillStyle = d.color
-                    // context.globalAlpha = d.type === "author" ? 1 : scale_node_opacity(d.degree)
-                    let r = d.r //d.type === "author" ? 10 : d.r
-                    drawNode(context, d.x, d.y, SF, r)
-                    context.shadowBlur = 0
-
-                    // Also draw a stroke around the node
-                    // context.globalAlpha = 0.5
-                    context.strokeStyle = COLOR_BACKGROUND
-                    context.lineWidth = Math.max(1, d.r * 0.07) * SF
-                    context.stroke()
-                    context.globalAlpha = 1
-
-                    // context.globalAlpha = 1
-                })// forEach
-
-            // // Draw the central node
-            // context.fillStyle = context.strokeStyle = COLOR_REPO_MAIN
-            // drawNode(context, 0, 0, SF, CENTRAL_RADIUS * 0.85)
-            // context.lineWidth = 3 * SF
-            // context.beginPath()
-            // context.moveTo(CENTRAL_RADIUS * SF, 0)
-            // context.arc(0, 0, CENTRAL_RADIUS * SF, 0, TAU)
-            // context.globalAlpha = 0.3
-            // context.stroke()
-            // context.globalAlpha = 1
-
-            // Draw the name above each node
-            context.fillStyle = "#4d4950"
-            context.font = `${12 * SF}px sans-serif`
-            context.textAlign = "center"
-            nodes_central.forEach(d => {
-                context.fillText(d.label, d.x * SF, d.y * SF - d.r * SF - 2)
-            })// forEach
-
-            context.restore()
-        }//function drawQuick
+            }//if
+        })// forEach
+    }// simulationPlacementConstraints
 
 
     /////////////////////////////////////////////////////////////////
@@ -414,6 +279,65 @@ function createFullVisual(values) {
     /////////////////////////////////////////////////////////////////
 
     return (context, WIDTH, HEIGHT) => {
+        context.lineJoin = "round" 
+
+        context.fillStyle = COLOR_BACKGROUND
+        context.fillRect(0, 0, WIDTH, HEIGHT)
+
+        context.save()
+        context.translate(WIDTH / 2, HEIGHT / 2)
+
+        // Draw all the links as lines
+        links.forEach(l => {
+            if(l.source.x !== undefined && l.target.x !== undefined) {
+                calculateLinkGradient(context, l)
+                calculateEdgeCenters(l, 1)
+                context.strokeStyle = l.gradient 
+            } else context.strokeStyle = COLOR_LINK
+
+            let line_width = scale_link_width(l.commit_count)
+            context.lineWidth = line_width * SF
+            drawLine(context, l, SF)
+
+            // context.beginPath()
+            // context.moveTo(l.source.x * SF, l.source.y * SF)
+            // context.lineTo(l.target.x * SF, l.target.y * SF)
+            // context.stroke()
+        })// forEach
+
+        // Draw all the nodes as circles
+        nodes
+            // .filter(d => d.id !== central_repo.id)
+            .forEach(d => {
+            
+                context.shadowBlur = Math.max(3, d.r * 0.2) * SF
+                context.shadowColor = "#f7f7f7"//d.color
+                context.fillStyle = d.color
+                // context.globalAlpha = d.type === "author" ? 1 : scale_node_opacity(d.degree)
+                let r = d.r //d.type === "author" ? 10 : d.r
+                drawNode(context, d.x, d.y, SF, r)
+                context.shadowBlur = 0
+
+                // Also draw a stroke around the node
+                // context.globalAlpha = 0.5
+                context.strokeStyle = COLOR_BACKGROUND
+                context.lineWidth = Math.max(1, d.r * 0.07) * SF
+                context.stroke()
+                context.globalAlpha = 1
+
+                // context.globalAlpha = 1
+            })// forEach
+
+        // Draw the name above each node
+        context.fillStyle = "#4d4950"
+        context.font = `${12 * SF}px sans-serif`
+        context.textAlign = "center"
+        context.textBaseline = "bottom"
+        nodes_central.forEach(d => {
+            context.fillText(d.label, d.x * SF, (d.y - d.r) * SF)
+        })// forEach
+
+        context.restore()
 
         console.log("Finished Drawing")
 
@@ -523,10 +447,6 @@ function prepareData(authors, repos, links) {
     // Which is the central repo, the one that connects everyone (the one with the highest degree)
     central_repo = nodes.find(d => d.type === "repo" && d.degree === d3.max(nodes.filter(d => d.type === "repo"), d => d.degree))
 
-    central_repo.r = CENTRAL_RADIUS
-    central_repo.padding = CENTRAL_RADIUS * 0.5
-    central_repo.special_type = "central"
-
     // Set scales
     scale_repo_radius.domain(d3.extent(repos, d => d.stars))
     scale_author_radius.domain(d3.extent(links.filter(l => l.target === central_repo.id), d => d.commit_count))
@@ -548,6 +468,11 @@ function prepareData(authors, repos, links) {
 
         d.color = d.data.color
     })// forEach
+
+    // Replace some values for the central repository
+    central_repo.r = CENTRAL_RADIUS
+    central_repo.padding = CENTRAL_RADIUS
+    central_repo.special_type = "central"
     central_repo.color = COLOR_REPO_MAIN
     
 }// function prepareData
@@ -675,6 +600,57 @@ function singleAuthorForceSimulation() {
     }// function drawAuthorBubbles
 }// function singleAuthorForceSimulation
 
+// Place the author nodes in a circle around the central repo
+// Taking into account the max_radius of single-degree repos around them
+function positionAuthorNodes() {
+    // Get the sum of all the author nodes' max_radius
+    let sum_radius = nodes
+        .filter(d => d.type === "author")
+        .reduce((acc, curr) => acc + curr.max_radius * 2, 0)
+    // Take padding into account between the author nodes
+    const author_padding = 30
+    sum_radius += authors.length * author_padding
+    // This sum should be the circumference of the circle around the central node, what radius belongs to this -> 2*pi*R
+    RADIUS_AUTHOR = sum_radius / TAU
+
+    // Fix the author nodes in a ring around the central node
+    // const angle = TAU / (nodes.filter(d => d.type === "author").length)
+    let angle = 0
+    nodes
+        .filter(d => d.type === "author")
+        .forEach((d,i) => {
+            // Subtract the author node position from all it's connected single-degree repos
+            d.connected_single_repo.forEach(repo => {
+                repo.x -= d.x
+                repo.y -= d.y
+            })// forEach
+
+            // Find the new position of the author node in a ring around the central node
+            let author_arc = d.max_radius * 2 + author_padding
+            // translate this distance to an angle
+            let author_angle = (author_arc / RADIUS_AUTHOR)/2
+            d.x = central_repo.fx + RADIUS_AUTHOR * cos(angle + author_angle - PI/2)
+            d.y = central_repo.fy + RADIUS_AUTHOR * sin(angle + author_angle - PI/2)
+            angle += author_angle * 2
+
+            // Fix the authors for the force simulation
+            d.fx = d.x
+            d.fy = d.y
+
+            // Add the new author position to all it's connected single-degree repos
+            d.connected_single_repo.forEach(repo => {
+                repo.x += d.x
+                repo.y += d.y
+
+                // Just in case
+                repo.fx = repo.x
+                repo.fy = repo.y
+            })// forEach
+
+            // 
+        })// forEach
+}// function positionAuthorNodes
+
 /////////////////////////////////////////////////////////////////////
 /////////////////////// Node Drawing Functions //////////////////////
 /////////////////////////////////////////////////////////////////////
@@ -755,7 +731,7 @@ function calculateLinkGradient(context, l) {
     // l.gradient.addColorStop(1, l.target.color)
 
     // Incorporate opacity into gradient
-    createGradient(l, l.target.special_type ? 0.2 : 0.5)
+    createGradient(l, l.target.special_type ? 0.15 : 0.5)
 
     function createGradient(l, alpha) {
         let col
