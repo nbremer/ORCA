@@ -1,14 +1,13 @@
 // During what time of its existence has the author been involved
 // Fraction of commits
 // More than X or X% of the commits - Not trying to say that "the more commits is better"
-// Make clear which repos are used by multiple authors
 
 //Possible: use similarity of tags to put repos closer together or give colors to themes
 // Look how long ago it was that the author was last active in the repo - link opacity?
 
 // Get list of tags to Adam
 
-// Central node a polygon of authors in points?
+// Central node a star-like shape of authors in points?
 
 
 /////////////////////////////////////////////////////////////////////
@@ -35,9 +34,10 @@ let nodes = [], links
 let central_repo
 
 // Settings
-const CENTRAL_RADIUS = 50
-let RADIUS_AUTHOR
-const MAX_AUTHOR_WIDTH = 50
+const CENTRAL_RADIUS = 50 // The radius of the central repository node
+let RADIUS_AUTHOR // The eventual radius along which the author nodes are placed
+const MAX_AUTHOR_WIDTH = 50 // The maximum width (at SF = 1) of the author name before it gets wrapped
+const AUTHOR_PADDING = 20 // The padding between the author nodes around the circle (at SF = 1)
 
 /////////////////////////////////////////////////////////////////////
 /////////////////////////// Create Canvas ///////////////////////////
@@ -51,7 +51,7 @@ const context = canvas.getContext("2d")
 /////////////////////////////////////////////////////////////////////
 
 //Sizes
-const DEFAULT_SIZE = 1300
+const DEFAULT_SIZE = 1400
 let SF, WIDTH, HEIGHT
 
 // Resize function
@@ -356,18 +356,41 @@ function createFullVisual(values) {
             }// if
 
             if(d.type === "author") {
-                // Draw each line of the author
-                // Centered on the author node
+                // // Draw each line of the author
+                // // Centered on the author node
+                // let n = d.data.author_lines.length
+                // let label_line_height = 1.2
+                // let font_size = 12
+                // d.data.author_lines.forEach((l,i) => {
+                //     let x = d.x * SF
+                //     // Let the y-position be the center of the author node
+                //     let y = (d.y - (n - 1) * font_size * label_line_height / 2 + i * font_size * label_line_height) * SF
+                //     renderText(context, l,x, y, 1.25 * SF)
+                // })
+
+                // Draw the author name radiating outward from the author's node
+                context.save()
+                context.translate(d.x * SF, d.y * SF)
+                context.rotate(d.author_angle + (d.author_angle > PI/2 ? PI : 0))
+                // Move the max_radius farther away
+                context.translate((d.author_angle > PI/2 ? -1 : 1) * (d.max_radius + 10) * SF, 0)
+                context.textAlign = d.author_angle > PI/2 ? "right" : "left"
+
                 let n = d.data.author_lines.length
                 let label_line_height = 1.2
                 let font_size = 12
-                d.data.author_lines.forEach((l,i) => {
-                    let x = d.x * SF
+                d.data.author_lines.forEach((l, i) => {
+                    let x = 0
                     // Let the y-position be the center of the author node
-                    let y = (d.y - (n - 1) * font_size * label_line_height / 2 + i * font_size * label_line_height) * SF
-                    renderText(context, l,x, y, 1.25 * SF)
+                    let y = (0 - (n - 1) * font_size * label_line_height / 2 + i * font_size * label_line_height) * SF
+                    renderText(context, l, x, y, 1.25 * SF)
                 })
+
+                // renderText(context, d.id, 0, 0, 1.25 * SF)
+
+                context.restore()
             } else {
+                context.textAlign = "center"
                 renderText(context, d.label, d.x * SF, d.y * SF, 1.25 * SF)
             }// else
 
@@ -605,9 +628,12 @@ function singleAuthorForceSimulation() {
             // Draw the result
             drawAuthorBubbles(nodes_to_author, links_author)
 
-            // Determine the farthest distance of the nodes to the author node
+            // Determine the farthest distance of the nodes (including its radius) to the author node
             d.max_radius = d3.max(nodes_to_author, n => Math.sqrt((n.x - d.x)**2 + (n.y - d.y)**2))
-            d.max_radius = Math.max(d.max_radius, d.r)
+            // Determine which node is the largest distance to the author node
+            let max_radius_node = nodes_to_author.find(n => Math.sqrt((n.x - d.x)**2 + (n.y - d.y)**2) === d.max_radius)
+            // Get the overall radius to take into account for the next simulation and labeling
+            d.max_radius = Math.max(d.max_radius + max_radius_node.r, d.r)
             // See this as the new "author node" radius that includes all of it's single-degree repos
 
         })// forEach
@@ -648,8 +674,7 @@ function positionAuthorNodes() {
         .filter(d => d.type === "author")
         .reduce((acc, curr) => acc + curr.max_radius * 2, 0)
     // Take padding into account between the author nodes
-    const author_padding = 30
-    sum_radius += authors.length * author_padding
+    sum_radius += authors.length * AUTHOR_PADDING
     // This sum should be the circumference of the circle around the central node, what radius belongs to this -> 2*pi*R
     RADIUS_AUTHOR = sum_radius / TAU
 
@@ -666,11 +691,12 @@ function positionAuthorNodes() {
             })// forEach
 
             // Find the new position of the author node in a ring around the central node
-            let author_arc = d.max_radius * 2 + author_padding
+            let author_arc = d.max_radius * 2 + AUTHOR_PADDING
             // translate this distance to an angle
             let author_angle = (author_arc / RADIUS_AUTHOR)/2
             d.x = central_repo.fx + RADIUS_AUTHOR * cos(angle + author_angle - PI/2)
             d.y = central_repo.fy + RADIUS_AUTHOR * sin(angle + author_angle - PI/2)
+            d.author_angle = angle + author_angle - PI/2
             angle += author_angle * 2
 
             // Fix the authors for the force simulation
