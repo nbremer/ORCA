@@ -1,40 +1,32 @@
-"author_name_top","is_mozilla_staff"
-"Adil Allawi","false"
-"Andreas Gal","false"
-"Artur Adib","false"
-"Brendan Dahl","false"
-"Calixte Denizet","false"
-"Chris Jones","false"
-"Fabian Lange","false"
-"Haebaru","false"
-"Ionuț G. Stan","false"
-"Jakob Miland","false"
-"Jani Pehkonen","false"
-"Jon Buckley","false"
-"Jonas","false"
-"Jonas Jenwald","false"
-"Julian Viereck","false"
-"Justin D'Arcangelo","false"
-"Kalervo Kujala","false"
-"Mukul Mishra","false"
-"Nicholas Nethercote","true"
-"Pramodh KP","false"
-"Rob Sayre","false"
-"Rob Wu","false"
-"Samuel Chantaraud","false"
-"Takashi Tamura","false"
-"Thorben Bochenek","false"
-"Tim van der Meij","false"
-"Vivien Nicolas","false"
-"Wojciech Maj","false"
-"Xavier Fung","false"
-"Yury Delendik","true"
-"benbro","false"
-"fkaelberer","false"
-"gigaherz","false"
-"mduan","false"
-"notmasteryet","false"
-"p01","false"
-"sbarman","false"
-"vyv03354","false"
-"waddlesplash","false"
+"author_name_top","employee_sec_min","employee_sec_max"
+"Adil Allawi",,
+"Andreas Gal",,
+"Artur Adib",,
+"Brendan Dahl",1496265499,1619636428
+"Calixte Denizet",1471869279,1663858729
+"Chris Jones",,
+"Fabian Lange",,
+"Haebaru",,
+"Jakob Miland",,
+"Jani Pehkonen",,
+"Jon Buckley",,
+"Jonas",,
+"Jonas Jenwald",,
+"Julian Viereck",,
+"Justin D'Arcangelo",,
+"Kalervo Kujala",,
+"Mukul Mishra",,
+"Nicholas Nethercote",1257306329,1606180573
+"Rob Sayre",,
+"Rob Wu",,
+"Tim van der Meij",,
+"Vivien Nicolas",,
+"Wojciech Maj",,
+"Xavier Fung",,
+"Yury Delendik",1333550913,1632163296
+"fkaelberer",,
+"gigaherz",,
+"mduan",,
+"p01",,
+"sbarman",,
+"vyv03354",,

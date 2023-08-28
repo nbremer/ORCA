@@ -10,19 +10,19 @@
         <style>
             html {
                 width: 100%;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                flex-direction: column;
+                /* display: flex; */
+                /* justify-content: center; */
+                /* align-items: center; */
+                /* flex-direction: column; */
             }
 
             body {
                 width: 100%;
                 height: 100%;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                flex-direction: row;
+                /* display: flex; */
+                /* justify-content: center; */
+                /* align-items: center; */
+                /* flex-direction: row; */
                 margin: 0;
                 font-family: 'Atkinson Hyperlegible', sans-serif;
             }
@@ -30,6 +30,14 @@
             canvas {
                 margin: 0px;
                 display: block;
+            }
+
+            #canvas {
+                position: absolute;
+                top: 0;
+                /* pointer-events: none; */
+                z-index: -1;
+                transition: opacity 200ms ease-in;
             }
         </style>
 		
@@ -40,10 +48,14 @@
 
         <!-- JavaScript files -->
         <script src="lib/d3.v7.js"></script>
+        <script src="lib/d3-delaunay.js"></script>
         
 	</head>
 	<body>
-        <canvas id="canvas"></canvas>
+        <div id="chart-container">
+            <canvas id="canvas"></canvas>
+            <canvas id="canvas-hover"></canvas>
+        </div>
 
         <!-- Custom JavaScript file -->
         <script src="script.js"></script>
