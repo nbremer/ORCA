@@ -48,7 +48,7 @@ let central_repo
 // Hover options
 let delaunay
 let voronoi
-let hover_active = false
+let HOVER_ACTIVE = false
 
 // Settings
 const CENTRAL_RADIUS = 50 // The radius of the central repository node
@@ -116,13 +116,17 @@ const COLOR_REPO = "#64d6d3" // "#b2faf8"
 const COLOR_AUTHOR = "#ea9df5"
 const COLOR_LINK = "#e8e8e8"
 const COLOR_PURPLE = "#783ce6"
+const COLOR_TEXT = "#4d4950"
 
 /////////////////////////////////////////////////////////////////////
 ////////////////////////// Create Functions /////////////////////////
 /////////////////////////////////////////////////////////////////////
 
-let formatDate = d3.timeParse("%Y-%m-%dT%H:%M:%SZ")
-let formatDateUnix = d3.timeParse("%s")
+let parseDate = d3.timeParse("%Y-%m-%dT%H:%M:%SZ")
+let parseDateUnix = d3.timeParse("%s")
+let formatDate = d3.timeFormat("%b %Y")
+let formatDigit = d3.format(",.2s")
+// let formatDigit = d3.format(",.2r")
 
 const scale_repo_radius = d3.scaleSqrt()
     .range([4, 20])
@@ -265,11 +269,10 @@ function createFullVisual(values) {
             })// forEach
 
         /////////////////////////////////////////////////////////////
+        // Draw the labels for the repositories in the center (those that have more than one contributor)
         nodes_central.forEach(d => {
             drawNodeLabel(context, d)
         })// forEach
-
-        // context.restore()
 
         console.log("Finished Drawing")
 
@@ -279,61 +282,209 @@ function createFullVisual(values) {
         //         console.log(event.layerX)
         //     };
 
+        // HOVER
         d3.select("#canvas-hover").on("mousemove", function(event) {
             // Get the position of the mouse on the canvas
             let [mx, my] = d3.pointer(event, this)
-            mx = ((mx * PIXEL_RATIO) - WIDTH / 2) /SF
-            my = ((my * PIXEL_RATIO) - HEIGHT / 2) /SF
+            mx = ((mx * PIXEL_RATIO) - WIDTH / 2) / SF
+            my = ((my * PIXEL_RATIO) - HEIGHT / 2) / SF
 
+            //Get the closest hovered node
             let point = delaunay.find(mx, my)
-            // console.log(nodes[point])
-
             let d = nodes[point]
             // Get the distance from the mouse to the node
             let dist = Math.sqrt((d.x - mx)**2 + (d.y - my)**2)
             // If the distance is too big, don't show anything
-            let found = dist < d.r + 50
+            let FOUND = dist < d.r + 50
+            
+            drawHoverState(context_hover, d, FOUND)
 
-            // Draw the hover canvas
-            context_hover.save()
-            context_hover.clearRect(0, 0, WIDTH, HEIGHT)
-            context_hover.translate(WIDTH / 2, HEIGHT / 2)
+            function drawHoverState(context, d, FOUND) {
+                // Draw the hover canvas
+                context.save()
+                context.clearRect(0, 0, WIDTH, HEIGHT)
+                context.translate(WIDTH / 2, HEIGHT / 2)
 
-            if(found) {
-                hover_active = true
+                if(FOUND) {
+                    HOVER_ACTIVE = true
 
-                // Fade out the main canvas, using CSS
-                canvas.style.opacity = '0.3'
+                    // Fade out the main canvas, using CSS
+                    canvas.style.opacity = '0.3'
 
-                // Show all the connected nodes
-                if(d.neighbors === undefined) d.neighbors = nodes.filter(n => links.find(l => l.source.id === d.id && l.target.id === n.id || l.target.id === d.id && l.source.id === n.id))
+                    /////////////////////////////////////////////////
+                    // Draw all the links to this node
+                    links.filter(l => l.source.id === d.id || l.target.id === d.id)
+                        .forEach(l => {
+                            drawLink(context, l)
+                        })// forEach
+
+                    /////////////////////////////////////////////////
+                    // Get all the connected nodes (if not done before)
+                    if(d.neighbors === undefined) d.neighbors = nodes.filter(n => links.find(l => l.source.id === d.id && l.target.id === n.id || l.target.id === d.id && l.source.id === n.id))
+                    // Draw all the connected nodes
+                    d.neighbors.forEach(n => {
+                            // Draw the hovered node
+                            drawNode(context, SF, n)
+                            if(n.node_central) drawNodeLabel(context_hover, n)
+                        })// forEach
+
+                    /////////////////////////////////////////////////
+                    // Draw the hovered node
+                    drawNode(context, SF, d)
+                    // Show a ring around the hovered node
+                    drawHoverRing(context, d)
+                    
+                    /////////////////////////////////////////////////
+                    // Show its label
+                    // if(d.node_central && d.type === "author") drawNodeLabel(context, d)
+
+                    /////////////////////////////////////////////////
+                    // Create a tooltip with more info
+                    const x_base = d.x
+                    const y_base = d.y - d.r
+
+                    let H
+                    if(d.type === "author") H = 95
+                    else {
+                        if(d.data.languages.length > 3) H = 174
+                        else if(d.data.languages.length > 0) H = 162
+                        else H = 126
+                    }
+                    const W = 220
+                    context.save()
+                    context.translate(x_base * SF, (y_base - H - 20) * SF)
+
+                    let x = 0
+                    let y = 0
+
+                    // Background rectangle
+                    context.shadowBlur = 3 * SF
+                    context.shadowColor = "#d4d4d4"
+                    context.fillStyle = COLOR_BACKGROUND
+                    context.fillRect((x - W/2)*SF, y*SF, W*SF, H*SF)
+                    context.shadowBlur = 0
+                    
+                    // Line along the side
+                    context.fillStyle = d.type === "author" ? COLOR_AUTHOR : COLOR_REPO
+                    context.fillRect((x - W/2 - 1)*SF, (y-1)*SF, (W+2)*SF, 6*SF)
 
 
-                // Draw all the links to this node
-                links.filter(l => l.source.id === d.id || l.target.id === d.id)
-                    .forEach(l => {
-                        drawLink(context_hover, l)
-                    })// forEach
+                    context.textAlign = "center"
+                    context.textBaseline = "middle"
+                    
+                    let line_height = 1.2
+                    let font_size
+                    let text
 
-                d.neighbors.forEach(n => {
-                        // Draw the hovered node
-                        drawNode(context_hover, SF, n)
-                        if(n.node_central) drawNodeLabel(context_hover, n)
-                    })// forEach
 
-                // Draw the hovered node
-                drawNode(context_hover, SF, d)
-                // Show its label
-                if(d.node_central) drawNodeLabel(context_hover, d)
+                    // Contributor or repo
+                    y = 22
+                    font_size = 10.5
+                    setFont(context, font_size * SF, 400, "italic")
+                    context.fillStyle = d.type === "author" ? COLOR_AUTHOR : COLOR_REPO
+                    renderText(context, d.type === "author" ? "contributor" : "repository", x * SF, y * SF, 2.5 * SF)
 
-            } else {
-                hover_active = false
+                    context.fillStyle = COLOR_TEXT
+                    y += 20
 
-                // Fade the main canvas back in
-                canvas.style.opacity = '1'
-            }// else
+                    if (d.type === "author") {
+                        // The author's name
+                        font_size = 14
+                        setFont(context, font_size * SF, 700, "normal")
+                        renderText(context, d.data.author_name, x * SF, y * SF, 1.25 * SF)
+                        // d.data.author_lines.forEach((l, i) => {
+                        //     renderText(context, l, x * SF, (y + i * line_height * font_size) * SF, 1.25 * SF)
+                        // })
 
-            context_hover.restore()
+                        // Number of commits to the central repo
+                        y += 22
+                        font_size = 11
+                        setFont(context, font_size * SF, 400, "normal")
+                        context.globalAlpha = 0.8
+                        renderText(context, `${formatDigit(d.data.link_central.commit_count)} commits to ${central_repo.label}`, x * SF, y * SF, 1.25 * SF)
+                        
+                        // First and last commit to main repo
+                        font_size = 9.5
+                        context.globalAlpha = 0.6
+                        setFont(context, font_size * SF, 400, "normal")
+                        y += font_size * line_height + 3
+                        // Check if the start and end date are in the same month of the same year
+                        if(d.data.link_central.commit_sec_min.getMonth() === d.data.link_central.commit_sec_max.getMonth() && d.data.link_central.commit_sec_min.getFullYear() === d.data.link_central.commit_sec_max.getFullYear()) {
+                            text = `In ${formatDate(d.data.link_central.commit_sec_min)}`
+                        } else { 
+                            text = `Between ${formatDate(d.data.link_central.commit_sec_min)} & ${formatDate(d.data.link_central.commit_sec_max)}`
+                        }
+                        renderText(context, text, x * SF, y * SF, 1.25 * SF)
+
+                    } else {
+                        // The repo's name and owner
+                        font_size = 13
+                        setFont(context, font_size * SF, 700, "normal")
+                        renderText(context, `${d.data.owner}/`, x * SF, y * SF, 1.25 * SF)
+                        renderText(context, d.label, x * SF, (y + line_height * font_size) * SF, 1.25 * SF)
+
+                        // The creation date
+                        y += 35
+                        font_size = 9.5
+                        context.globalAlpha = 0.6
+                        setFont(context, font_size * SF, 400, "normal")
+                        renderText(context, `Created in ${formatDate(d.data.createdAt)}`, x * SF, y * SF, 1.25 * SF)
+                        // The most recent updated date
+                        y += font_size * line_height
+                        renderText(context, `Last updated in ${formatDate(d.data.updatedAt)}`, x * SF, y * SF, 1.25 * SF)
+
+                        // The number of stars & forks
+                        y += 19
+                        font_size = 10.5
+                        setFont(context, font_size * SF, 400, "normal")
+                        context.globalAlpha = 0.9
+                        let stars = d.data.stars
+                        let forks = d.data.forks
+                        renderText(context, `${stars < 10 ? stars : formatDigit(stars)} stars | ${forks < 10 ? forks : formatDigit(forks)} forks`, x * SF, y * SF, 1.25 * SF)
+                        context.globalAlpha = 1
+
+                        // Languages
+                        console.log(d.data.languages)
+                        if(d.data.languages.length > 0) {
+                            y += 23
+                            font_size = 9.5
+                            context.globalAlpha = 0.6
+                            setFont(context, font_size * SF, 400, "italic")
+                            renderText(context, "Languages", x * SF, y * SF, 2 * SF)
+
+                            font_size = 10.5
+                            y += font_size * line_height + 3
+                            context.globalAlpha = 0.9
+                            setFont(context, font_size * SF, 400, "normal")
+                            text = ""
+                            for(let i = 0; i < Math.min(3, d.data.languages.length); i++) {
+                                text += `${d.data.languages[i]}${i < Math.min(3, d.data.languages.length) - 1 ? ", " : ""}`
+                            }// for i
+                            renderText(context, text, x * SF, y * SF, 1.25 * SF)
+                            if(d.data.languages.length > 3) {
+                                y += font_size * line_height
+                                text = `& ${d.data.languages.length - 3} more`
+                                renderText(context, text, x * SF, y * SF, 1.25 * SF)
+                            }// if
+
+                        }// if
+
+                    }// else
+
+                    context.restore()
+
+                } else {
+                    HOVER_ACTIVE = false
+
+                    // Fade the main canvas back in
+                    canvas.style.opacity = '1'
+                }// else
+
+                context.restore()
+            }// function drawHoverState
+
+
+
 
         })
     }// sketch
@@ -352,8 +503,8 @@ function prepareData(authors, repos, links) {
         d.author_name = d.author_name_top
 
         // Has the person been a (Mozilla) employee
-        d.employee_sec_min = formatDateUnix(d.employee_sec_min)
-        d.employee_sec_max = formatDateUnix(d.employee_sec_max)
+        d.employee_sec_min = parseDateUnix(d.employee_sec_min)
+        d.employee_sec_max = parseDateUnix(d.employee_sec_max)
 
         d.color = COLOR_AUTHOR
 
@@ -368,13 +519,18 @@ function prepareData(authors, repos, links) {
         d.repo = d.base_repo_original
         d.forks = +d.repo_forks
         d.stars = +d.repo_stars
-        d.createdAt = formatDate(d.repo_createdAt)
-        d.updatedAt = formatDate(d.repo_updatedAt)
+        d.createdAt = parseDate(d.repo_createdAt)
+        d.updatedAt = parseDate(d.repo_updatedAt)
 
         // Get the substring until the slash
         d.owner = d.repo.substring(0, d.repo.indexOf("/"))
         // Get the substring after the slash
         d.name = d.repo.substring(d.repo.indexOf("/") + 1)
+
+        // Split the string of languages into an array
+        d.languages = d.repo_languages.split(",")
+        // Remove languages that are empty or ""
+        d.languages = d.languages.filter(l => l !== "" && l !== " ")
 
         d.color = COLOR_REPO
 
@@ -393,8 +549,8 @@ function prepareData(authors, repos, links) {
 
         // Metadata of the "link"
         d.commit_count = +d.commit_count
-        d.commit_sec_min = formatDateUnix(d.commit_sec_min)
-        d.commit_sec_max = formatDateUnix(d.commit_sec_max)
+        d.commit_sec_min = parseDateUnix(d.commit_sec_min)
+        d.commit_sec_max = parseDateUnix(d.commit_sec_max)
 
         // Get the substring until the slash
         d.owner = d.base_repo_original.substring(0, d.base_repo_original.indexOf("/"))
@@ -407,11 +563,12 @@ function prepareData(authors, repos, links) {
 
     remainingAuthors.forEach(d => {
         d.commit_count = +d.commit_count
-        d.author_sec_min = formatDateUnix(d.author_sec_min)
-        d.author_sec_max = formatDateUnix(d.author_sec_max)
+        d.author_sec_min = parseDateUnix(d.author_sec_min)
+        d.author_sec_max = parseDateUnix(d.author_sec_max)
     })// forEach
 
     // console.log(authors[0])
+    // console.log(repos[0])
     // console.log(remainingAuthors[0])
     // console.log(links[0])
 
@@ -772,7 +929,7 @@ function collaborationRepoSimulation() {
 /////////////////////////////////////////////////////////////////////
 
 function drawNode(context, SF, d) {
-    context.shadowBlur = hover_active ? 0 : Math.max(3, d.r * 0.2) * SF
+    context.shadowBlur = HOVER_ACTIVE ? 0 : Math.max(2, d.r * 0.2) * SF
     context.shadowColor = "#f7f7f7"//d.color
     context.fillStyle = d.color
     // context.globalAlpha = d.type === "author" ? 1 : scale_node_opacity(d.degree)
@@ -783,7 +940,7 @@ function drawNode(context, SF, d) {
     // Also draw a stroke around the node
     // context.globalAlpha = 0.5
     context.strokeStyle = COLOR_BACKGROUND
-    context.lineWidth = Math.max(1, d.r * 0.07) * SF
+    context.lineWidth = Math.max(HOVER_ACTIVE ? 1.5 : 1, d.r * 0.07) * SF
     context.stroke()
     context.globalAlpha = 1
 
@@ -836,6 +993,17 @@ function drawNode(context, SF, d) {
         context.restore()
     }// if
 }// function drawNode
+
+// Draw a stroked ring around the hovered node
+function drawHoverRing(context, d) {
+    let r = d.r + (d.type === "author" ? 11 : d.special_type ? 14 : 5)
+    context.beginPath()
+    context.moveTo((d.x + r) * SF, d.y * SF)
+    context.arc(d.x * SF, d.y * SF, r * SF, 0, TAU)
+    context.strokeStyle = d.color
+    context.lineWidth = 3 * SF
+    context.stroke()
+}// function drawHoverRing
 
 /////////////////////////// Draw a circle ///////////////////////////
 function drawCircle(context, x, y, SF, r = 10, begin = true) {
@@ -927,7 +1095,7 @@ function calculateLinkGradient(context, l) {
 
     // Incorporate opacity into gradient
     let alpha
-    if(hover_active) alpha = l.target.special_type ? 0.3 : 0.7
+    if(HOVER_ACTIVE) alpha = l.target.special_type ? 0.3 : 0.7
     else alpha = l.target.special_type ? 0.15 : 0.5
     createGradient(l, alpha)
 
@@ -963,8 +1131,7 @@ function calculateLinkGradient(context, l) {
 
 function drawNodeLabel(context, d) {
     // Draw the name above each node
-    context.fillStyle = "#4d4950"
-    context.strokeStyle = COLOR_BACKGROUND
+    context.fillStyle = COLOR_TEXT
     context.lineWidth = 2 * SF
     context.textAlign = "center"
     context.textBaseline = "middle"
@@ -983,7 +1150,7 @@ function drawNodeLabel(context, d) {
     }// if
 
     if(d.type === "author") {
-        context.textAlign = "center"
+        // context.textAlign = "center"
         context.textBaseline = "middle"
 
         // Draw the author name radiating outward from the author's node
@@ -1015,8 +1182,8 @@ function drawNodeLabel(context, d) {
     } else {
         context.textAlign = "center"
         context.textBaseline = "bottom"
-        renderText(context, `${d.data.owner}/`, d.x * SF, (d.y - d.r - 1.1 * 12) * SF, 1.25 * SF)
-        renderText(context, d.label, d.x * SF, (d.y - d.r) * SF, 1.25 * SF)
+        renderText(context, `${d.data.owner}/`, d.x * SF, (d.y - d.r - 3 - 1.1 * 12) * SF, 1.25 * SF)
+        renderText(context, d.label, d.x * SF, (d.y - d.r - 3) * SF, 1.25 * SF)
     }// else
 }// function drawNodeLabel
 

@@ -27,6 +27,10 @@
                 font-family: 'Atkinson Hyperlegible', sans-serif;
             }
 
+            #chart-container {
+                background-color: #f7f7f7;
+            }
+
             canvas {
                 margin: 0px;
                 display: block;
@@ -35,9 +39,14 @@
             #canvas {
                 position: absolute;
                 top: 0;
-                /* pointer-events: none; */
-                z-index: -1;
+                pointer-events: none;
+                z-index: 0;
                 transition: opacity 200ms ease-in;
+            }
+
+            #canvas-hover {
+                position: relative;
+                z-index: 1
             }
         </style>
 		
