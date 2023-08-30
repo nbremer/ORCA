@@ -1,21 +1,31 @@
-// Hover for environment (rust, ruby, javascript, etc)
-// Tooltip (on canvas?)
-// TODO: also show label when hovering over nodes without permanent label
 // A tiny mark for everyone else (like pebbles on the outside)
 // TODO: Make big lines into tapered ones?
 
-// Central node a star-like shape of authors in points?
+// TODO: Make it clear which people are currently employees of the company that wants to give ORCA, and who have already received it
+// TODO: Is there a way to make it clear that if you use a subset of the data, that is just those that got ORCA, that it's that subset
 
-// Look into SAT solver for label placement
-// Look into Cynthia Brewer paper for label
-
-
+// This is the actual set of people that is getting compensation
+// Marker of yellow behind the name?
+// Ring for those that are getting ORCA and a larger ring for those that are not
 
 // Add title and intro (summary)
 // Mozilla/pdfjs has time period
 // Top contributors by count are these people
 // These people have also contributed to X other repos
 // Tiny histogram of the number of people that have done Y commits - with those top contributors highlighted
+
+// Central node a star-like shape of authors in points?
+
+// TODO: Add a legend
+// TODO: Add credit
+// TODO: Make central nodes not overlap
+// TODO: Look into label placement 
+// Look into SAT solver for label placement
+// Look into Cynthia Brewer paper for label
+
+
+
+
 
 
 
@@ -53,7 +63,9 @@ let HOVER_ACTIVE = false
 // Settings
 const CENTRAL_RADIUS = 50 // The radius of the central repository node
 let RADIUS_AUTHOR // The eventual radius along which the author nodes are placed
-const MAX_AUTHOR_WIDTH = 50 // The maximum width (at SF = 1) of the author name before it gets wrapped
+let RADIUS_AUTHOR_NON_ORCA // The radius along which the author nodes are placed that have not received ORCA
+const INNER_RADIUS_FACTOR = 0.7 // The factor of the RADIUS_AUTHOR outside of which the inner repos are not allwoed to go in the force simulation
+const MAX_AUTHOR_WIDTH = 55 // The maximum width (at SF = 1) of the author name before it gets wrapped
 const AUTHOR_PADDING = 20 // The padding between the author nodes around the circle (at SF = 1)
 
 /////////////////////////////////////////////////////////////////////
@@ -71,7 +83,7 @@ const context_hover = canvas_hover.getContext("2d")
 /////////////////////////////////////////////////////////////////////
 
 //Sizes
-const DEFAULT_SIZE = 1400
+const DEFAULT_SIZE = 1500
 let WIDTH, HEIGHT
 let SF, PIXEL_RATIO
 
@@ -251,6 +263,48 @@ function createFullVisual(values) {
         delaunay = d3.Delaunay.from(nodes.map(d => [d.x, d.y]))
         voronoi = delaunay.voronoi([0,0, WIDTH, HEIGHT])
 
+        // Draw the ORCA rings
+        context.fillStyle = context.strokeStyle = COLOR_PURPLE //COLOR_REPO_MAIN //spectral.mix("#e3e3e3", COLOR_REPO_MAIN, 0.75) 
+        let LW = ((RADIUS_AUTHOR+RADIUS_AUTHOR_NON_ORCA)/2 - RADIUS_AUTHOR) * 2
+        let O = 4
+        context.lineWidth = 1.5 * SF
+        // context.lineWidth = LW * SF
+
+        // Inner ring of those receiving ORCA
+        context.beginPath()
+        context.moveTo(0 + (RADIUS_AUTHOR + LW/2 - O) * SF, 0)
+        context.arc(0, 0, (RADIUS_AUTHOR + LW/2 - O) * SF, 0, TAU)
+        context.moveTo(0 + (RADIUS_AUTHOR - LW/2) * SF, 0)
+        context.arc(0, 0, (RADIUS_AUTHOR - LW/2) * SF, 0, TAU, true)
+        context.globalAlpha = 0.06
+        context.fill()
+        context.globalAlpha = 0.2
+        // context.stroke()
+        
+        // Second ring of those not receiving ORCA
+        context.beginPath()
+        context.moveTo(0 + (RADIUS_AUTHOR_NON_ORCA + LW/2) * SF, 0)
+        context.arc(0, 0, (RADIUS_AUTHOR_NON_ORCA + LW/2) * SF, 0, TAU)
+        context.moveTo(0 + (RADIUS_AUTHOR_NON_ORCA - LW/2 + O) * SF, 0)
+        context.arc(0, 0, (RADIUS_AUTHOR_NON_ORCA - LW/2 + O) * SF, 0, TAU, true)
+        context.globalAlpha = 0.03
+        context.fill()
+        context.globalAlpha = 0.1
+
+        // context.stroke()
+        context.textAlign = "center"
+        context.textBaseline = "bottom"
+        context.globalAlpha = 0.5
+        setFont(context, 16 * SF, 700, "italic")
+        drawTextAlongArc(context, "contributors supported through ORCA", TAU * 0.9, (RADIUS_AUTHOR - (LW/2 - O - 2)) * SF, "up", 1.5 * SF) 
+        
+        // context.textBaseline = "top"
+        drawTextAlongArc(context, "other top contributors", TAU * 0.9, (RADIUS_AUTHOR_NON_ORCA - (LW/2 - O - 2)) * SF, "up", 1.5 * SF) 
+        context.globalAlpha = 1
+        
+
+
+
         // Draw all the links as lines
         links.forEach(l => {
             drawLink(context, l) 
@@ -344,11 +398,13 @@ function createFullVisual(values) {
                     const y_base = d.y - d.r
 
                     let H
-                    if(d.type === "author") H = 95
-                    else {
-                        if(d.data.languages.length > 3) H = 174
-                        else if(d.data.languages.length > 0) H = 162
-                        else H = 126
+                    if(d.type === "author") {
+                        if(d.data.orca_received) H = 130
+                        else H = 105
+                    } else {
+                        if(d.data.languages.length > 3) H = 192
+                        else if(d.data.languages.length > 0) H = 180
+                        else H = 138
                     }
                     const W = 220
                     context.save()
@@ -378,18 +434,18 @@ function createFullVisual(values) {
 
 
                     // Contributor or repo
-                    y = 22
-                    font_size = 10.5
+                    y = 24
+                    font_size = 11
                     setFont(context, font_size * SF, 400, "italic")
                     context.fillStyle = d.type === "author" ? COLOR_AUTHOR : COLOR_REPO
                     renderText(context, d.type === "author" ? "contributor" : "repository", x * SF, y * SF, 2.5 * SF)
 
                     context.fillStyle = COLOR_TEXT
-                    y += 20
+                    y += 22
 
                     if (d.type === "author") {
                         // The author's name
-                        font_size = 14
+                        font_size = 15
                         setFont(context, font_size * SF, 700, "normal")
                         renderText(context, d.data.author_name, x * SF, y * SF, 1.25 * SF)
                         // d.data.author_lines.forEach((l, i) => {
@@ -397,17 +453,17 @@ function createFullVisual(values) {
                         // })
 
                         // Number of commits to the central repo
-                        y += 22
-                        font_size = 11
+                        y += 25
+                        font_size = 12
                         setFont(context, font_size * SF, 400, "normal")
                         context.globalAlpha = 0.8
                         renderText(context, `${formatDigit(d.data.link_central.commit_count)} commits to ${central_repo.label}`, x * SF, y * SF, 1.25 * SF)
                         
                         // First and last commit to main repo
-                        font_size = 9.5
+                        font_size = 10.5
                         context.globalAlpha = 0.6
                         setFont(context, font_size * SF, 400, "normal")
-                        y += font_size * line_height + 3
+                        y += font_size * line_height + 4
                         // Check if the start and end date are in the same month of the same year
                         if(d.data.link_central.commit_sec_min.getMonth() === d.data.link_central.commit_sec_max.getMonth() && d.data.link_central.commit_sec_min.getFullYear() === d.data.link_central.commit_sec_max.getFullYear()) {
                             text = `In ${formatDate(d.data.link_central.commit_sec_min)}`
@@ -416,16 +472,25 @@ function createFullVisual(values) {
                         }
                         renderText(context, text, x * SF, y * SF, 1.25 * SF)
 
+                        // Supported through ORCA
+                        if(d.data.orca_received) {
+                            y += 25
+                            font_size = 12
+                            context.fillStyle = COLOR_PURPLE
+                            setFont(context, font_size * SF, 700, "normal")
+                            renderText(context, "supported through ORCA", x * SF, y * SF, 1.5 * SF)
+                        }// if
+
                     } else {
                         // The repo's name and owner
-                        font_size = 13
+                        font_size = 14
                         setFont(context, font_size * SF, 700, "normal")
                         renderText(context, `${d.data.owner}/`, x * SF, y * SF, 1.25 * SF)
                         renderText(context, d.label, x * SF, (y + line_height * font_size) * SF, 1.25 * SF)
 
                         // The creation date
-                        y += 35
-                        font_size = 9.5
+                        y += 39
+                        font_size = 10
                         context.globalAlpha = 0.6
                         setFont(context, font_size * SF, 400, "normal")
                         renderText(context, `Created in ${formatDate(d.data.createdAt)}`, x * SF, y * SF, 1.25 * SF)
@@ -434,8 +499,8 @@ function createFullVisual(values) {
                         renderText(context, `Last updated in ${formatDate(d.data.updatedAt)}`, x * SF, y * SF, 1.25 * SF)
 
                         // The number of stars & forks
-                        y += 19
-                        font_size = 10.5
+                        y += 21
+                        font_size = 11
                         setFont(context, font_size * SF, 400, "normal")
                         context.globalAlpha = 0.9
                         let stars = d.data.stars
@@ -444,16 +509,15 @@ function createFullVisual(values) {
                         context.globalAlpha = 1
 
                         // Languages
-                        console.log(d.data.languages)
                         if(d.data.languages.length > 0) {
-                            y += 23
-                            font_size = 9.5
+                            y += 26
+                            font_size = 10.5
                             context.globalAlpha = 0.6
                             setFont(context, font_size * SF, 400, "italic")
                             renderText(context, "Languages", x * SF, y * SF, 2 * SF)
 
-                            font_size = 10.5
-                            y += font_size * line_height + 3
+                            font_size = 11.5
+                            y += font_size * line_height + 4
                             context.globalAlpha = 0.9
                             setFont(context, font_size * SF, 400, "normal")
                             text = ""
@@ -483,9 +547,6 @@ function createFullVisual(values) {
                 context.restore()
             }// function drawHoverState
 
-
-
-
         })
     }// sketch
 }// createFullVisual
@@ -499,12 +560,19 @@ function prepareData(authors, repos, links) {
     /////////////////////////////////////////////////////////////
     ///////////////////// Initial Data Prep /////////////////////
     /////////////////////////////////////////////////////////////
+    const ORCA_LEVEL = 0.5 //Math.random()
+    console.log(ORCA_LEVEL)
+
     authors.forEach(d => {
         d.author_name = d.author_name_top
 
-        // Has the person been a (Mozilla) employee
-        d.employee_sec_min = parseDateUnix(d.employee_sec_min)
-        d.employee_sec_max = parseDateUnix(d.employee_sec_max)
+        // // NOTE: Not used anymore
+        // // Has the person been a (Mozilla) employee
+        // d.employee_sec_min = parseDateUnix(d.employee_sec_min)
+        // d.employee_sec_max = parseDateUnix(d.employee_sec_max)
+
+        // Because this data isn't available yet, make it random
+        d.orca_received = Math.random() > ORCA_LEVEL ? true : false
 
         d.color = COLOR_AUTHOR
 
@@ -786,6 +854,7 @@ function positionAuthorNodes() {
     sum_radius += authors.length * AUTHOR_PADDING
     // This sum should be the circumference of the circle around the central node, what radius belongs to this -> 2*pi*R
     RADIUS_AUTHOR = sum_radius / TAU
+    RADIUS_AUTHOR_NON_ORCA = RADIUS_AUTHOR * 1.3
 
     // Fix the author nodes in a ring around the central node
     // const angle = TAU / (nodes.filter(d => d.type === "author").length)
@@ -803,8 +872,10 @@ function positionAuthorNodes() {
             let author_arc = d.max_radius * 2 + AUTHOR_PADDING
             // translate this distance to an angle
             let author_angle = (author_arc / RADIUS_AUTHOR)/2
-            d.x = central_repo.fx + RADIUS_AUTHOR * cos(angle + author_angle - PI/2)
-            d.y = central_repo.fy + RADIUS_AUTHOR * sin(angle + author_angle - PI/2)
+
+            let radius_drawn = d.data.orca_received ? RADIUS_AUTHOR : RADIUS_AUTHOR_NON_ORCA
+            d.x = central_repo.fx + radius_drawn * cos(angle + author_angle - PI/2)
+            d.y = central_repo.fy + radius_drawn * sin(angle + author_angle - PI/2)
             d.author_angle = angle + author_angle - PI/2
             angle += author_angle * 2
 
@@ -915,9 +986,9 @@ function collaborationRepoSimulation() {
         nodes.forEach(d => {
             if(d.type === "repo") {
                 const dist = Math.sqrt(d.x ** 2 + d.y ** 2)
-                if(dist > RADIUS_AUTHOR * 0.8) {
-                    d.x = d.x / dist * RADIUS_AUTHOR * 0.8
-                    d.y = d.y / dist * RADIUS_AUTHOR * 0.8
+                if(dist > RADIUS_AUTHOR * INNER_RADIUS_FACTOR) {
+                    d.x = d.x / dist * RADIUS_AUTHOR * INNER_RADIUS_FACTOR
+                    d.y = d.y / dist * RADIUS_AUTHOR * INNER_RADIUS_FACTOR
                 }//if
             }//if
         })// forEach
@@ -946,31 +1017,12 @@ function drawNode(context, SF, d) {
 
     // Draw a tiny arc inside the author node to show how long they've been involved in the central repo's existence, based on their first and last commit
     if(d.type === "author") {
-        const arc = d3.arc()
-            .context(context)
-
         context.save()
         context.translate(d.x * SF, d.y * SF)
 
-        context.fillStyle = COLOR_REPO_MAIN
-
-        // If this person also has a non-zero employee_sec_min, draw a thick arc from the min to max commit second that is connected to their employee status
-        if(d.data.employee_sec_min) {
-            arc
-                .innerRadius((d.r + 2.5 - 1.5) * SF)
-                .outerRadius((d.r + 2.5 + 3 + 1.5) * SF)
-                .startAngle(scale_involved_range(d.data.employee_sec_min))
-                .endAngle(scale_involved_range(d.data.employee_sec_max))
-
-            // Create the arc
-            context.beginPath()
-            arc()
-            context.fill()
-        }// if
-
         // TODO: Check that the angle is not too small
         // let angle = scale_involved_range(d.data.link_central.commit_sec_max) - scale_involved_range(d.data.link_central.commit_sec_min)
-        arc 
+        const arc = d3.arc()
             .innerRadius((d.r + 2.5) * SF)
             .outerRadius((d.r + 2.5 + 3) * SF)
             .startAngle(scale_involved_range(d.data.link_central.commit_sec_min))
@@ -980,8 +1032,9 @@ function drawNode(context, SF, d) {
         // Create the arc
         context.beginPath()
         arc()
+        context.fillStyle = COLOR_REPO_MAIN
         context.fill()
-        
+
         // Draw a tiny marker at the top to show where the "start" is
         context.strokeStyle = COLOR_REPO_MAIN
         context.lineWidth = 1 * SF
@@ -1159,17 +1212,20 @@ function drawNodeLabel(context, d) {
         context.rotate(d.author_angle + (d.author_angle > PI/2 ? PI : 0))
         // Move the max_radius farther away
         context.translate((d.author_angle > PI/2 ? -1 : 1) * (d.max_radius + 10) * SF, 0)
+        // context.textAlign = "center"
         context.textAlign = d.author_angle > PI/2 ? "right" : "left"
 
         let n = d.data.author_lines.length
         let label_line_height = 1.2
-        let font_size = 12
+        let font_size = 13
         d.data.author_lines.forEach((l, i) => {
             let x = 0
             // Let the y-position be the center of the author node
             let y = (0 - (n - 1) * font_size * label_line_height / 2 + i * font_size * label_line_height) * SF
             renderText(context, l, x, y, 1.25 * SF)
-        })
+        })// forEach
+
+        // drawTextAlongArc(context, d.data.author_name, 0, (d.max_radius + 20) * SF, "up", 1.25 * SF) 
 
         // renderText(context, d.id, 0, 0, 1.25 * SF)
 
@@ -1200,7 +1256,7 @@ function setRepoFont(context, SF = 1, font_size = 12) {
     setFont(context, font_size * SF, 400, "normal")
 }//function setRepoFont
 
-function setAuthorFont(context, SF = 1, font_size = 12) {
+function setAuthorFont(context, SF = 1, font_size = 13) {
     setFont(context, font_size * SF, 700, "italic")
 }//function setAuthorFont
 
@@ -1295,6 +1351,35 @@ function splitSpring(text) {
 
     return [str1.trim(), str2.trim()]
 }//function splitSpring
+
+////////////////////////// Draw curved text /////////////////////////
+function drawTextAlongArc(context, str, angle, radius, side, kerning = 0) {
+    let startAngle = side === "up" ? angle : angle - pi
+    if (side === "up") str = str.split("").reverse().join("") // Reverse letters
+
+    //Rotate 50% of total angle for center alignment
+    for (let j = 0; j < str.length; j++) {
+        let charWid = (context.measureText(str[j]).width)
+        startAngle += ((charWid + (j === str.length - 1 ? 0 : kerning)) / radius) / 2
+    }//for j
+
+    context.save()
+    context.rotate(startAngle)
+
+    for (let n = 0; n < str.length; n++) {
+        let charWid = (context.measureText(str[n]).width / 2) // half letter
+        let y = (side === "up" ? -1 : 1) * radius
+        //Rotate half letter
+        context.rotate(-(charWid + kerning) / radius)
+
+        // context.fillText(str[n], 0, y)
+        renderText(context, str[n], 0, y, 0)
+        //Rotate another half letter
+        context.rotate(-(charWid + kerning) / radius)
+    }//for n
+
+    context.restore()
+}//function drawTextAlongArc
 
 /////////////////////////////////////////////////////////////////////
 ////////////////////////// Helper Functions /////////////////////////
