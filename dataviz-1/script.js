@@ -377,10 +377,10 @@ function createFullVisual(values) {
                     if(d.neighbors === undefined) d.neighbors = nodes.filter(n => links.find(l => l.source.id === d.id && l.target.id === n.id || l.target.id === d.id && l.source.id === n.id))
                     // Draw all the connected nodes
                     d.neighbors.forEach(n => {
-                            // Draw the hovered node
-                            drawNode(context, SF, n)
-                            if(n.node_central) drawNodeLabel(context_hover, n)
-                        })// forEach
+                        // Draw the hovered node
+                        drawNode(context, SF, n)
+                        if(n.node_central) drawNodeLabel(context_hover, n)
+                    })// forEach
 
                     /////////////////////////////////////////////////
                     // Draw the hovered node
@@ -394,148 +394,8 @@ function createFullVisual(values) {
 
                     /////////////////////////////////////////////////
                     // Create a tooltip with more info
-                    const x_base = d.x
-                    const y_base = d.y - d.r
+                    drawTooltip(context, d)
 
-                    let H
-                    if(d.type === "author") {
-                        if(d.data.orca_received) H = 130
-                        else H = 105
-                    } else {
-                        if(d.data.languages.length > 3) H = 192
-                        else if(d.data.languages.length > 0) H = 180
-                        else H = 138
-                    }
-                    const W = 220
-                    context.save()
-                    context.translate(x_base * SF, (y_base - H - 20) * SF)
-
-                    let x = 0
-                    let y = 0
-
-                    // Background rectangle
-                    context.shadowBlur = 3 * SF
-                    context.shadowColor = "#d4d4d4"
-                    context.fillStyle = COLOR_BACKGROUND
-                    context.fillRect((x - W/2)*SF, y*SF, W*SF, H*SF)
-                    context.shadowBlur = 0
-                    
-                    // Line along the side
-                    context.fillStyle = d.type === "author" ? COLOR_AUTHOR : COLOR_REPO
-                    context.fillRect((x - W/2 - 1)*SF, (y-1)*SF, (W+2)*SF, 6*SF)
-
-
-                    context.textAlign = "center"
-                    context.textBaseline = "middle"
-                    
-                    let line_height = 1.2
-                    let font_size
-                    let text
-
-
-                    // Contributor or repo
-                    y = 24
-                    font_size = 11
-                    setFont(context, font_size * SF, 400, "italic")
-                    context.fillStyle = d.type === "author" ? COLOR_AUTHOR : COLOR_REPO
-                    renderText(context, d.type === "author" ? "contributor" : "repository", x * SF, y * SF, 2.5 * SF)
-
-                    context.fillStyle = COLOR_TEXT
-                    y += 22
-
-                    if (d.type === "author") {
-                        // The author's name
-                        font_size = 15
-                        setFont(context, font_size * SF, 700, "normal")
-                        renderText(context, d.data.author_name, x * SF, y * SF, 1.25 * SF)
-                        // d.data.author_lines.forEach((l, i) => {
-                        //     renderText(context, l, x * SF, (y + i * line_height * font_size) * SF, 1.25 * SF)
-                        // })
-
-                        // Number of commits to the central repo
-                        y += 25
-                        font_size = 12
-                        setFont(context, font_size * SF, 400, "normal")
-                        context.globalAlpha = 0.8
-                        renderText(context, `${formatDigit(d.data.link_central.commit_count)} commits to ${central_repo.label}`, x * SF, y * SF, 1.25 * SF)
-                        
-                        // First and last commit to main repo
-                        font_size = 10.5
-                        context.globalAlpha = 0.6
-                        setFont(context, font_size * SF, 400, "normal")
-                        y += font_size * line_height + 4
-                        // Check if the start and end date are in the same month of the same year
-                        if(d.data.link_central.commit_sec_min.getMonth() === d.data.link_central.commit_sec_max.getMonth() && d.data.link_central.commit_sec_min.getFullYear() === d.data.link_central.commit_sec_max.getFullYear()) {
-                            text = `In ${formatDate(d.data.link_central.commit_sec_min)}`
-                        } else { 
-                            text = `Between ${formatDate(d.data.link_central.commit_sec_min)} & ${formatDate(d.data.link_central.commit_sec_max)}`
-                        }
-                        renderText(context, text, x * SF, y * SF, 1.25 * SF)
-
-                        // Supported through ORCA
-                        if(d.data.orca_received) {
-                            y += 25
-                            font_size = 12
-                            context.fillStyle = COLOR_PURPLE
-                            setFont(context, font_size * SF, 700, "normal")
-                            renderText(context, "supported through ORCA", x * SF, y * SF, 1.5 * SF)
-                        }// if
-
-                    } else {
-                        // The repo's name and owner
-                        font_size = 14
-                        setFont(context, font_size * SF, 700, "normal")
-                        renderText(context, `${d.data.owner}/`, x * SF, y * SF, 1.25 * SF)
-                        renderText(context, d.label, x * SF, (y + line_height * font_size) * SF, 1.25 * SF)
-
-                        // The creation date
-                        y += 39
-                        font_size = 10
-                        context.globalAlpha = 0.6
-                        setFont(context, font_size * SF, 400, "normal")
-                        renderText(context, `Created in ${formatDate(d.data.createdAt)}`, x * SF, y * SF, 1.25 * SF)
-                        // The most recent updated date
-                        y += font_size * line_height
-                        renderText(context, `Last updated in ${formatDate(d.data.updatedAt)}`, x * SF, y * SF, 1.25 * SF)
-
-                        // The number of stars & forks
-                        y += 21
-                        font_size = 11
-                        setFont(context, font_size * SF, 400, "normal")
-                        context.globalAlpha = 0.9
-                        let stars = d.data.stars
-                        let forks = d.data.forks
-                        renderText(context, `${stars < 10 ? stars : formatDigit(stars)} stars | ${forks < 10 ? forks : formatDigit(forks)} forks`, x * SF, y * SF, 1.25 * SF)
-                        context.globalAlpha = 1
-
-                        // Languages
-                        if(d.data.languages.length > 0) {
-                            y += 26
-                            font_size = 10.5
-                            context.globalAlpha = 0.6
-                            setFont(context, font_size * SF, 400, "italic")
-                            renderText(context, "Languages", x * SF, y * SF, 2 * SF)
-
-                            font_size = 11.5
-                            y += font_size * line_height + 4
-                            context.globalAlpha = 0.9
-                            setFont(context, font_size * SF, 400, "normal")
-                            text = ""
-                            for(let i = 0; i < Math.min(3, d.data.languages.length); i++) {
-                                text += `${d.data.languages[i]}${i < Math.min(3, d.data.languages.length) - 1 ? ", " : ""}`
-                            }// for i
-                            renderText(context, text, x * SF, y * SF, 1.25 * SF)
-                            if(d.data.languages.length > 3) {
-                                y += font_size * line_height
-                                text = `& ${d.data.languages.length - 3} more`
-                                renderText(context, text, x * SF, y * SF, 1.25 * SF)
-                            }// if
-
-                        }// if
-
-                    }// else
-
-                    context.restore()
 
                 } else {
                     HOVER_ACTIVE = false
@@ -1177,6 +1037,183 @@ function calculateLinkGradient(context, l) {
         else l.gradient = COLOR_LINK
     }//function createGradient
 }//function calculateLinkGradient
+
+/////////////////////////////////////////////////////////////////////
+////////////////////////// Hover Functions //////////////////////////
+/////////////////////////////////////////////////////////////////////
+function drawTooltip(context, d) {
+    // Figure out the base x and y position of the tooltip
+    const x_base = d.x
+    const y_base = d.y - d.r
+
+    /////////////////////////////////////////////////////////////////
+    // Figure out the required height of the tooltip
+    let H
+    if(d.type === "author") {
+        if(d.data.orca_received) H = 130
+        else H = 105
+    } else {
+        if(d.data.languages.length > 3) H = 192
+        else if(d.data.languages.length > 0) H = 180
+        else H = 138
+    }// else
+
+    // Start with a minimum width
+    let W = 240
+    // Check if any of the typically longer texts are wider than this
+    // Bit of a hack (if I change the font's settings later, I need to remember to do it here), but it works
+    let tW = 0
+    if(d.type === "author") {
+        // The author's name
+        setFont(context, 15 * SF, 700, "normal")
+        tW = context.measureText(d.data.author_name).width * 1.25
+    } else {
+        // The repo's owner and name
+        setFont(context, 14 * SF, 700, "normal")
+        tW = context.measureText(d.data.owner).width * 1.25
+        if(context.measureText(d.data.name).width * 1.25 > tW) tW = context.measureText(d.data.name).width * 1.25
+        // Languages
+        if(d.data.languages.length > 0) {
+            setFont(context, 11.5 * SF, 400, "normal")
+            let text = ""
+            for(let i = 0; i < Math.min(3, d.data.languages.length); i++) {
+                text += `${d.data.languages[i]}${i < Math.min(3, d.data.languages.length) - 1 ? ", " : ""}`
+            }// for i
+            if(context.measureText(text).width * 1.25 > tW) tW = context.measureText(text).width * 1.24
+        }// if
+    }// else
+    // Update the max width if the text is wider
+    if(tW + 40 * SF > W * SF) W = tW / SF + 40
+
+    /////////////////////////////////////////////////////////////////
+    context.save()
+    context.translate(x_base * SF, (y_base - H - 20) * SF)
+
+    let x = 0
+    let y = 0
+
+    // Background rectangle
+    context.shadowBlur = 3 * SF
+    context.shadowColor = "#d4d4d4"
+    context.fillStyle = COLOR_BACKGROUND
+    context.fillRect((x - W/2)*SF, y*SF, W*SF, H*SF)
+    context.shadowBlur = 0
+    
+    // Line along the side
+    context.fillStyle = d.type === "author" ? COLOR_AUTHOR : COLOR_REPO
+    context.fillRect((x - W/2 - 1)*SF, (y-1)*SF, (W+2)*SF, 6*SF)
+
+    // Textual settings
+    context.textAlign = "center"
+    context.textBaseline = "middle"
+    let line_height = 1.2
+    let font_size
+    let text
+
+    // Contributor or repo
+    y = 24
+    font_size = 11
+    setFont(context, font_size * SF, 400, "italic")
+    context.fillStyle = d.type === "author" ? COLOR_AUTHOR : COLOR_REPO
+    renderText(context, d.type === "author" ? "contributor" : "repository", x * SF, y * SF, 2.5 * SF)
+
+    context.fillStyle = COLOR_TEXT
+    y += 22
+
+    if (d.type === "author") {
+        // The author's name
+        font_size = 15
+        setFont(context, font_size * SF, 700, "normal")
+        renderText(context, d.data.author_name, x * SF, y * SF, 1.25 * SF)
+        // d.data.author_lines.forEach((l, i) => {
+        //     renderText(context, l, x * SF, (y + i * line_height * font_size) * SF, 1.25 * SF)
+        // })
+
+        // Number of commits to the central repo
+        y += 25
+        font_size = 12
+        setFont(context, font_size * SF, 400, "normal")
+        context.globalAlpha = 0.8
+        renderText(context, `${formatDigit(d.data.link_central.commit_count)} commits to ${central_repo.label}`, x * SF, y * SF, 1.25 * SF)
+        
+        // First and last commit to main repo
+        font_size = 10.5
+        context.globalAlpha = 0.6
+        setFont(context, font_size * SF, 400, "normal")
+        y += font_size * line_height + 4
+        // Check if the start and end date are in the same month of the same year
+        if(d.data.link_central.commit_sec_min.getMonth() === d.data.link_central.commit_sec_max.getMonth() && d.data.link_central.commit_sec_min.getFullYear() === d.data.link_central.commit_sec_max.getFullYear()) {
+            text = `In ${formatDate(d.data.link_central.commit_sec_min)}`
+        } else { 
+            text = `Between ${formatDate(d.data.link_central.commit_sec_min)} & ${formatDate(d.data.link_central.commit_sec_max)}`
+        }// else
+        renderText(context, text, x * SF, y * SF, 1.25 * SF)
+
+        // Supported through ORCA
+        if(d.data.orca_received) {
+            y += 25
+            font_size = 12
+            context.fillStyle = COLOR_PURPLE
+            setFont(context, font_size * SF, 700, "normal")
+            renderText(context, "supported through ORCA", x * SF, y * SF, 1.5 * SF)
+        }// if
+
+    } else {
+        // The repo's name and owner
+        font_size = 14
+        setFont(context, font_size * SF, 700, "normal")
+        renderText(context, `${d.data.owner}/`, x * SF, y * SF, 1.25 * SF)
+        renderText(context, d.data.name, x * SF, (y + line_height * font_size) * SF, 1.25 * SF)
+
+        // The creation date
+        y += 39
+        font_size = 10
+        context.globalAlpha = 0.6
+        setFont(context, font_size * SF, 400, "normal")
+        renderText(context, `Created in ${formatDate(d.data.createdAt)}`, x * SF, y * SF, 1.25 * SF)
+        // The most recent updated date
+        y += font_size * line_height
+        renderText(context, `Last updated in ${formatDate(d.data.updatedAt)}`, x * SF, y * SF, 1.25 * SF)
+
+        // The number of stars & forks
+        y += 21
+        font_size = 11
+        setFont(context, font_size * SF, 400, "normal")
+        context.globalAlpha = 0.9
+        let stars = d.data.stars
+        let forks = d.data.forks
+        renderText(context, `${stars < 10 ? stars : formatDigit(stars)} stars | ${forks < 10 ? forks : formatDigit(forks)} forks`, x * SF, y * SF, 1.25 * SF)
+        context.globalAlpha = 1
+
+        // Languages
+        if(d.data.languages.length > 0) {
+            y += 26
+            font_size = 10.5
+            context.globalAlpha = 0.6
+            setFont(context, font_size * SF, 400, "italic")
+            renderText(context, "Languages", x * SF, y * SF, 2 * SF)
+
+            font_size = 11.5
+            y += font_size * line_height + 4
+            context.globalAlpha = 0.9
+            setFont(context, font_size * SF, 400, "normal")
+            text = ""
+            for(let i = 0; i < Math.min(3, d.data.languages.length); i++) {
+                text += `${d.data.languages[i]}${i < Math.min(3, d.data.languages.length) - 1 ? ", " : ""}`
+            }// for i
+            renderText(context, text, x * SF, y * SF, 1.25 * SF)
+            if(d.data.languages.length > 3) {
+                y += font_size * line_height
+                text = `& ${d.data.languages.length - 3} more`
+                renderText(context, text, x * SF, y * SF, 1.25 * SF)
+            }// if
+
+        }// if
+
+    }// else
+
+    context.restore()
+}// function drawTooltip
 
 /////////////////////////////////////////////////////////////////////
 /////////////////////////// Text Functions //////////////////////////
