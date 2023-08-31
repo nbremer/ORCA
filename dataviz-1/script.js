@@ -17,6 +17,8 @@
 // Central node a star-like shape of contributors in points?
 // TODO: Is there a way to make it clear that if you use a subset of the data, that is just those that got ORCA, that it's that subset
 
+// TODO: Have the width be determined by the container, not the window. Or have someone set the width beforehand?
+
 /////////////////////////////////////////////////////////////////////
 ///////////////////////////// CONSTANTS /////////////////////////////
 /////////////////////////////////////////////////////////////////////
@@ -25,7 +27,7 @@ const REPOSITORY = "PDFjs"
 
 // NOTE: Because there is no ORCA data yet, this is a dummy factor that will randomly determine roughly how many contributors are randomly selected to receive ORCA
 const ORCA_LEVEL = Math.random()
-console.log("ORCA Level:", ORCA_LEVEL)
+console.log("Random ORCA level this time:", ORCA_LEVEL)
 
 const PI = Math.PI
 const TAU = PI * 2
@@ -54,7 +56,7 @@ let HOVER_ACTIVE = false
 const CENTRAL_RADIUS = 50 // The radius of the central repository node
 let RADIUS_CONTRIBUTOR // The eventual radius along which the contributor nodes are placed
 let RADIUS_CONTRIBUTOR_NON_ORCA // The radius along which the contributor nodes are placed that have not received ORCA
-const INNER_RADIUS_FACTOR = 0.7 // The factor of the RADIUS_CONTRIBUTOR outside of which the inner repos are not allwoed to go in the force simulation
+const INNER_RADIUS_FACTOR = 0.7 // The factor of the RADIUS_CONTRIBUTOR outside of which the inner repos are not allowed to go in the force simulation
 const MAX_CONTRIBUTOR_WIDTH = 55 // The maximum width (at SF = 1) of the contributor name before it gets wrapped
 const CONTRIBUTOR_PADDING = 20 // The padding between the contributor nodes around the circle (at SF = 1)
 
@@ -74,7 +76,7 @@ const context_hover = canvas_hover.getContext("2d")
 
 //Sizes
 const DEFAULT_SIZE = 1500
-let WIDTH, HEIGHT
+let WIDTH, HEIGHT, MARGIN_TOP
 let SF, PIXEL_RATIO
 
 // Resize function
@@ -83,26 +85,26 @@ function resize() {
     PIXEL_RATIO = window.devicePixelRatio
 
     // Screen sizes
-    let width =  window.innerWidth
-    let height = window.innerHeight
-    // Take the smaller of the two
-    let size = min(width, height)
+    let width =  window.innerWidth - 20 // minus a little to avoid a possible horizontal scrollbar
 
+    // It's the width that determines the size
     WIDTH = round(width * PIXEL_RATIO)
-    HEIGHT = round(height * PIXEL_RATIO)
+    MARGIN_TOP = round(WIDTH * 0.2) // For the title and legend etc.
+    HEIGHT = round(width * PIXEL_RATIO) + MARGIN_TOP
 
     // Set the scale factor
-    SF = (size * PIXEL_RATIO) / DEFAULT_SIZE
+    SF = (width * PIXEL_RATIO) / DEFAULT_SIZE
     console.log("SF:", SF)
 
     sizeCanvas(canvas)
     sizeCanvas(canvas_hover)
+
     // Size the canvas
     function sizeCanvas(canvas) {
         canvas.width = WIDTH
         canvas.height = HEIGHT
         canvas.style.width = `${width}px`
-        canvas.style.height = `${height}px`
+        canvas.style.height = `${HEIGHT / PIXEL_RATIO}px`
     }// function sizeCanvas
 
     if (render) draw()
@@ -206,7 +208,6 @@ function createFullVisual(values) {
     /////////////////////////////////////////////////////////////////
     //////////////////////// Data Preparation ///////////////////////
     /////////////////////////////////////////////////////////////////
-
     contributors = values[0]
     repos = values[1]
     links = values[2]
@@ -224,8 +225,8 @@ function createFullVisual(values) {
     /////////////////// Position Contributor Nodes //////////////////
     /////////////////////////////////////////////////////////////////
     // Place the central repo in the middle
-    central_repo.x = central_repo.fx = 0 //WIDTH / 2
-    central_repo.y = central_repo.fy = 0 //HEIGHT / 2
+    central_repo.x = central_repo.fx = 0
+    central_repo.y = central_repo.fy = 0
 
     // Place the contributor nodes in a circle around the central repo
     // Taking into account the max_radius of single-degree repos around them
@@ -238,169 +239,63 @@ function createFullVisual(values) {
     collaborationRepoSimulation()
 
     /////////////////////////////////////////////////////////////////
+    //////// Run Force Simulation for Remaining Contributors ////////
+    /////////////////////////////////////////////////////////////////
+    // Run a force simulation to position the remaining contributors around the central area
+    remainingContributorSimulation()
+
+    function remainingContributorSimulation() {
+
+    }// function remainingContributorSimulation
+
+    /////////////////////////////////////////////////////////////////
     ///////////////////////// Return Sketch /////////////////////////
     /////////////////////////////////////////////////////////////////
 
     return (canvas, context, WIDTH, HEIGHT, SF) => {
-        context.lineJoin = "round" 
-        context_hover.lineJoin = "round" 
-
-        context.fillStyle = COLOR_BACKGROUND
-        context.fillRect(0, 0, WIDTH, HEIGHT)
-
-        // context.save()
-        context.translate(WIDTH / 2, HEIGHT / 2)
-
         // Reset the voronoi/delaunay for the mouse events
         delaunay = d3.Delaunay.from(nodes.map(d => [d.x, d.y]))
         voronoi = delaunay.voronoi([0,0, WIDTH, HEIGHT])
 
-        // Draw the ORCA rings
-        context.fillStyle = context.strokeStyle = COLOR_PURPLE //COLOR_REPO_MAIN //spectral.mix("#e3e3e3", COLOR_REPO_MAIN, 0.75) 
-        let LW = ((RADIUS_CONTRIBUTOR+RADIUS_CONTRIBUTOR_NON_ORCA)/2 - RADIUS_CONTRIBUTOR) * 2
-        let O = 4
-        context.lineWidth = 1.5 * SF
-        // context.lineWidth = LW * SF
+        // Some canvas settings
+        context.lineJoin = "round" 
+        context_hover.lineJoin = "round" 
 
-        // Inner ring of those receiving ORCA
-        context.beginPath()
-        context.moveTo(0 + (RADIUS_CONTRIBUTOR + LW/2 - O) * SF, 0)
-        context.arc(0, 0, (RADIUS_CONTRIBUTOR + LW/2 - O) * SF, 0, TAU)
-        context.moveTo(0 + (RADIUS_CONTRIBUTOR - LW/2) * SF, 0)
-        context.arc(0, 0, (RADIUS_CONTRIBUTOR - LW/2) * SF, 0, TAU, true)
-        context.globalAlpha = 0.06
-        context.fill()
-        context.globalAlpha = 0.2
-        // context.stroke()
-        
-        // Second ring of those not receiving ORCA
-        context.beginPath()
-        context.moveTo(0 + (RADIUS_CONTRIBUTOR_NON_ORCA + LW/2) * SF, 0)
-        context.arc(0, 0, (RADIUS_CONTRIBUTOR_NON_ORCA + LW/2) * SF, 0, TAU)
-        context.moveTo(0 + (RADIUS_CONTRIBUTOR_NON_ORCA - LW/2 + O) * SF, 0)
-        context.arc(0, 0, (RADIUS_CONTRIBUTOR_NON_ORCA - LW/2 + O) * SF, 0, TAU, true)
-        context.globalAlpha = 0.03
-        context.fill()
-        context.globalAlpha = 0.1
-        // context.stroke()
+        // Fill the background with a color
+        context.fillStyle = COLOR_BACKGROUND
+        context.fillRect(0, 0, WIDTH, HEIGHT)
 
-        // Add the title along the two bands
-        context.textAlign = "center"
-        context.textBaseline = "bottom"
-        context.globalAlpha = 0.5
-        setFont(context, 16 * SF, 700, "italic")
-        drawTextAlongArc(context, "contributors supported through ORCA", TAU * 0.9, (RADIUS_CONTRIBUTOR - (LW/2 - O - 2)) * SF, "up", 1.5 * SF) 
-        
-        // context.textBaseline = "top"
-        drawTextAlongArc(context, "other top contributors", TAU * 0.9, (RADIUS_CONTRIBUTOR_NON_ORCA - (LW/2 - O - 2)) * SF, "up", 1.5 * SF) 
-        context.globalAlpha = 1
-        
+        // Move the visual to the center
+        // context.save()
+        context.translate(WIDTH / 2, MARGIN_TOP + WIDTH / 2)
 
+        /////////////////////////////////////////////////////////////
+        // Draw two rings that show the placement of the ORCA receiving contributors versus the non-ORCA receiving contributors
+        drawOrcaRings(context)
 
-
+        /////////////////////////////////////////////////////////////
         // Draw all the links as lines
         links.forEach(l => {
             drawLink(context, l) 
-            // context.beginPath()
-            // context.moveTo(l.source.x * SF, l.source.y * SF)
-            // context.lineTo(l.target.x * SF, l.target.y * SF)
-            // context.stroke()
         })// forEach
 
         /////////////////////////////////////////////////////////////
         // Draw all the nodes as circles
-        nodes
-            // .filter(d => d.id !== central_repo.id)
-            .forEach(d => {
-                drawNode(context, SF, d)
-            })// forEach
+        nodes.forEach(d => {
+            drawNode(context, SF, d)
+        })// forEach
 
         /////////////////////////////////////////////////////////////
-        // Draw the labels for the repositories in the center (those that have more than one contributor)
+        // Draw the labels for the contributors and for the repositories in the center
+        // (those that have more than one contributor)
         nodes_central.forEach(d => {
             drawNodeLabel(context, d)
         })// forEach
 
-        console.log("Finished Drawing")
+        /////////////////////////////////////////////////////////////
+        // Setup the hover settings
+        setupHover()
 
-        // canvas.ontouchmove =
-        // canvas.onmousemove = event => {
-        //         event.preventDefault();
-        //         console.log(event.layerX)
-        //     };
-
-        // HOVER
-        d3.select("#canvas-hover").on("mousemove", function(event) {
-            // Get the position of the mouse on the canvas
-            let [mx, my] = d3.pointer(event, this)
-            mx = ((mx * PIXEL_RATIO) - WIDTH / 2) / SF
-            my = ((my * PIXEL_RATIO) - HEIGHT / 2) / SF
-
-            //Get the closest hovered node
-            let point = delaunay.find(mx, my)
-            let d = nodes[point]
-            // Get the distance from the mouse to the node
-            let dist = Math.sqrt((d.x - mx)**2 + (d.y - my)**2)
-            // If the distance is too big, don't show anything
-            let FOUND = dist < d.r + 50
-            
-            drawHoverState(context_hover, d, FOUND)
-
-            function drawHoverState(context, d, FOUND) {
-                // Draw the hover canvas
-                context.save()
-                context.clearRect(0, 0, WIDTH, HEIGHT)
-                context.translate(WIDTH / 2, HEIGHT / 2)
-
-                if(FOUND) {
-                    HOVER_ACTIVE = true
-
-                    // Fade out the main canvas, using CSS
-                    canvas.style.opacity = '0.3'
-
-                    /////////////////////////////////////////////////
-                    // Draw all the links to this node
-                    links.filter(l => l.source.id === d.id || l.target.id === d.id)
-                        .forEach(l => {
-                            drawLink(context, l)
-                        })// forEach
-
-                    /////////////////////////////////////////////////
-                    // Get all the connected nodes (if not done before)
-                    if(d.neighbors === undefined) d.neighbors = nodes.filter(n => links.find(l => l.source.id === d.id && l.target.id === n.id || l.target.id === d.id && l.source.id === n.id))
-                    // Draw all the connected nodes
-                    d.neighbors.forEach(n => {
-                        // Draw the hovered node
-                        drawNode(context, SF, n)
-                        if(n.node_central) drawNodeLabel(context_hover, n)
-                    })// forEach
-
-                    /////////////////////////////////////////////////
-                    // Draw the hovered node
-                    drawNode(context, SF, d)
-                    // Show a ring around the hovered node
-                    drawHoverRing(context, d)
-                    
-                    /////////////////////////////////////////////////
-                    // Show its label
-                    // if(d.node_central && d.type === "contributor") drawNodeLabel(context, d)
-
-                    /////////////////////////////////////////////////
-                    // Create a tooltip with more info
-                    drawTooltip(context, d)
-
-
-                } else {
-                    HOVER_ACTIVE = false
-
-                    // Fade the main canvas back in
-                    canvas.style.opacity = '1'
-                }// else
-
-                context.restore()
-            }// function drawHoverState
-
-        })
     }// sketch
 }// createFullVisual
 
@@ -841,6 +736,52 @@ function collaborationRepoSimulation() {
 }// function collaborationRepoSimulation
 
 /////////////////////////////////////////////////////////////////////
+//////////////////////// Background Elements ////////////////////////
+/////////////////////////////////////////////////////////////////////
+// Draw two rings around the central node to show those that receive ORCA vs those that do not
+function drawOrcaRings(context) {
+    // Draw the ORCA rings
+    context.fillStyle = context.strokeStyle = COLOR_PURPLE //COLOR_REPO_MAIN //spectral.mix("#e3e3e3", COLOR_REPO_MAIN, 0.75) 
+    let LW = ((RADIUS_CONTRIBUTOR+RADIUS_CONTRIBUTOR_NON_ORCA)/2 - RADIUS_CONTRIBUTOR) * 2
+    let O = 4
+    context.lineWidth = 1.5 * SF
+    // context.lineWidth = LW * SF
+
+    // Inner ring of those receiving ORCA
+    context.beginPath()
+    context.moveTo(0 + (RADIUS_CONTRIBUTOR + LW/2 - O) * SF, 0)
+    context.arc(0, 0, (RADIUS_CONTRIBUTOR + LW/2 - O) * SF, 0, TAU)
+    context.moveTo(0 + (RADIUS_CONTRIBUTOR - LW/2) * SF, 0)
+    context.arc(0, 0, (RADIUS_CONTRIBUTOR - LW/2) * SF, 0, TAU, true)
+    context.globalAlpha = 0.06
+    context.fill()
+    context.globalAlpha = 0.2
+    // context.stroke()
+    
+    // Second ring of those not receiving ORCA
+    context.beginPath()
+    context.moveTo(0 + (RADIUS_CONTRIBUTOR_NON_ORCA + LW/2) * SF, 0)
+    context.arc(0, 0, (RADIUS_CONTRIBUTOR_NON_ORCA + LW/2) * SF, 0, TAU)
+    context.moveTo(0 + (RADIUS_CONTRIBUTOR_NON_ORCA - LW/2 + O) * SF, 0)
+    context.arc(0, 0, (RADIUS_CONTRIBUTOR_NON_ORCA - LW/2 + O) * SF, 0, TAU, true)
+    context.globalAlpha = 0.03
+    context.fill()
+    context.globalAlpha = 0.1
+    // context.stroke()
+
+    // Add the title along the two bands
+    context.textAlign = "center"
+    context.textBaseline = "bottom"
+    context.globalAlpha = 0.5
+    setFont(context, 16 * SF, 700, "italic")
+    drawTextAlongArc(context, "contributors supported through ORCA", TAU * 0.9, (RADIUS_CONTRIBUTOR - (LW/2 - O - 2)) * SF, "up", 1.5 * SF) 
+    
+    // context.textBaseline = "top"
+    drawTextAlongArc(context, "other top contributors", TAU * 0.9, (RADIUS_CONTRIBUTOR_NON_ORCA - (LW/2 - O - 2)) * SF, "up", 1.5 * SF) 
+    context.globalAlpha = 1
+}// function drawOrcaRings
+
+/////////////////////////////////////////////////////////////////////
 /////////////////////// Node Drawing Functions //////////////////////
 /////////////////////////////////////////////////////////////////////
 
@@ -1026,6 +967,89 @@ function calculateLinkGradient(context, l) {
 /////////////////////////////////////////////////////////////////////
 ////////////////////////// Hover Functions //////////////////////////
 /////////////////////////////////////////////////////////////////////
+// Setup the hover on the top canvas, get the mouse position and call the drawing functions
+function setupHover() {
+    d3.select("#canvas-hover").on("mousemove", function(event) {
+        // Get the position of the mouse on the canvas
+        let [mx, my] = d3.pointer(event, this)
+        mx = ((mx * PIXEL_RATIO) - WIDTH / 2) / SF
+        my = ((my * PIXEL_RATIO) - (MARGIN_TOP + WIDTH / 2)) / SF
+
+        //Get the closest hovered node
+        let point = delaunay.find(mx, my)
+        let d = nodes[point]
+        // Get the distance from the mouse to the node
+        let dist = Math.sqrt((d.x - mx)**2 + (d.y - my)**2)
+        // If the distance is too big, don't show anything
+        let FOUND = dist < d.r + 50
+        
+        // Draw the hover state on the top canvas
+        drawHoverState(context_hover, d, FOUND)
+    })// on mousemove
+
+    // canvas.ontouchmove =
+    // canvas.onmousemove = event => {
+    //         event.preventDefault();
+    //         console.log(event.layerX)
+    //     };
+
+}// function setupHover
+
+// Draw the hovered node and its links and neighbors and a tooltip
+function drawHoverState(context, d, FOUND) {
+    // Draw the hover canvas
+    context.save()
+    context.clearRect(0, 0, WIDTH, HEIGHT)
+    context.translate(WIDTH / 2, MARGIN_TOP + WIDTH / 2)
+
+    if(FOUND) {
+        HOVER_ACTIVE = true
+
+        // Fade out the main canvas, using CSS
+        canvas.style.opacity = '0.3'
+
+        /////////////////////////////////////////////////
+        // Draw all the links to this node
+        links.filter(l => l.source.id === d.id || l.target.id === d.id)
+            .forEach(l => {
+                drawLink(context, l)
+            })// forEach
+
+        /////////////////////////////////////////////////
+        // Get all the connected nodes (if not done before)
+        if(d.neighbors === undefined) d.neighbors = nodes.filter(n => links.find(l => l.source.id === d.id && l.target.id === n.id || l.target.id === d.id && l.source.id === n.id))
+        // Draw all the connected nodes
+        d.neighbors.forEach(n => {
+            // Draw the hovered node
+            drawNode(context, SF, n)
+            if(n.node_central) drawNodeLabel(context_hover, n)
+        })// forEach
+
+        /////////////////////////////////////////////////
+        // Draw the hovered node
+        drawNode(context, SF, d)
+        // Show a ring around the hovered node
+        drawHoverRing(context, d)
+        
+        /////////////////////////////////////////////////
+        // Show its label
+        // if(d.node_central && d.type === "contributor") drawNodeLabel(context, d)
+
+        /////////////////////////////////////////////////
+        // Create a tooltip with more info
+        drawTooltip(context, d)
+
+
+    } else {
+        HOVER_ACTIVE = false
+
+        // Fade the main canvas back in
+        canvas.style.opacity = '1'
+    }// else
+
+    context.restore()
+}// function drawHoverState
+
 function drawTooltip(context, d) {
     // Figure out the base x and y position of the tooltip
     const x_base = d.x
