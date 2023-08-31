@@ -2,7 +2,7 @@
 
 // TODO: Make big lines into tapered ones?
 
-// TODO: Add title and intro (summary)
+// TODO: Add title and intro (summary) - On canvas or via divs?
 // Top contributors by count are these people
 // These people have also contributed to X other repos
 // Tiny histogram of the number of people that have done Y commits - with those top contributors highlighted
@@ -141,11 +141,6 @@ const scale_repo_radius = d3.scaleSqrt()
 const scale_contributor_radius = d3.scaleSqrt()
     .range([8, 30])
 
-// const scale_node_opacity = d3.scaleLinear()
-//     .domain([1,7])
-//     .range([0.2,1])
-//     .clamp(true)
-
 const scale_link_distance = d3.scaleLinear()
     .domain([1,50])
     .range([10,80])
@@ -162,39 +157,40 @@ const scale_link_width = d3.scaleLinear()
 // The scale for between which min and max date the contributor has been involved in the central repo
 const scale_involved_range = d3.scaleLinear()
     .range([0, TAU])
-    // .range([0 - PI/2, TAU - PI/2])
 
 /////////////////////////////////////////////////////////////////////
 /////////////////////////////// START ///////////////////////////////
 /////////////////////////////////////////////////////////////////////
 
-//Start it all the first time
-window.addEventListener("resize", resize)
-resize()
-
-//Draw
-function draw() {
-    render(canvas, context, WIDTH, HEIGHT, SF)
-}//function draw
-
+//////////////////////// Datasets to Read in ////////////////////////
 let promises = []
 promises.push(d3.csv(`data/${REPOSITORY}/authorInfo-PDFjs.csv`))
 promises.push(d3.csv(`data/${REPOSITORY}/baseRepoInfo-PDFjs.csv`))
 promises.push(d3.csv(`data/${REPOSITORY}/links-PDFjs.csv`))
 promises.push(d3.csv(`data/${REPOSITORY}/remainingContributors-PDFjs.csv`))
 
-///////////////////////// Read in the fonts /////////////////////////
-
+///////////////////////// Fonts to activate /////////////////////////
 const FONT_FAMILY = "Atkinson Hyperlegible"
 document.fonts.load(`normal 400 10px "${FONT_FAMILY}"`)
 document.fonts.load(`italic 400 10px "${FONT_FAMILY}"`)
 document.fonts.load(`normal 700 10px "${FONT_FAMILY}"`)
 document.fonts.load(`italic 700 10px "${FONT_FAMILY}"`)
 
+// Setup the resizing event and first scaling
+window.addEventListener("resize", resize)
+resize()
+
+// Draw
+function draw() {
+    render(canvas, context, WIDTH, HEIGHT, SF)
+}//function draw
+
+// Start
 document.fonts.ready.then(() => {
     Promise.all(promises).then(values => {
         //Create the rendering function
         render = createFullVisual(values)
+
         //Draw the visual   
         draw()        
     })//promises
@@ -246,6 +242,47 @@ function createFullVisual(values) {
 
     function remainingContributorSimulation() {
 
+        const PAD = 50
+        let simulation = d3.forceSimulation()
+            .force("collide",
+                d3.forceCollide()
+                    .radius(d => d.r + Math.random() * 40 + 20)
+                    .strength(0)
+            )
+            .force("charge",
+                d3.forceManyBody()
+            )
+        .force("x", d3.forceX().x(0).strength(0.1)) //0.1
+        .force("y", d3.forceY().y(0).strength(0.1)) //0.1
+        // .force("center", d3.forceCenter(0,0))
+
+        // Add a dummy node to the dataset that is fixed in the center that is as big as the NON-ORCA circle
+        let LW = ((RADIUS_CONTRIBUTOR+RADIUS_CONTRIBUTOR_NON_ORCA)/2 - RADIUS_CONTRIBUTOR) * 2
+        remainingContributors.push({
+            x: 0,
+            y: 0,
+            fx: 0,
+            fy: 0,
+            r: RADIUS_CONTRIBUTOR_NON_ORCA + LW/2,
+            id: "dummy"
+        })
+
+        // Perform the simulation
+        simulation
+            .nodes(remainingContributors)
+            .stop()
+
+        //Manually "tick" through the network
+        let n_ticks = 200
+        for (let i = 0; i < n_ticks; ++i) {
+            simulation.tick()
+            //Ramp up collision strength to provide smooth transition
+            simulation.force("collide").strength(Math.pow(i / n_ticks, 2) * 0.7)
+        }//for i
+
+        // Remove the dummy node from the dataset again
+        remainingContributors.pop()
+
     }// function remainingContributorSimulation
 
     /////////////////////////////////////////////////////////////////
@@ -268,6 +305,16 @@ function createFullVisual(values) {
         // Move the visual to the center
         // context.save()
         context.translate(WIDTH / 2, MARGIN_TOP + WIDTH / 2)
+
+        /////////////////////////////////////////////////////////////
+        // Draw the remaining contributors
+        context.fillStyle = COLOR_CONTRIBUTOR
+        context.globalAlpha = 0.4
+        remainingContributors.forEach(d => {
+            context.globalAlpha = Math.random() * 0.4 + 0.2
+            drawCircle(context, d.x, d.y, SF, d.r)
+        })// forEach
+        context.globalAlpha = 1
 
         /////////////////////////////////////////////////////////////
         // Draw two rings that show the placement of the ORCA receiving contributors versus the non-ORCA receiving contributors
@@ -373,12 +420,14 @@ function prepareData(contributors, repos, links) {
         d.commit_count = +d.commit_count
         d.contributor_sec_min = parseDateUnix(d.author_sec_min)
         d.contributor_sec_max = parseDateUnix(d.author_sec_max)
+
+        d.type = "contributor"
     })// forEach
 
     // console.log(contributors[0])
     // console.log(repos[0])
-    // console.log(remainingContributors[0])
     // console.log(links[0])
+    console.log(remainingContributors)
 
     ////////////////////////// Create Nodes /////////////////////////
     // Combine the contributors and repos into one variable to become the nodes
@@ -447,6 +496,14 @@ function prepareData(contributors, repos, links) {
         }// else 
 
         d.color = d.data.color
+    })// forEach
+
+    remainingContributors.forEach(d => {
+        // Initial settings
+        d.x = (Math.random() > 0.5 ? -1 : 1) * Math.random()
+        d.y = (Math.random() > 0.5 ? -1 : 1) * Math.random()
+
+        d.r = scale_contributor_radius(d.commit_count) / 2
     })// forEach
 
     // Replace some values for the central repository
@@ -643,7 +700,6 @@ function positionContributorNodes() {
 
 // Run a force simulation to position the repos that are shared between contributors
 function collaborationRepoSimulation() {
-    //
     let simulation = d3.forceSimulation()
         .force("link",
             d3.forceLink()
