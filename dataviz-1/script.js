@@ -1,20 +1,11 @@
-// A tiny mark for everyone else (like pebbles on the outside)
+// TODO: A tiny mark for everyone else (like pebbles on the outside)
+
 // TODO: Make big lines into tapered ones?
 
-// TODO: Make it clear which people are currently employees of the company that wants to give ORCA, and who have already received it
-// TODO: Is there a way to make it clear that if you use a subset of the data, that is just those that got ORCA, that it's that subset
-
-// This is the actual set of people that is getting compensation
-// Marker of yellow behind the name?
-// Ring for those that are getting ORCA and a larger ring for those that are not
-
-// Add title and intro (summary)
-// Mozilla/pdfjs has time period
+// TODO: Add title and intro (summary)
 // Top contributors by count are these people
 // These people have also contributed to X other repos
 // Tiny histogram of the number of people that have done Y commits - with those top contributors highlighted
-
-// Central node a star-like shape of authors in points?
 
 // TODO: Add a legend
 // TODO: Add credit
@@ -23,19 +14,18 @@
 // Look into SAT solver for label placement
 // Look into Cynthia Brewer paper for label
 
-
-
-
-
-
-
-// Show; these people are compensated through being an employee, these people through ORCA, and these not
+// Central node a star-like shape of contributors in points?
+// TODO: Is there a way to make it clear that if you use a subset of the data, that is just those that got ORCA, that it's that subset
 
 /////////////////////////////////////////////////////////////////////
 ///////////////////////////// CONSTANTS /////////////////////////////
 /////////////////////////////////////////////////////////////////////
 
 const REPOSITORY = "PDFjs"
+
+// NOTE: Because there is no ORCA data yet, this is a dummy factor that will randomly determine roughly how many contributors are randomly selected to receive ORCA
+const ORCA_LEVEL = Math.random()
+console.log("ORCA Level:", ORCA_LEVEL)
 
 const PI = Math.PI
 const TAU = PI * 2
@@ -49,7 +39,7 @@ let min = Math.min
 let max = Math.max
 
 // Datasets
-let authors, remainingAuthors
+let contributors, remainingContributors
 let repos
 let nodes = [], nodes_central
 let links
@@ -62,11 +52,11 @@ let HOVER_ACTIVE = false
 
 // Settings
 const CENTRAL_RADIUS = 50 // The radius of the central repository node
-let RADIUS_AUTHOR // The eventual radius along which the author nodes are placed
-let RADIUS_AUTHOR_NON_ORCA // The radius along which the author nodes are placed that have not received ORCA
-const INNER_RADIUS_FACTOR = 0.7 // The factor of the RADIUS_AUTHOR outside of which the inner repos are not allwoed to go in the force simulation
-const MAX_AUTHOR_WIDTH = 55 // The maximum width (at SF = 1) of the author name before it gets wrapped
-const AUTHOR_PADDING = 20 // The padding between the author nodes around the circle (at SF = 1)
+let RADIUS_CONTRIBUTOR // The eventual radius along which the contributor nodes are placed
+let RADIUS_CONTRIBUTOR_NON_ORCA // The radius along which the contributor nodes are placed that have not received ORCA
+const INNER_RADIUS_FACTOR = 0.7 // The factor of the RADIUS_CONTRIBUTOR outside of which the inner repos are not allwoed to go in the force simulation
+const MAX_CONTRIBUTOR_WIDTH = 55 // The maximum width (at SF = 1) of the contributor name before it gets wrapped
+const CONTRIBUTOR_PADDING = 20 // The padding between the contributor nodes around the circle (at SF = 1)
 
 /////////////////////////////////////////////////////////////////////
 /////////////////////////// Create Canvas ///////////////////////////
@@ -122,12 +112,14 @@ function resize() {
 /////////////////////////////// Colors //////////////////////////////
 /////////////////////////////////////////////////////////////////////
 
-const COLOR_BACKGROUND = "#f7f7f7"
-const COLOR_REPO_MAIN = "#f2a900"
-const COLOR_REPO = "#64d6d3" // "#b2faf8"
-const COLOR_AUTHOR = "#ea9df5"
-const COLOR_LINK = "#e8e8e8"
+const COLOR_YELLOW = "#f2a900"
 const COLOR_PURPLE = "#783ce6"
+
+const COLOR_BACKGROUND = "#f7f7f7"
+const COLOR_REPO_MAIN = COLOR_YELLOW
+const COLOR_REPO = "#64d6d3" // "#b2faf8"
+const COLOR_CONTRIBUTOR = "#ea9df5"
+const COLOR_LINK = "#e8e8e8"
 const COLOR_TEXT = "#4d4950"
 
 /////////////////////////////////////////////////////////////////////
@@ -144,7 +136,7 @@ const scale_repo_radius = d3.scaleSqrt()
     .range([4, 20])
 
 // Based on the number of commits to the central repo
-const scale_author_radius = d3.scaleSqrt()
+const scale_contributor_radius = d3.scaleSqrt()
     .range([8, 30])
 
 // const scale_node_opacity = d3.scaleLinear()
@@ -165,7 +157,7 @@ const scale_link_width = d3.scaleLinear()
     .range([1,2,5])
     // .clamp(true)
 
-// The scale for between which min and max date the author has been involved in the central repo
+// The scale for between which min and max date the contributor has been involved in the central repo
 const scale_involved_range = d3.scaleLinear()
     .range([0, TAU])
     // .range([0 - PI/2, TAU - PI/2])
@@ -215,34 +207,34 @@ function createFullVisual(values) {
     //////////////////////// Data Preparation ///////////////////////
     /////////////////////////////////////////////////////////////////
 
-    authors = values[0]
+    contributors = values[0]
     repos = values[1]
     links = values[2]
-    remainingAuthors = values[3]
-    prepareData(authors, repos, links, remainingAuthors)
+    remainingContributors = values[3]
+    prepareData(contributors, repos, links, remainingContributors)
 
     /////////////////////////////////////////////////////////////////
-    //////////////// Run Force Simulation per Author ////////////////
+    ////////////// Run Force Simulation per Contributor /////////////
     /////////////////////////////////////////////////////////////////
-    // Run a force simulation for per author for all the repos that are not shared between other authors
+    // Run a force simulation for per contributor for all the repos that are not shared between other contributors
     // Like a little cloud of repos around them
-    singleAuthorForceSimulation()
+    singleContributorForceSimulation()
 
     /////////////////////////////////////////////////////////////////
-    ///////////////////// Position Author Nodes /////////////////////
+    /////////////////// Position Contributor Nodes //////////////////
     /////////////////////////////////////////////////////////////////
     // Place the central repo in the middle
     central_repo.x = central_repo.fx = 0 //WIDTH / 2
     central_repo.y = central_repo.fy = 0 //HEIGHT / 2
 
-    // Place the author nodes in a circle around the central repo
+    // Place the contributor nodes in a circle around the central repo
     // Taking into account the max_radius of single-degree repos around them
-    positionAuthorNodes()
+    positionContributorNodes()
 
     /////////////////////////////////////////////////////////////////
     ///////////// Run Force Simulation for Shared Repos /////////////
     /////////////////////////////////////////////////////////////////
-    // Run a force simulation to position the repos that are shared between authors 
+    // Run a force simulation to position the repos that are shared between contributors 
     collaborationRepoSimulation()
 
     /////////////////////////////////////////////////////////////////
@@ -265,17 +257,17 @@ function createFullVisual(values) {
 
         // Draw the ORCA rings
         context.fillStyle = context.strokeStyle = COLOR_PURPLE //COLOR_REPO_MAIN //spectral.mix("#e3e3e3", COLOR_REPO_MAIN, 0.75) 
-        let LW = ((RADIUS_AUTHOR+RADIUS_AUTHOR_NON_ORCA)/2 - RADIUS_AUTHOR) * 2
+        let LW = ((RADIUS_CONTRIBUTOR+RADIUS_CONTRIBUTOR_NON_ORCA)/2 - RADIUS_CONTRIBUTOR) * 2
         let O = 4
         context.lineWidth = 1.5 * SF
         // context.lineWidth = LW * SF
 
         // Inner ring of those receiving ORCA
         context.beginPath()
-        context.moveTo(0 + (RADIUS_AUTHOR + LW/2 - O) * SF, 0)
-        context.arc(0, 0, (RADIUS_AUTHOR + LW/2 - O) * SF, 0, TAU)
-        context.moveTo(0 + (RADIUS_AUTHOR - LW/2) * SF, 0)
-        context.arc(0, 0, (RADIUS_AUTHOR - LW/2) * SF, 0, TAU, true)
+        context.moveTo(0 + (RADIUS_CONTRIBUTOR + LW/2 - O) * SF, 0)
+        context.arc(0, 0, (RADIUS_CONTRIBUTOR + LW/2 - O) * SF, 0, TAU)
+        context.moveTo(0 + (RADIUS_CONTRIBUTOR - LW/2) * SF, 0)
+        context.arc(0, 0, (RADIUS_CONTRIBUTOR - LW/2) * SF, 0, TAU, true)
         context.globalAlpha = 0.06
         context.fill()
         context.globalAlpha = 0.2
@@ -283,23 +275,24 @@ function createFullVisual(values) {
         
         // Second ring of those not receiving ORCA
         context.beginPath()
-        context.moveTo(0 + (RADIUS_AUTHOR_NON_ORCA + LW/2) * SF, 0)
-        context.arc(0, 0, (RADIUS_AUTHOR_NON_ORCA + LW/2) * SF, 0, TAU)
-        context.moveTo(0 + (RADIUS_AUTHOR_NON_ORCA - LW/2 + O) * SF, 0)
-        context.arc(0, 0, (RADIUS_AUTHOR_NON_ORCA - LW/2 + O) * SF, 0, TAU, true)
+        context.moveTo(0 + (RADIUS_CONTRIBUTOR_NON_ORCA + LW/2) * SF, 0)
+        context.arc(0, 0, (RADIUS_CONTRIBUTOR_NON_ORCA + LW/2) * SF, 0, TAU)
+        context.moveTo(0 + (RADIUS_CONTRIBUTOR_NON_ORCA - LW/2 + O) * SF, 0)
+        context.arc(0, 0, (RADIUS_CONTRIBUTOR_NON_ORCA - LW/2 + O) * SF, 0, TAU, true)
         context.globalAlpha = 0.03
         context.fill()
         context.globalAlpha = 0.1
-
         // context.stroke()
+
+        // Add the title along the two bands
         context.textAlign = "center"
         context.textBaseline = "bottom"
         context.globalAlpha = 0.5
         setFont(context, 16 * SF, 700, "italic")
-        drawTextAlongArc(context, "contributors supported through ORCA", TAU * 0.9, (RADIUS_AUTHOR - (LW/2 - O - 2)) * SF, "up", 1.5 * SF) 
+        drawTextAlongArc(context, "contributors supported through ORCA", TAU * 0.9, (RADIUS_CONTRIBUTOR - (LW/2 - O - 2)) * SF, "up", 1.5 * SF) 
         
         // context.textBaseline = "top"
-        drawTextAlongArc(context, "other top contributors", TAU * 0.9, (RADIUS_AUTHOR_NON_ORCA - (LW/2 - O - 2)) * SF, "up", 1.5 * SF) 
+        drawTextAlongArc(context, "other top contributors", TAU * 0.9, (RADIUS_CONTRIBUTOR_NON_ORCA - (LW/2 - O - 2)) * SF, "up", 1.5 * SF) 
         context.globalAlpha = 1
         
 
@@ -390,7 +383,7 @@ function createFullVisual(values) {
                     
                     /////////////////////////////////////////////////
                     // Show its label
-                    // if(d.node_central && d.type === "author") drawNodeLabel(context, d)
+                    // if(d.node_central && d.type === "contributor") drawNodeLabel(context, d)
 
                     /////////////////////////////////////////////////
                     // Create a tooltip with more info
@@ -416,31 +409,23 @@ function createFullVisual(values) {
 /////////////////////////////////////////////////////////////////////
 
 ////////////////// Prepare the data for the visual //////////////////
-function prepareData(authors, repos, links) {
+function prepareData(contributors, repos, links) {
     /////////////////////////////////////////////////////////////
     ///////////////////// Initial Data Prep /////////////////////
     /////////////////////////////////////////////////////////////
-    const ORCA_LEVEL = 0.5 //Math.random()
-    console.log(ORCA_LEVEL)
+    contributors.forEach(d => {
+        d.contributor_name = d.author_name_top
 
-    authors.forEach(d => {
-        d.author_name = d.author_name_top
+        // TODO: NOTE | Because this data isn't available yet, make it random
+        d.orca_received = Math.random() <= ORCA_LEVEL ? true : false
 
-        // // NOTE: Not used anymore
-        // // Has the person been a (Mozilla) employee
-        // d.employee_sec_min = parseDateUnix(d.employee_sec_min)
-        // d.employee_sec_max = parseDateUnix(d.employee_sec_max)
+        d.color = COLOR_CONTRIBUTOR
 
-        // Because this data isn't available yet, make it random
-        d.orca_received = Math.random() > ORCA_LEVEL ? true : false
-
-        d.color = COLOR_AUTHOR
-
-        // Determine across how many lines to split the author name
-        setAuthorFont(context);
-        [d.author_lines, d.author_max_width] = getLines(context, d.author_name, MAX_AUTHOR_WIDTH);
+        // Determine across how many lines to split the contributor name
+        setContributorFont(context);
+        [d.contributor_lines, d.contributor_max_width] = getLines(context, d.contributor_name, MAX_CONTRIBUTOR_WIDTH);
         
-        delete d.author_name_top
+        delete d.contributor_name_top
     })// forEach
 
     repos.forEach(d => {
@@ -471,7 +456,7 @@ function prepareData(authors, repos, links) {
 
     links.forEach(d => {
         // Source
-        d.author_name = d.author_name_top
+        d.contributor_name = d.author_name_top
         // Target
         d.repo = d.base_repo_original
 
@@ -489,22 +474,22 @@ function prepareData(authors, repos, links) {
         delete d.author_name_top
     })// forEach
 
-    remainingAuthors.forEach(d => {
+    remainingContributors.forEach(d => {
         d.commit_count = +d.commit_count
-        d.author_sec_min = parseDateUnix(d.author_sec_min)
-        d.author_sec_max = parseDateUnix(d.author_sec_max)
+        d.contributor_sec_min = parseDateUnix(d.author_sec_min)
+        d.contributor_sec_max = parseDateUnix(d.author_sec_max)
     })// forEach
 
-    // console.log(authors[0])
+    // console.log(contributors[0])
     // console.log(repos[0])
-    // console.log(remainingAuthors[0])
+    // console.log(remainingContributors[0])
     // console.log(links[0])
 
     ////////////////////////// Create Nodes /////////////////////////
-    // Combine the authors and repos into one variable to become the nodes
-    authors.forEach((d,i) => {
+    // Combine the contributors and repos into one variable to become the nodes
+    contributors.forEach((d,i) => {
         nodes.push({
-            id: d.author_name, type: "author", label: d.author_name, data: d
+            id: d.contributor_name, type: "contributor", label: d.contributor_name, data: d
         })
     })// forEach
     repos.forEach((d,i) => {
@@ -515,7 +500,7 @@ function prepareData(authors, repos, links) {
 
     // Add the index of the node to the links
     links.forEach(d => {
-        d.source = nodes.find(n => n.id === d.author_name).id
+        d.source = nodes.find(n => n.id === d.contributor_name).id
         d.target = nodes.find(n => n.id === d.repo).id
     })// forEach
 
@@ -530,14 +515,14 @@ function prepareData(authors, repos, links) {
         // d.neighbors = nodes.filter(n => links.find(l => l.source === d.id && l.target === n.id || l.target === d.id && l.source === n.id))
     })// forEach
 
-    // Sort the nodes by type and id (author name)
+    // Sort the nodes by type and id (contributor name)
     nodes.sort((a,b) => {
         if(a.type === b.type) {
             if(a.id.toLowerCase() < b.id.toLowerCase()) return -1
             else if(a.id.toLowerCase() > b.id.toLowerCase()) return 1
             else return 0
         } else {
-            if(a.type === "author") return -1
+            if(a.type === "contributor") return -1
             else return 1
         }
     })// sort
@@ -547,7 +532,7 @@ function prepareData(authors, repos, links) {
 
     // Set scales
     scale_repo_radius.domain(d3.extent(repos, d => d.stars))
-    scale_author_radius.domain(d3.extent(links.filter(l => l.target === central_repo.id), d => d.commit_count))
+    scale_contributor_radius.domain(d3.extent(links.filter(l => l.target === central_repo.id), d => d.commit_count))
     scale_involved_range.domain([central_repo.data.createdAt, central_repo.data.updatedAt])
 
     // Determine some visual settings for the nodes
@@ -555,12 +540,12 @@ function prepareData(authors, repos, links) {
         d.index = i
         d.data.index = i
 
-        // If this node is an "author", find the number of commits they have on the central repo node
-        if(d.type === "author") {
+        // If this node is an "contributor", find the number of commits they have on the central repo node
+        if(d.type === "contributor") {
             let link_to_central = links.find(l => l.source === d.id && l.target === central_repo.id)
             d.data.link_central = link_to_central
             // d.data.commit_count_central = link_to_central.commit_count
-            d.r = scale_author_radius(d.data.link_central.commit_count)
+            d.r = scale_contributor_radius(d.data.link_central.commit_count)
         }     
         else {
             d.r = scale_repo_radius(d.data.stars)
@@ -578,21 +563,21 @@ function prepareData(authors, repos, links) {
 }// function prepareData
 
 /////////////////////////////////////////////////////////////////////
-/////////////////// Force Simulation | Per Author ///////////////////
+///////////////// Force Simulation | Per Contributor ////////////////
 /////////////////////////////////////////////////////////////////////
 
-// Run a force simulation for per author for all the repos that are not shared between other authors
+// Run a force simulation for per contributor for all the repos that are not shared between other contributors
 // Like a little cloud of repos around them
-function singleAuthorForceSimulation() {
-    // First fix the author nodes in the center - this is only temporarily
+function singleContributorForceSimulation() {
+    // First fix the contributor nodes in the center - this is only temporarily
     nodes
-        .filter(d => d.type === "author")
+        .filter(d => d.type === "contributor")
         .forEach((d,i) => {
                 d.x = d.fx = 0
                 d.y = d.fy = 0
 
                 // // For testing
-                // // Place the authors in a grid of 10 columns
+                // // Place the contributors in a grid of 10 columns
                 // d.x = -WIDTH/4 + (i % 8) * 140
                 // d.y = -HEIGHT/4 + Math.floor(i / 8) * 150
                 // d.fx = d.x
@@ -601,22 +586,22 @@ function singleAuthorForceSimulation() {
 
     // Next run a force simulation to place all the single-degree repositories
     nodes
-        .filter(d => d.type === "author")
+        .filter(d => d.type === "contributor")
         .forEach(d => {
-            // Find all the nodes that are connected to this one with a degree of one, including the author node itself
-            let nodes_to_author = nodes.filter(n => links.find(l => l.source === d.id && l.target === n.id && n.degree === 1) || n.id === d.id)
+            // Find all the nodes that are connected to this one with a degree of one, including the contributor node itself
+            let nodes_to_contributor = nodes.filter(n => links.find(l => l.source === d.id && l.target === n.id && n.degree === 1) || n.id === d.id)
 
             // If there are no nodes connected to this one, skip it
-            // if(nodes_to_author.length <= 1) return
+            // if(nodes_to_contributor.length <= 1) return
 
-            // Save the list of repositories that are connected to this author (with a degree of one)
-            d.connected_single_repo = nodes_to_author.filter(n => n.type === "repo")
+            // Save the list of repositories that are connected to this contributor (with a degree of one)
+            d.connected_single_repo = nodes_to_contributor.filter(n => n.type === "repo")
 
-            // Get the links between this node and nodes_to_author
-            let links_author = links.filter(l => l.source === d.id && nodes_to_author.find(n => n.id === l.target))
+            // Get the links between this node and nodes_to_contributor
+            let links_contributor = links.filter(l => l.source === d.id && nodes_to_contributor.find(n => n.id === l.target))
 
-            // Let the nodes start on the location of the author node
-            nodes_to_author.forEach(n => {
+            // Let the nodes start on the location of the contributor node
+            nodes_to_contributor.forEach(n => {
                 n.x = d.fx + Math.random() * (Math.random() > 0.5 ? 1 : -1)
                 n.y = d.fy + Math.random() * (Math.random() > 0.5 ? 1 : -1)
             })// forEach
@@ -643,17 +628,17 @@ function singleAuthorForceSimulation() {
                 //         .strength(-20)
                 //         // .distanceMax(WIDTH / 3)
                 // )
-                // Keep the repo nodes want to stay close to the author node
+                // Keep the repo nodes want to stay close to the contributor node
                 // so they try to spread out evenly around it
                 .force("x", d3.forceX().x(d.fx).strength(0.1))
                 .force("y", d3.forceY().y(d.fy).strength(0.1))
 
             simulation
-                .nodes(nodes_to_author)
+                .nodes(nodes_to_contributor)
                 .stop()
                 // .on("tick", ticked)
     
-            simulation.force("link").links(links_author)
+            simulation.force("link").links(links_contributor)
 
             //Manually "tick" through the network
             let n_ticks = 200
@@ -663,19 +648,19 @@ function singleAuthorForceSimulation() {
                 simulation.force("collide").strength(Math.pow(i / n_ticks, 2) * 0.8)
             }//for i
             // TEST - Draw the result
-            // drawAuthorBubbles(nodes_to_author, links_author)
+            // drawContributorBubbles(nodes_to_contributor, links_contributor)
 
-            // Determine the farthest distance of the nodes (including its radius) to the author node
-            d.max_radius = d3.max(nodes_to_author, n => Math.sqrt((n.x - d.x)**2 + (n.y - d.y)**2))
-            // Determine which node is the largest distance to the author node
-            let max_radius_node = nodes_to_author.find(n => Math.sqrt((n.x - d.x)**2 + (n.y - d.y)**2) === d.max_radius)
+            // Determine the farthest distance of the nodes (including its radius) to the contributor node
+            d.max_radius = d3.max(nodes_to_contributor, n => Math.sqrt((n.x - d.x)**2 + (n.y - d.y)**2))
+            // Determine which node is the largest distance to the contributor node
+            let max_radius_node = nodes_to_contributor.find(n => Math.sqrt((n.x - d.x)**2 + (n.y - d.y)**2) === d.max_radius)
             // Get the overall radius to take into account for the next simulation and labeling
             d.max_radius = Math.max(d.max_radius + max_radius_node.r, d.r)
-            // See this as the new "author node" radius that includes all of it's single-degree repos
+            // See this as the new "contributor node" radius that includes all of it's single-degree repos
 
         })// forEach
 
-    function drawAuthorBubbles(nodes, links) {
+    function drawContributorBubbles(nodes, links) {
             context.save()
             context.translate(WIDTH / 2, HEIGHT / 2)
 
@@ -695,55 +680,55 @@ function singleAuthorForceSimulation() {
                 .filter(d => d.id !== central_repo.id)
                 .forEach(d => {
                     context.fillStyle = d.color
-                    let r = d.r //d.type === "author" ? 10 : d.r
+                    let r = d.r //d.type === "contributor" ? 10 : d.r
                     drawCircle(context, d.x, d.y, SF, r)
                 })// forEach
 
             context.restore()
-    }// function drawAuthorBubbles
-}// function singleAuthorForceSimulation
+    }// function drawContributorBubbles
+}// function singleContributorForceSimulation
 
-// Place the author nodes in a circle around the central repo
+// Place the contributor nodes in a circle around the central repo
 // Taking into account the max_radius of single-degree repos around them
-function positionAuthorNodes() {
-    // Get the sum of all the author nodes' max_radius
+function positionContributorNodes() {
+    // Get the sum of all the contributor nodes' max_radius
     let sum_radius = nodes
-        .filter(d => d.type === "author")
+        .filter(d => d.type === "contributor")
         .reduce((acc, curr) => acc + curr.max_radius * 2, 0)
-    // Take padding into account between the author nodes
-    sum_radius += authors.length * AUTHOR_PADDING
+    // Take padding into account between the contributor nodes
+    sum_radius += contributors.length * CONTRIBUTOR_PADDING
     // This sum should be the circumference of the circle around the central node, what radius belongs to this -> 2*pi*R
-    RADIUS_AUTHOR = sum_radius / TAU
-    RADIUS_AUTHOR_NON_ORCA = RADIUS_AUTHOR * 1.3
+    RADIUS_CONTRIBUTOR = sum_radius / TAU
+    RADIUS_CONTRIBUTOR_NON_ORCA = RADIUS_CONTRIBUTOR * 1.3
 
-    // Fix the author nodes in a ring around the central node
-    // const angle = TAU / (nodes.filter(d => d.type === "author").length)
+    // Fix the contributor nodes in a ring around the central node
+    // const angle = TAU / (nodes.filter(d => d.type === "contributor").length)
     let angle = 0
     nodes
-        .filter(d => d.type === "author")
+        .filter(d => d.type === "contributor")
         .forEach((d,i) => {
-            // Subtract the author node position from all it's connected single-degree repos
+            // Subtract the contributor node position from all it's connected single-degree repos
             d.connected_single_repo.forEach(repo => {
                 repo.x -= d.x
                 repo.y -= d.y
             })// forEach
 
-            // Find the new position of the author node in a ring around the central node
-            let author_arc = d.max_radius * 2 + AUTHOR_PADDING
+            // Find the new position of the contributor node in a ring around the central node
+            let contributor_arc = d.max_radius * 2 + CONTRIBUTOR_PADDING
             // translate this distance to an angle
-            let author_angle = (author_arc / RADIUS_AUTHOR)/2
+            let contributor_angle = (contributor_arc / RADIUS_CONTRIBUTOR)/2
 
-            let radius_drawn = d.data.orca_received ? RADIUS_AUTHOR : RADIUS_AUTHOR_NON_ORCA
-            d.x = central_repo.fx + radius_drawn * cos(angle + author_angle - PI/2)
-            d.y = central_repo.fy + radius_drawn * sin(angle + author_angle - PI/2)
-            d.author_angle = angle + author_angle - PI/2
-            angle += author_angle * 2
+            let radius_drawn = d.data.orca_received ? RADIUS_CONTRIBUTOR : RADIUS_CONTRIBUTOR_NON_ORCA
+            d.x = central_repo.fx + radius_drawn * cos(angle + contributor_angle - PI/2)
+            d.y = central_repo.fy + radius_drawn * sin(angle + contributor_angle - PI/2)
+            d.contributor_angle = angle + contributor_angle - PI/2
+            angle += contributor_angle * 2
 
-            // Fix the authors for the force simulation
+            // Fix the contributors for the force simulation
             d.fx = d.x
             d.fy = d.y
 
-            // Add the new author position to all it's connected single-degree repos
+            // Add the new contributor position to all it's connected single-degree repos
             d.connected_single_repo.forEach(repo => {
                 repo.x += d.x
                 repo.y += d.y
@@ -755,13 +740,13 @@ function positionAuthorNodes() {
 
             // 
         })// forEach
-}// function positionAuthorNodes
+}// function positionContributorNodes
 
 /////////////////////////////////////////////////////////////////////
 /////////////// Force Simulation | Collaboration Repos //////////////
 /////////////////////////////////////////////////////////////////////
 
-// Run a force simulation to position the repos that are shared between authors
+// Run a force simulation to position the repos that are shared between contributors
 function collaborationRepoSimulation() {
     //
     let simulation = d3.forceSimulation()
@@ -789,8 +774,8 @@ function collaborationRepoSimulation() {
         // .force("y", d3.forceY().y(d => d.focusY).strength(0.08)) //0.1
         // .force("center", d3.forceCenter(0,0))
 
-    // Keep the nodes that are an "author" or a repo that has a degree > 1 (and is thus committed to by more than one author)
-    nodes_central = nodes.filter(d => d.type === "author" || (d.type === "repo" && d.degree > 1))
+    // Keep the nodes that are an "contributor" or a repo that has a degree > 1 (and is thus committed to by more than one contributor)
+    nodes_central = nodes.filter(d => d.type === "contributor" || (d.type === "repo" && d.degree > 1))
     nodes_central.forEach(d => {
         d.node_central = true
     })// forEach
@@ -842,13 +827,13 @@ function collaborationRepoSimulation() {
 
     /////////////////////////////////////////////////////////////
     function simulationPlacementConstraints(nodes) {
-        // Make sure the "repo" nodes cannot be placed farther away from the center than RADIUS_AUTHOR
+        // Make sure the "repo" nodes cannot be placed farther away from the center than RADIUS_CONTRIBUTOR
         nodes.forEach(d => {
             if(d.type === "repo") {
                 const dist = Math.sqrt(d.x ** 2 + d.y ** 2)
-                if(dist > RADIUS_AUTHOR * INNER_RADIUS_FACTOR) {
-                    d.x = d.x / dist * RADIUS_AUTHOR * INNER_RADIUS_FACTOR
-                    d.y = d.y / dist * RADIUS_AUTHOR * INNER_RADIUS_FACTOR
+                if(dist > RADIUS_CONTRIBUTOR * INNER_RADIUS_FACTOR) {
+                    d.x = d.x / dist * RADIUS_CONTRIBUTOR * INNER_RADIUS_FACTOR
+                    d.y = d.y / dist * RADIUS_CONTRIBUTOR * INNER_RADIUS_FACTOR
                 }//if
             }//if
         })// forEach
@@ -863,8 +848,8 @@ function drawNode(context, SF, d) {
     context.shadowBlur = HOVER_ACTIVE ? 0 : Math.max(2, d.r * 0.2) * SF
     context.shadowColor = "#f7f7f7"//d.color
     context.fillStyle = d.color
-    // context.globalAlpha = d.type === "author" ? 1 : scale_node_opacity(d.degree)
-    let r = d.r //d.type === "author" ? 10 : d.r
+    // context.globalAlpha = d.type === "contributor" ? 1 : scale_node_opacity(d.degree)
+    let r = d.r //d.type === "contributor" ? 10 : d.r
     drawCircle(context, d.x, d.y, SF, r)
     context.shadowBlur = 0
 
@@ -875,8 +860,8 @@ function drawNode(context, SF, d) {
     context.stroke()
     context.globalAlpha = 1
 
-    // Draw a tiny arc inside the author node to show how long they've been involved in the central repo's existence, based on their first and last commit
-    if(d.type === "author") {
+    // Draw a tiny arc inside the contributor node to show how long they've been involved in the central repo's existence, based on their first and last commit
+    if(d.type === "contributor") {
         context.save()
         context.translate(d.x * SF, d.y * SF)
 
@@ -909,7 +894,7 @@ function drawNode(context, SF, d) {
 
 // Draw a stroked ring around the hovered node
 function drawHoverRing(context, d) {
-    let r = d.r + (d.type === "author" ? 11 : d.special_type ? 14 : 5)
+    let r = d.r + (d.type === "contributor" ? 11 : d.special_type ? 14 : 5)
     context.beginPath()
     context.moveTo((d.x + r) * SF, d.y * SF)
     context.arc(d.x * SF, d.y * SF, r * SF, 0, TAU)
@@ -1049,7 +1034,7 @@ function drawTooltip(context, d) {
     /////////////////////////////////////////////////////////////////
     // Figure out the required height of the tooltip
     let H
-    if(d.type === "author") {
+    if(d.type === "contributor") {
         if(d.data.orca_received) H = 130
         else H = 105
     } else {
@@ -1063,10 +1048,10 @@ function drawTooltip(context, d) {
     // Check if any of the typically longer texts are wider than this
     // Bit of a hack (if I change the font's settings later, I need to remember to do it here), but it works
     let tW = 0
-    if(d.type === "author") {
-        // The author's name
+    if(d.type === "contributor") {
+        // The contributor's name
         setFont(context, 15 * SF, 700, "normal")
-        tW = context.measureText(d.data.author_name).width * 1.25
+        tW = context.measureText(d.data.contributor_name).width * 1.25
     } else {
         // The repo's owner and name
         setFont(context, 14 * SF, 700, "normal")
@@ -1100,7 +1085,7 @@ function drawTooltip(context, d) {
     context.shadowBlur = 0
     
     // Line along the side
-    context.fillStyle = d.type === "author" ? COLOR_AUTHOR : COLOR_REPO
+    context.fillStyle = d.type === "contributor" ? COLOR_CONTRIBUTOR : COLOR_REPO
     context.fillRect((x - W/2 - 1)*SF, (y-1)*SF, (W+2)*SF, 6*SF)
 
     // Textual settings
@@ -1114,18 +1099,18 @@ function drawTooltip(context, d) {
     y = 24
     font_size = 11
     setFont(context, font_size * SF, 400, "italic")
-    context.fillStyle = d.type === "author" ? COLOR_AUTHOR : COLOR_REPO
-    renderText(context, d.type === "author" ? "contributor" : "repository", x * SF, y * SF, 2.5 * SF)
+    context.fillStyle = d.type === "contributor" ? COLOR_CONTRIBUTOR : COLOR_REPO
+    renderText(context, d.type === "contributor" ? "contributor" : "repository", x * SF, y * SF, 2.5 * SF)
 
     context.fillStyle = COLOR_TEXT
     y += 22
 
-    if (d.type === "author") {
-        // The author's name
+    if (d.type === "contributor") {
+        // The contributor's name
         font_size = 15
         setFont(context, font_size * SF, 700, "normal")
-        renderText(context, d.data.author_name, x * SF, y * SF, 1.25 * SF)
-        // d.data.author_lines.forEach((l, i) => {
+        renderText(context, d.data.contributor_name, x * SF, y * SF, 1.25 * SF)
+        // d.data.contributor_lines.forEach((l, i) => {
         //     renderText(context, l, x * SF, (y + i * line_height * font_size) * SF, 1.25 * SF)
         // })
 
@@ -1227,8 +1212,8 @@ function drawNodeLabel(context, d) {
     context.textBaseline = "middle"
     // context.textBaseline = "bottom"
 
-    if(d.type === "author") {
-        setAuthorFont(context, SF)
+    if(d.type === "contributor") {
+        setContributorFont(context, SF)
     } else {
         setRepoFont(context, SF)
     }// else
@@ -1239,32 +1224,44 @@ function drawNodeLabel(context, d) {
         context.font = `${font_weight} ${font_size * SF}px ${FONT_FAMILY}`
     }// if
 
-    if(d.type === "author") {
+    if(d.type === "contributor") {
         // context.textAlign = "center"
         context.textBaseline = "middle"
 
-        // Draw the author name radiating outward from the author's node
+        // Draw the contributor name radiating outward from the contributor's node
         context.save()
         context.translate(d.x * SF, d.y * SF)
-        context.rotate(d.author_angle + (d.author_angle > PI/2 ? PI : 0))
+        context.rotate(d.contributor_angle + (d.contributor_angle > PI/2 ? PI : 0))
         // Move the max_radius farther away
-        context.translate((d.author_angle > PI/2 ? -1 : 1) * (d.max_radius + 10) * SF, 0)
+        context.translate((d.contributor_angle > PI/2 ? -1 : 1) * (d.max_radius + 14) * SF, 0)
         // context.textAlign = "center"
-        context.textAlign = d.author_angle > PI/2 ? "right" : "left"
+        context.textAlign = d.contributor_angle > PI/2 ? "right" : "left"
 
-        let n = d.data.author_lines.length
+        let n = d.data.contributor_lines.length
         let label_line_height = 1.2
         let font_size = 13
-        d.data.author_lines.forEach((l, i) => {
+        d.data.contributor_lines.forEach((l, i) => {
             let x = 0
-            // Let the y-position be the center of the author node
+            // Let the y-position be the center of the contributor node
             let y = (0 - (n - 1) * font_size * label_line_height / 2 + i * font_size * label_line_height) * SF
+
+            // Draw a background colored rectangle for those receiving ORCA
+            if(d.data.orca_received) {
+                let W = context.measureText(l).width * 1.25 + 8 * SF
+                let x_rect = x - 6 * SF
+                if(d.contributor_angle > PI/2) x_rect = x + 4 * SF - W
+                context.fillStyle = "#f1caf6"
+                // context.fillStyle = COLOR_CONTRIBUTOR
+                // context.fillStyle = COLOR_PURPLE
+                // context.globalAlpha = 0.5
+                context.fillRect(x_rect, -10 * SF + y, W, 20 * SF)
+                context.globalAlpha = 1
+                // context.fillStyle = COLOR_BACKGROUND
+                context.fillStyle = COLOR_TEXT
+            }// if
+
             renderText(context, l, x, y, 1.25 * SF)
         })// forEach
-
-        // drawTextAlongArc(context, d.data.author_name, 0, (d.max_radius + 20) * SF, "up", 1.25 * SF) 
-
-        // renderText(context, d.id, 0, 0, 1.25 * SF)
 
         context.restore()
     } else if(d.id === central_repo.id) {
@@ -1293,9 +1290,9 @@ function setRepoFont(context, SF = 1, font_size = 12) {
     setFont(context, font_size * SF, 400, "normal")
 }//function setRepoFont
 
-function setAuthorFont(context, SF = 1, font_size = 13) {
+function setContributorFont(context, SF = 1, font_size = 13) {
     setFont(context, font_size * SF, 700, "italic")
-}//function setAuthorFont
+}//function setContributorFont
 
 //////////////// Add tracking (space) between letters ///////////////
 function renderText(context, text, x, y, letterSpacing = 0) {
