@@ -2,7 +2,16 @@
 // TODO: Make line strokes towards owner nodes (and from owner nodes to repos) correct thickness
 // TODO: Make the owner node of the central repo connected?
 
+// TODO: add parameter to switch repos
+
+// TODO: Check node label drawing order
+
+// TODO: On hover draw an arc around each connected repo to show the min and max date of involvement
+
+
 // TODO: Do network calculations through web workers
+
+// TODO: Maybe also draw the other repos that a contributor is connected to when hovering over an owner node
 
 // TODO: A tiny mark for everyone else (like pebbles on the outside)
 // TODO: Add hover for tiny circles as well
@@ -29,10 +38,14 @@
 ///////////////////////////// CONSTANTS /////////////////////////////
 /////////////////////////////////////////////////////////////////////
 
-// const REPOSITORY = "terraform"
-// const REPO_CENTRAL = "hashicorp/terraform"
-const REPOSITORY = "PDFjs"
-const REPO_CENTRAL = "mozilla/pdf.js"
+let params = new URLSearchParams(window.location.search)
+const REPOSITORY = [
+    "pdfjs",
+    "terraform"
+].indexOf(params.get("repo")) === -1 ? "pdfjs" : params.get("repo")
+
+let REPO_CENTRAL = "mozilla/pdf.js" // Default
+if(REPOSITORY === "terraform") REPO_CENTRAL = "hashicorp/terraform"
 
 // NOTE: Because there is no ORCA data yet, this is a dummy factor that will randomly determine roughly how many contributors are randomly selected to receive ORCA
 const ORCA_LEVEL = Math.random()
@@ -128,8 +141,9 @@ const COLOR_YELLOW = "#f2a900"
 const COLOR_PURPLE = "#783ce6"
 
 const COLOR_BACKGROUND = "#f7f7f7"
-const COLOR_REPO_MAIN = COLOR_YELLOW
+const COLOR_REPO_MAIN = "#a682e8"
 const COLOR_REPO = "#64d6d3" // "#b2faf8"
+const COLOR_OWNER = COLOR_YELLOW
 const COLOR_CONTRIBUTOR = "#ea9df5"
 const COLOR_LINK = "#e8e8e8"
 const COLOR_TEXT = "#4d4950"
@@ -355,7 +369,7 @@ function createFullVisual(values) {
         nodes_central
             .filter(d => {
                 // console.log(d)
-                return d.type === "contributor" || (d.type === "repo" && d.degree > 3)
+                return d.type === "contributor" || d.type === "owner" || (d.type === "repo" && d.degree > 3)
             })
             .forEach(d => {
             drawNodeLabel(context, d)
@@ -673,6 +687,22 @@ function prepareData() {
         d.color = d.data.color
     })// forEach
 
+    nodes.sort((a,b) => {
+        if(a.type === b.type) {
+            if(a.data.link_central && b.data.link_central) {
+                if(a.data.link_central.commit_sec_min < b.data.link_central.commit_sec_min) return -1
+                else if(a.data.link_central.commit_sec_min > b.data.link_central.commit_sec_min) return 1
+                else return 0
+            } else return 0
+        } else {
+            if(a.type < b.type) return -1
+            else if(a.type > b.type) return 1
+            else return 0
+        }// else
+    })// sort
+
+    // d.data.link_central.commit_sec_min
+
     remainingContributors.forEach(d => {
         // Initial settings
         d.x = (Math.random() > 0.5 ? -1 : 1) * Math.random()
@@ -685,7 +715,7 @@ function prepareData() {
     central_repo.r = CENTRAL_RADIUS
     central_repo.padding = CENTRAL_RADIUS
     central_repo.special_type = "central"
-    // central_repo.color = COLOR_REPO_MAIN
+    central_repo.color = COLOR_REPO_MAIN
     
 }// function prepareData
 
@@ -1163,8 +1193,8 @@ function drawOrcaRings(context) {
     setFont(context, 16 * SF, 700, "italic")
     drawTextAlongArc(context, "contributors supported through ORCA", TAU * 0.9, (RADIUS_CONTRIBUTOR - (LW/2 - O - 2)) * SF, "up", 1.5 * SF) 
     
-    // context.textBaseline = "top"
-    drawTextAlongArc(context, "other top contributors", TAU * 0.9, (RADIUS_CONTRIBUTOR_NON_ORCA - (LW/2 - O - 2)) * SF, "up", 1.5 * SF) 
+    context.textBaseline = "top"
+    drawTextAlongArc(context, "other top contributors", TAU * 0.9, (RADIUS_CONTRIBUTOR_NON_ORCA + (LW/2 - O - 2)) * SF, "up", 1.5 * SF) 
     context.globalAlpha = 1
 }// function drawOrcaRings
 
@@ -1588,7 +1618,7 @@ function drawTooltip(context, d) {
     let COL
     if(d.type === "contributor") COL = COLOR_CONTRIBUTOR
     else if(d.type === "repo") COL = COLOR_REPO
-    else if (d.type === "owner") COL = COLOR_YELLOW
+    else if (d.type === "owner") COL = COLOR_OWNER
 
     // Background rectangle
     context.shadowBlur = 3 * SF
