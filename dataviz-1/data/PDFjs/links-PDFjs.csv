@@ -3,7 +3,6 @@
 "Andreas Gal","andreasgal/dom.js",19,1300489449,1313022305
 "Andreas Gal","andreasgal/zipfile.js",6,1370108138,1407001231
 "Andreas Gal","cisco/openh264",11,1386948895,1388890220
-"Andreas Gal","danielrh/losslessh264",11,1386948895,1388890220
 "Andreas Gal","google/gemmlowp",7,1492798937,1508847008
 "Andreas Gal","mozilla-b2g/gaia",118,1316221071,1333133898
 "Andreas Gal","mozilla/pdf.js",436,1303799555,1344388068
@@ -12,16 +11,11 @@
 "Andreas Gal","peterbraden/node-opencv",4,1460648175,1473290171
 "Andreas Gal","pouchdb/pouchdb",1,1374120913,1374120913
 "Andreas Gal","rust-lang/rust",1,1317015250,1317015250
-"Andreas Gal","rust-random/rand",1,1317015250,1317015250
-"Andreas Gal","rust-windowing/glutin",2,1424727726,1424731817
-"Andreas Gal","rust-windowing/winit",2,1424727726,1424731817
 "Andreas Gal","servo/rust-azure",2,1424425275,1424467738
 "Andreas Gal","servo/servo",1,1424425554,1424425554
 "Andreas Gal","silklabs/silk",1,1480807090,1480807090
-"Andreas Gal","videojs/vtt.js",50,1373419334,1374469095
 "Andreas Gal","xiph/daala",9,1408989944,1411420818
 "Artur Adib","NZKoz/rails_xss",1,1355935072,1355935072
-"Artur Adib","amdjs/backbone",1,1308155555,1308155555
 "Artur Adib","arturadib/agility",189,1308342764,1587407090
 "Artur Adib","arturadib/node-five",12,1333747886,1346937290
 "Artur Adib","arturadib/node-qt",19,1333741868,1402846550
@@ -30,11 +24,9 @@
 "Artur Adib","jruby/warbler",1,1367597821,1367597821
 "Artur Adib","mozilla/pdf.js",373,1312234217,1349209191
 "Artur Adib","nodegit/nodegit",1,1433086631,1433086631
-"Artur Adib","shelljs/shelljs",191,1330651364,1452567165
-"Artur Adib","unknownbrackets/maxcso",1,1349299748,1349299748
+"Artur Adib","shelljs/shelljs",131,1330651364,1357662550
 "Brendan Dahl","WebAssembly/binaryen",3,1662157303,1667939055
 "Brendan Dahl","brendandahl/pdf.js.utils",22,1375912832,1637201543
-"Brendan Dahl","mdn/serviceworker-cookbook",19,1446157020,1448993276
 "Brendan Dahl","mozilla/oghliner",22,1443040106,1446500414
 "Brendan Dahl","mozilla/pdf.js",1302,1312666878,1646440997
 "Brendan Dahl","mozilla/pdfjs-dist",6,1486219995,1641517927
@@ -42,24 +34,15 @@
 "Brendan Dahl","mozilla/pluotsorbet",484,1411167897,1483661495
 "Brendan Dahl","mozilla/release-services",1,1498068429,1498068429
 "Brendan Dahl","mozilla/treeherder",1,1575914226,1575914226
-"Brendan Dahl","mozilla/wp-offline-shell",1,1457658985,1457658985
-"Brendan Dahl","servo/servo",1,1570618589,1570618589
 "Calixte Denizet","apple/swift-clang",6,1537521426,1542483699
 "Calixte Denizet","apple/swift-llvm",8,1537356380,1542013303
 "Calixte Denizet","gimli-rs/gimli",1,1586339824,1586339824
 "Calixte Denizet","llvm-mirror/clang",6,1537521426,1542483699
 "Calixte Denizet","llvm-mirror/compiler-rt",9,1537460469,1541693764
-"Calixte Denizet","mozilla-services/socorro",2,1501863292,1502892854
-"Calixte Denizet","mozilla/bugbot",295,1471869279,1643380598
 "Calixte Denizet","mozilla/pdf.js",407,1595418952,1669135733
 "Calixte Denizet","mozilla/release-services",12,1524559379,1553627052
-"Calixte Denizet","mozsearch/mozsearch",1,1565962961,1565962961
 "Calixte Denizet","peterbe/premailer",1,1556211936,1556211936
-"Calixte Denizet","pygments/pygments",1,1401461856,1401461856
-"Calixte Denizet","servo/servo",1,1562336984,1562336984
-"Calixte Denizet","tree-sitter/tree-sitter-c",10,1559668006,1576607111
 "Calixte Denizet","tree-sitter/tree-sitter-cpp",15,1559755355,1584636858
-"Calixte Denizet","tree-sitter/tree-sitter-javascript",17,1563475452,1565289205
 "Calixte Denizet","tree-sitter/tree-sitter-python",4,1573582328,1573666912
 "Calixte Denizet","willglynn/pdb",18,1568303288,1584466155
 "Chris Jones","mozilla-b2g/gaia",83,1316319764,1333046616
@@ -70,7 +53,6 @@
 "Fabian Lange","JodaOrg/joda-time",6,1392231317,1392728997
 "Fabian Lange","apache/karaf",16,1452428786,1536070286
 "Fabian Lange","aws/aws-sdk-java",1,1550504836,1550504836
-"Fabian Lange","bripkens/dock",3,1438161611,1447233866
 "Fabian Lange","census-instrumentation/opencensus-java",2,1517610238,1518204810
 "Fabian Lange","codecentric/NSMenuFX",2,1427716253,1448833691
 "Fabian Lange","codecentric/spring-boot-admin",1,1412395458,1412395458
@@ -95,25 +77,19 @@
 "Jakob Miland","saebekassebil/teoria",216,1337527225,1498997560
 "Jani Pehkonen","mozilla/pdf.js",30,1504694508,1618401523
 "Jon Buckley","Automattic/knox",2,1366925236,1384745095
-"Jon Buckley","Homebrew/homebrew-core",3,1342980187,1343919622
 "Jon Buckley","Homebrew/legacy-homebrew",3,1342980187,1343919622
 "Jon Buckley","JedWatson/node-premailer",1,1379962759,1379962759
-"Jon Buckley","Linuxbrew/legacy-linuxbrew",3,1342980187,1343919622
 "Jon Buckley","apache/cordova-firefoxos",1,1424276023,1424276023
 "Jon Buckley","atmos/camo",11,1396466956,1396896349
 "Jon Buckley","brianchirls/Seriously.js",1,1338512009,1338512009
 "Jon Buckley","brianloveswords/habitat",8,1366309631,1410368196
 "Jon Buckley","donejs/donejs",1,1319211667,1319211667
 "Jon Buckley","emberfeather/less.js-middleware",1,1349190935,1349190935
-"Jon Buckley","foliojs/png.js",1,1326345989,1326345989
 "Jon Buckley","gladiusjs/gladius-core",4,1319138485,1328299481
 "Jon Buckley","helmetjs/helmet",2,1367861038,1374600877
 "Jon Buckley","imakewebthings/deck.js",1,1314298771,1314298771
 "Jon Buckley","jbuck/express-persona",66,1348184395,1401397746
 "Jon Buckley","jbuck/input.js",15,1318708802,1322194164
-"Jon Buckley","jsfiddle/togetherjs",1,1441730335,1441730335
-"Jon Buckley","mistydemeo/tigerbrew",3,1342980187,1343919622
-"Jon Buckley","mongoosastic/mongoosastic",1,1379421500,1379421500
 "Jon Buckley","mozilla-appmaker/appmaker",21,1389053302,1426175260
 "Jon Buckley","mozilla/advocacy.mozilla.org",12,1427992991,1454345384
 "Jon Buckley","mozilla/bedrock",5,1374115009,1407797167
@@ -127,18 +103,12 @@
 "Jon Buckley","mozilla/openbadges-badgekit",10,1398442855,1438207247
 "Jon Buckley","mozilla/pdf.js",25,1359674977,1359736618
 "Jon Buckley","mozilla/popcorn-js",192,1307022422,1418757162
-"Jon Buckley","mozilla/popcorn.webmaker.org",328,1350320385,1436665010
 "Jon Buckley","mozilla/popcorn_maker",3,1338906692,1339444178
-"Jon Buckley","mozilla/testpilot",2,1540415186,1540415186
 "Jon Buckley","mozilla/thimble.mozilla.org",150,1366059988,1441038972
 "Jon Buckley","mozilla/tls-observatory",2,1485984436,1492022042
 "Jon Buckley","mozilla/webmaker-android",2,1420849103,1423241831
 "Jon Buckley","mozilla/webmaker-browser",3,1436913039,1446044460
 "Jon Buckley","mozilla/webmaker.org",218,1366061536,1434397740
-"Jon Buckley","octokit/octokit.js",1,1355770345,1355770345
-"Jon Buckley","processing-js/processing-js",548,1295748436,1343665800
-"Jon Buckley","twitwi/deck.js",1,1314298771,1314298771
-"Jon Buckley","venables/koa-helmet",2,1367861038,1374600877
 "Jonas","mozilla/pdf.js",53,1361724582,1378451323
 "Jonas Jenwald","SparkyBluefang/S4E",1,1489000610,1489000610
 "Jonas Jenwald","mozilla/pdf.js",4300,1378665343,1669376332
@@ -146,7 +116,6 @@
 "Julian Viereck","adobe/brackets",2,1360589371,1360589371
 "Julian Viereck","ajaxorg/ace",166,1293042302,1308164838
 "Julian Viereck","babel/babel",2,1454199751,1454199751
-"Julian Viereck","babel/babylon",1,1454199751,1454199751
 "Julian Viereck","benoitsteiner/tensorflow-opencl",2,1453656451,1499268041
 "Julian Viereck","codemix/fast.js",2,1403982988,1404034587
 "Julian Viereck","emailjs/emailjs-imap-client",1,1412364941,1412364941
@@ -156,39 +125,26 @@
 "Julian Viereck","jviereck/regjsparser",93,1383493774,1576907839
 "Julian Viereck","localForage/localForage",1,1392321657,1392321657
 "Julian Viereck","mozilla/pdf.js",255,1308691991,1361613557
-"Julian Viereck","petewarden/tensorflow_makefile",1,1453656451,1453656451
 "Julian Viereck","rust-lang/rust",2,1427483649,1427734356
-"Julian Viereck","ryanackley/tailor",2,1360589371,1360589371
 "Julian Viereck","servo/servo",1,1404557377,1404557377
 "Julian Viereck","stack-of-tasks/eigenpy",1,1512159005,1512159005
-"Julian Viereck","tensorflow/docs",1,1499268041,1499268041
-"Julian Viereck","tensorflow/docs-l10n",1,1499268041,1499268041
-"Julian Viereck","tensorflow/examples",1,1453656451,1453656451
 "Julian Viereck","tensorflow/tensorflow",2,1453656451,1499268041
-"Julian Viereck","tomasreimers/tensorflow-emscripten",1,1453656451,1453656451
 "Julian Viereck","tomerfiliba-org/rpyc",2,1372164472,1372165373
-"Justin D'Arcangelo","cefsharp/CefSharp",1,1593539848,1593539848
-"Justin D'Arcangelo","getsentry/sentry-cocoa",2,1497468936,1497892730
 "Justin D'Arcangelo","justindarc/fxos-web-server",22,1418094405,1456898596
 "Justin D'Arcangelo","justindarc/raphael.chord.js",4,1312254695,1406779182
 "Justin D'Arcangelo","mamedev/mame",1,1535039254,1535039254
 "Justin D'Arcangelo","mozilla-b2g/gaia",94,1321389759,1329843804
 "Justin D'Arcangelo","mozilla-mobile/firefox-ios",332,1488840819,1561393900
-"Justin D'Arcangelo","mozilla-mobile/firefox-ios-open-in-client",1,1521226642,1521226642
 "Justin D'Arcangelo","mozilla-mobile/focus-ios",9,1494623325,1500397052
 "Justin D'Arcangelo","mozilla/pdf.js",39,1308385993,1310287572
-"Kalervo Kujala","cyber-dojo/web",1,1323295934,1323295934
 "Kalervo Kujala","mozilla/pdf.js",121,1317150906,1408178272
 "Kalervo Kujala","shelljs/shelljs",1,1337293582,1337293582
-"Mukul Mishra","JulianNorton/weather-10kb-wxkb",2,1508251016,1508606167
 "Mukul Mishra","bitmovin/bitmovin-player-ui",39,1605808201,1640091262
 "Mukul Mishra","jlord/patchwork",2,1462736738,1462736738
 "Mukul Mishra","mozilla/pdf.js",21,1478977952,1554596506
 "Mukul Mishra","sendgrid/sendgrid-nodejs",1,1509719949,1509719949
-"Nicholas Nethercote","bytecodealliance/cranelift",1,1544740463,1544740463
 "Nicholas Nethercote","clap-rs/clap",5,1595977484,1595981002
 "Nicholas Nethercote","google/breakpad",1,1465566674,1465566674
-"Nicholas Nethercote","mozilla-services/socorro",2,1479421555,1479783017
 "Nicholas Nethercote","mozilla/pdf.js",73,1389665319,1408586895
 "Nicholas Nethercote","mozilla/pluotsorbet",4,1427261437,1427347500
 "Nicholas Nethercote","mozilla/sccache",8,1590988488,1592351812
@@ -196,9 +152,8 @@
 "Nicholas Nethercote","rust-lang/cargo",2,1587292492,1606180573
 "Nicholas Nethercote","rust-lang/hashbrown",1,1596771267,1596771267
 "Nicholas Nethercote","rust-lang/rust",560,1473649401,1596852310
-"Nicholas Nethercote","rust-lang/rustc-perf",85,1522868952,1571374171
 "Nicholas Nethercote","servo/rust-mozjs",2,1435900504,1508361358
-"Nicholas Nethercote","servo/servo",72,1403762821,1565218735
+"Nicholas Nethercote","servo/servo",34,1403762821,1439811463
 "Nicholas Nethercote","servo/string-cache",1,1508804376,1508804376
 "Nicholas Nethercote","servo/webrender",17,1508466231,1599817233
 "Rob Sayre","bazelbuild/bazel",1,1555685340,1555685340
@@ -218,7 +173,6 @@
 "Rob Sayre","sayrer/json-sync",19,1272316151,1311091728
 "Rob Sayre","spullara/interviewcode",6,1546112479,1546218978
 "Rob Sayre","twitter/hogan.js",105,1324498006,1404164260
-"Rob Sayre","twitter/twitter-text",4,1311044953,1311098370
 "Rob Sayre","vsco/dcdr",4,1504833977,1505954792
 "Rob Wu","CodeYellowBV/chartist-plugin-legend",2,1454102774,1454103706
 "Rob Wu","KDE/plasma-desktop",1,1462033245,1462033245
@@ -226,16 +180,13 @@
 "Rob Wu","Rob--W/dont-track-me-google",61,1467839671,1624224007
 "Rob Wu","Samsung/ChromiumGStreamerBackend",8,1436332583,1441793003
 "Rob Wu","SeleniumHQ/selenium",1,1371070265,1371070265
-"Rob Wu","adblockplus/adblockpluschrome",1,1415017227,1415017227
 "Rob Wu","adblockplus/backup-adblockpluschrome",1,1415017227,1415017227
 "Rob Wu","angular/angular.js",1,1479948298,1479948298
 "Rob Wu","blittle/chrome-dev-tools",1,1437466787,1437466787
-"Rob Wu","chromium/chromium",132,1409001187,1487608766
 "Rob Wu","dhowe/AdNauseam",1,1525174101,1525174101
 "Rob Wu","facebook/react-devtools",1,1487971470,1487971470
 "Rob Wu","goldfire/howler.js",2,1405445686,1405446674
 "Rob Wu","google/WebFundamentals",1,1412120529,1412120529
-"Rob Wu","gorhill/uBlock",1,1525174101,1525174101
 "Rob Wu","jshint/jshint",3,1370710576,1381213113
 "Rob Wu","jsmreese/moment-duration-format",1,1402764109,1402764109
 "Rob Wu","ladjs/supertest",9,1432975962,1440322337
@@ -249,7 +200,7 @@
 "Rob Wu","mozilla/amo-validator",1,1360882724,1360882724
 "Rob Wu","mozilla/pdf.js",173,1397250068,1648427640
 "Rob Wu","mozilla/web-ext",18,1523963155,1618492143
-"Rob Wu","mozsearch/mozsearch",5,1467170831,1581964313
+"Rob Wu","mozsearch/mozsearch",3,1467170831,1473554136
 "Rob Wu","nwjs/blink",10,1409364205,1419867364
 "Rob Wu","nwjs/chromium.src",132,1409001187,1487608766
 "Rob Wu","onsip/SIP.js",4,1405695848,1405944673
@@ -262,7 +213,6 @@
 "Tim van der Meij","servo/servo",8,1453753287,1460547011
 "Vivien Nicolas","mozilla-b2g/gaia",365,1316646755,1333378305
 "Vivien Nicolas","mozilla/pdf.js",425,1306418572,1321268301
-"Vivien Nicolas","timdream/jszhuyin",5,1324649915,1339154556
 "Wojciech Maj","ChangeWindows/ChangeWindows",1,1620815974,1620815974
 "Wojciech Maj","GoogleChrome/lighthouse",1,1596480340,1596480340
 "Wojciech Maj","anushbmx/CSS-Cursors",2,1451348653,1451370886
@@ -272,13 +222,9 @@
 "Wojciech Maj","facebook/prop-types",2,1545140606,1640694004
 "Wojciech Maj","gaearon/react-hot-loader",1,1589265504,1589265504
 "Wojciech Maj","honestbleeps/Reddit-Enhancement-Suite",22,1477325879,1515253784
-"Wojciech Maj","jaredwray/flat-cache",1,1573690705,1573690705
 "Wojciech Maj","jestjs/jest",7,1593768314,1640944678
 "Wojciech Maj","mozilla/pdf.js",26,1510874490,1593443714
 "Wojciech Maj","oliviertassinari/react-event-listener",1,1545921670,1545921670
-"Wojciech Maj","puppeteer/puppeteer",1,1593766588,1593766588
-"Wojciech Maj","react-grid-layout/react-draggable",1,1629976759,1629976759
-"Wojciech Maj","react-grid-layout/react-grid-layout",1,1630325893,1630325893
 "Wojciech Maj","recharts/recharts",1,1658797189,1658797189
 "Wojciech Maj","styled-components/vscode-styled-components",1,1621362268,1621362268
 "Wojciech Maj","webpack/webpack",1,1615209647,1615209647
@@ -294,7 +240,6 @@
 "Yury Delendik","WebAssembly/website",1,1479919533,1479919533
 "Yury Delendik","apple/swift-lldb",2,1551795833,1551805766
 "Yury Delendik","apple/swift-llvm",7,1534873708,1547576052
-"Yury Delendik","bytecodealliance/cranelift",9,1515790584,1580767720
 "Yury Delendik","bytecodealliance/wasmparser",165,1496422005,1568985552
 "Yury Delendik","corbanbrook/audionode.js",5,1279236717,1280370573
 "Yury Delendik","firefox-devtools/debugger",36,1476385283,1547749933
@@ -306,7 +251,6 @@
 "Yury Delendik","mozilla/pdf.js",2177,1333550913,1532612152
 "Yury Delendik","mozilla/pdfjs-dist",297,1411420807,1411421722
 "Yury Delendik","mozilla/shumway",2183,1334880257,1450671049
-"Yury Delendik","processing-js/processing-js",178,1271734869,1342469599
 "Yury Delendik","rust-lang/rust",2,1517278409,1532998508
 "Yury Delendik","wasdk/wasmparser",123,1478034530,1632163296
 "Yury Delendik","yurydelendik/rtmp.js",56,1366143132,1551806875
@@ -315,9 +259,6 @@
 "fkaelberer","mozilla/pdf.js",40,1370958026,1458767401
 "gigaherz","MinecraftForge/Documentation",3,1454266998,1459177121
 "gigaherz","MinecraftForge/ForgeGradle",8,1551557766,1621908033
-"gigaherz","MinecraftForge/MinecraftForge",2,1458530296,1459182162
-"gigaherz","Tinob/Ishiiruka",22,1218216647,1227665249
-"gigaherz","dolphin-emu/dolphin",22,1218216647,1227665249
 "gigaherz","hrydgard/ppsspp",4,1352546144,1352547143
 "gigaherz","mezz/JustEnoughItems",1,1487157165,1487157165
 "gigaherz","mozilla/pdf.js",44,1320090269,1347062836
@@ -329,7 +270,5 @@
 "sbarman","mozilla/pdf.js",356,1307395588,1339628997
 "vyv03354","mozilla/pdf.js",42,1357989124,1367321041
 "vyv03354","mrdoob/three.js",2,1561307980,1562280555
-"vyv03354","publicsuffix/list",6,1345813303,1345816671
-"vyv03354","servo/servo",2,1598442335,1598442335
 "vyv03354","servo/webrender",1,1616559900,1616559900
 "vyv03354","tadzik/rakudobrew",1,1451105973,1451105973

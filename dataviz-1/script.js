@@ -1,4 +1,11 @@
+// TODO: Hover to owners also shows the repos that are connected to it that the contributor has worked on
+// TODO: Make line strokes towards owner nodes (and from owner nodes to repos) correct thickness
+// TODO: Make the owner node of the central repo connected?
+
+// TODO: Do network calculations through web workers
+
 // TODO: A tiny mark for everyone else (like pebbles on the outside)
+// TODO: Add hover for tiny circles as well
 
 // TODO: Make big lines into tapered ones?
 
@@ -14,7 +21,6 @@
 // Look into SAT solver for label placement
 // Look into Cynthia Brewer paper for label
 
-// Central node a star-like shape of contributors in points?
 // TODO: Is there a way to make it clear that if you use a subset of the data, that is just those that got ORCA, that it's that subset
 
 // TODO: Have the width be determined by the container, not the window. Or have someone set the width beforehand?
@@ -23,7 +29,10 @@
 ///////////////////////////// CONSTANTS /////////////////////////////
 /////////////////////////////////////////////////////////////////////
 
+// const REPOSITORY = "terraform"
+// const REPO_CENTRAL = "hashicorp/terraform"
 const REPOSITORY = "PDFjs"
+const REPO_CENTRAL = "mozilla/pdf.js"
 
 // NOTE: Because there is no ORCA data yet, this is a dummy factor that will randomly determine roughly how many contributors are randomly selected to receive ORCA
 const ORCA_LEVEL = Math.random()
@@ -78,6 +87,7 @@ const context_hover = canvas_hover.getContext("2d")
 const DEFAULT_SIZE = 1500
 let WIDTH, HEIGHT, MARGIN_TOP
 let SF, PIXEL_RATIO
+let EXTRA_WIDTH_FACTOR = 1
 
 // Resize function
 function resize() {
@@ -164,10 +174,10 @@ const scale_involved_range = d3.scaleLinear()
 
 //////////////////////// Datasets to Read in ////////////////////////
 let promises = []
-promises.push(d3.csv(`data/${REPOSITORY}/authorInfo-PDFjs.csv`))
-promises.push(d3.csv(`data/${REPOSITORY}/baseRepoInfo-PDFjs.csv`))
-promises.push(d3.csv(`data/${REPOSITORY}/links-PDFjs.csv`))
-promises.push(d3.csv(`data/${REPOSITORY}/remainingContributors-PDFjs.csv`))
+promises.push(d3.csv(`data/${REPOSITORY}/authorInfo-${REPOSITORY}.csv`))
+promises.push(d3.csv(`data/${REPOSITORY}/baseRepoInfo-${REPOSITORY}.csv`))
+promises.push(d3.csv(`data/${REPOSITORY}/links-${REPOSITORY}.csv`))
+promises.push(d3.csv(`data/${REPOSITORY}/remainingContributors-${REPOSITORY}.csv`))
 
 ///////////////////////// Fonts to activate /////////////////////////
 const FONT_FAMILY = "Atkinson Hyperlegible"
@@ -208,7 +218,14 @@ function createFullVisual(values) {
     repos = values[1]
     links = values[2]
     remainingContributors = values[3]
-    prepareData(contributors, repos, links, remainingContributors)
+    prepareData()
+
+    /////////////////////////////////////////////////////////////////
+    ///////////////// Run Force Simulation per Owner ////////////////
+    /////////////////////////////////////////////////////////////////
+    // Run a force simulation for per owner for all the repos that have the same "owner"
+    // Like a little cloud of repos around them
+    singleOwnerForceSimulation()
 
     /////////////////////////////////////////////////////////////////
     ////////////// Run Force Simulation per Contributor /////////////
@@ -335,7 +352,12 @@ function createFullVisual(values) {
         /////////////////////////////////////////////////////////////
         // Draw the labels for the contributors and for the repositories in the center
         // (those that have more than one contributor)
-        nodes_central.forEach(d => {
+        nodes_central
+            .filter(d => {
+                // console.log(d)
+                return d.type === "contributor" || (d.type === "repo" && d.degree > 3)
+            })
+            .forEach(d => {
             drawNodeLabel(context, d)
         })// forEach
 
@@ -351,10 +373,12 @@ function createFullVisual(values) {
 /////////////////////////////////////////////////////////////////////
 
 ////////////////// Prepare the data for the visual //////////////////
-function prepareData(contributors, repos, links) {
-    /////////////////////////////////////////////////////////////
-    ///////////////////// Initial Data Prep /////////////////////
-    /////////////////////////////////////////////////////////////
+function prepareData() {
+    /////////////////////////////////////////////////////////////////
+    /////////////////////// Initial Data Prep ///////////////////////
+    /////////////////////////////////////////////////////////////////
+
+    ////////////////////////// CONTRIBUTORS /////////////////////////
     contributors.forEach(d => {
         d.contributor_name = d.author_name_top
 
@@ -370,6 +394,7 @@ function prepareData(contributors, repos, links) {
         delete d.contributor_name_top
     })// forEach
 
+    ////////////////////////// REPOSITORIES /////////////////////////
     repos.forEach(d => {
         d.repo = d.base_repo_original
         d.forks = +d.repo_forks
@@ -381,6 +406,8 @@ function prepareData(contributors, repos, links) {
         d.owner = d.repo.substring(0, d.repo.indexOf("/"))
         // Get the substring after the slash
         d.name = d.repo.substring(d.repo.indexOf("/") + 1)
+
+        // d.repo = d.owner
 
         // Split the string of languages into an array
         d.languages = d.repo_languages.split(",")
@@ -396,6 +423,7 @@ function prepareData(contributors, repos, links) {
         delete d.repo_updatedAt
     })// forEach
 
+    ///////////////////////////// LINKS /////////////////////////////
     links.forEach(d => {
         // Source
         d.contributor_name = d.author_name_top
@@ -412,10 +440,17 @@ function prepareData(contributors, repos, links) {
         // Get the substring after the slash
         d.name = d.base_repo_original.substring(d.base_repo_original.indexOf("/") + 1)
 
+        // d.repo = d.owner
+
+        // Set-up initial source and target
+        d.source = d.contributor_name
+        d.target = d.repo
+
         delete d.base_repo_original
         delete d.author_name_top
     })// forEach
 
+    /////////////////////// OTHER CONTRIBUTORS //////////////////////
     remainingContributors.forEach(d => {
         d.commit_count = +d.commit_count
         d.contributor_sec_min = parseDateUnix(d.author_sec_min)
@@ -427,7 +462,7 @@ function prepareData(contributors, repos, links) {
     // console.log(contributors[0])
     // console.log(repos[0])
     // console.log(links[0])
-    console.log(remainingContributors)
+    // console.log(remainingContributors)
 
     ////////////////////////// Create Nodes /////////////////////////
     // Combine the contributors and repos into one variable to become the nodes
@@ -442,10 +477,12 @@ function prepareData(contributors, repos, links) {
         })
     })// forEach
 
-    // Add the index of the node to the links
-    links.forEach(d => {
-        d.source = nodes.find(n => n.id === d.contributor_name).id
-        d.target = nodes.find(n => n.id === d.repo).id
+    // Save all the original links
+    contributors.forEach(d => {
+        d.links_original = links.filter(l => l.source === d.contributor_name)
+    })// forEach
+    repos.forEach(d => {
+        d.links_original = links.filter(l => l.target === d.repo)
     })// forEach
 
     ///////////// Calculate visual settings of Nodes ////////////
@@ -456,23 +493,160 @@ function prepareData(contributors, repos, links) {
         // d.out_degree = links.filter(l => l.source === d.id).length
 
         // Get all the connected nodes
+        // Takes too long, done on hover
         // d.neighbors = nodes.filter(n => links.find(l => l.source === d.id && l.target === n.id || l.target === d.id && l.source === n.id))
     })// forEach
 
-    // Sort the nodes by type and id (contributor name)
+    ///////////////////////////// OWNERS ////////////////////////////
+    // Create a dataset for all the repos that have an owner that occurs more than once
+    // For all the repos that have a degree > 0 (used to be 1) in the nodes dataset (those that appear in the center)
+    let owners = nodes.filter(d => d.type === "repo" && d.degree > 0 && nodes.filter(n => n.id !== d.id && n.type === "repo" && n.degree > 0 && n.data.owner === d.data.owner).length > 1).map(d => d.data)
+    // Create a unique entry per owner
+    owners = d3.group(owners, d => d.owner)
+    owners = Array.from(owners, ([key, value]) => ({ owner: key, repos: value.map(n => n.name), color: COLOR_YELLOW, stars: d3.sum(value, d => d.stars), forks: d3.sum(value, d => d.forks) }))
+    // Sort by the owner name
+    owners.sort((a,b) => {
+        if(a.owner.toLowerCase() < b.owner.toLowerCase()) return -1
+        else if(a.owner.toLowerCase() > b.owner.toLowerCase()) return 1
+        else return 0
+    })// sort
+
+    console.log("Owners:", owners)
+    console.log("Contributors:", contributors)
+
+    // Check which of the repos are owned by those in the "owners" dataset
+    nodes
+        .filter(d => d.type === "repo" && d.degree > 0)
+        .forEach(d => {
+            d.data.multi_repo_owner = owners.find(o => o.owner === d.data.owner) ? true : false
+        })// forEach
+
+    // Add the owners to the nodes dataset
+    owners.forEach((d,i) => {
+        nodes.push({
+            id: d.owner, type: "owner", label: d.owner, data: d
+        })
+    })// forEach
+
+    /////////////////////////////////////////////////////////////////
+    // Redo Links to take Owners into account as a grouping node
+
+    // Also for the links where the target is also in the owner dataset replace the link to the owner and make a new link from the owner to the repo
+    let new_links_owner_repo = []
+    let new_links_contributor_owner = []
+    links.forEach(d => {
+        // If the target's owner is also in the owners dataset, replace the link to the owner and make a new link from the owner to the repo
+        // Except if the target is the central repo
+        if(d.repo !== REPO_CENTRAL && owners.find(o => o.owner === d.owner)) {
+            // Add a new link from the owner to the repo
+            new_links_owner_repo.push({
+                source: d.owner,
+                target: d.repo,
+                owner: d.owner,
+                // name: d.name,
+                // repo: d.repo,
+                
+                commit_count: d.commit_count,
+                commit_sec_min: d.commit_sec_min,
+                commit_sec_max: d.commit_sec_max
+            })// push
+
+            // Add a new link from the contributor to the owner
+            new_links_contributor_owner.push({
+                source: d.contributor_name,
+                target: d.owner,
+                owner: d.owner,
+
+                commit_count: d.commit_count,
+                commit_sec_min: d.commit_sec_min,
+                commit_sec_max: d.commit_sec_max
+            })// push
+
+            // delete d.commit_count
+            // delete d.commit_sec_min
+            // delete d.commit_sec_max
+
+            // Delete this link
+            d.to_remove = true
+        }// if
+
+    })// forEach
+    links = links.filter(d => !(d.to_remove === true))
+
+    /////////////////////////////////////////////////////////////////
+    // Get the unique set of new_links
+
+    // Group all the new_links_contributor_owner by their source and target and add the commit counts, and take the min and max of the commit_sec_min and commit_sec_max
+    // new_links_contributor_owner = Array.from(new Set(new_links_contributor_owner.map(d => JSON.stringify(d)))).map(d => JSON.parse(d))
+    new_links_contributor_owner = d3.group(new_links_contributor_owner, d => d.source + "~" + d.target)
+    new_links_contributor_owner = Array.from(new_links_contributor_owner, ([key, value]) => {
+        let [source, target] = key.split("~")
+        return {
+            source: source,
+            target: target,
+            owner: value[0].owner,
+            commit_count: d3.sum(value, d => d.commit_count),
+            commit_sec_min: d3.min(value, d => d.commit_sec_min),
+            commit_sec_max: d3.max(value, d => d.commit_sec_max)
+        }
+    })// map
+
+    // new_links_owner_repo = Array.from(new Set(new_links_owner_repo.map(d => JSON.stringify(d)))).map(d => JSON.parse(d))
+    new_links_owner_repo = d3.group(new_links_owner_repo, d => d.source + "~" + d.target)
+    new_links_owner_repo = Array.from(new_links_owner_repo, ([key, value]) => {
+        let [source, target] = key.split("~")
+        return {
+            source: source,
+            target: target,
+            owner: value[0].owner,
+            commit_count: d3.sum(value, d => d.commit_count),
+            commit_sec_min: d3.min(value, d => d.commit_sec_min),
+            commit_sec_max: d3.max(value, d => d.commit_sec_max)
+        }
+    })// map
+
+
+    // Set-up the new links dataset
+    links = [...links, ...new_links_owner_repo, ...new_links_contributor_owner]
+    console.log("Links:", links)
+
+    /////////////////////////////////////////////////////////////////
+    // Which of these owner types have links that are all to the same contributor node
+    // If so, mark them as "single-contributor"
+    owners.forEach(d => {
+        // Get all the links that are connected to this owner, where the owner is the target (and the source is a contributor)
+        let links_owner = links.filter(l => l.target === d.owner)
+        // If the length is 1, it means that this owner is only connected to one contributor
+        d.single_contributor = links_owner.length === 1 ? true : false
+
+        // Get all the repos that are connected to this owner
+        d.repos = nodes.filter(n => n.type === "repo" && n.data.owner === d.owner).map(n => n.data)
+    })// forEach
+
+    // Redo the degree
+    nodes.forEach(d => {
+        d.degree = links.filter(l => l.source === d.id || l.target === d.id).length
+        // TEST - set initial placement
+        d.x = 0
+        d.y = 0
+    })// forEach
+
+    // Sort the nodes by type and id
     nodes.sort((a,b) => {
         if(a.type === b.type) {
             if(a.id.toLowerCase() < b.id.toLowerCase()) return -1
             else if(a.id.toLowerCase() > b.id.toLowerCase()) return 1
             else return 0
         } else {
-            if(a.type === "contributor") return -1
-            else return 1
-        }
+            if(a.type < b.type) return -1
+            else if(a.type > b.type) return 1
+            else return 0
+        }// else
     })// sort
 
     // Which is the central repo, the one that connects everyone (the one with the highest degree)
-    central_repo = nodes.find(d => d.type === "repo" && d.degree === d3.max(nodes.filter(d => d.type === "repo"), d => d.degree))
+    central_repo = nodes.find(d => d.type === "repo" && d.id === REPO_CENTRAL)
+    // central_repo = nodes.find(d => d.type === "repo" && d.degree === d3.max(nodes.filter(d => d.type === "repo"), d => d.degree))
 
     // Set scales
     scale_repo_radius.domain(d3.extent(repos, d => d.stars))
@@ -490,9 +664,10 @@ function prepareData(contributors, repos, links) {
             d.data.link_central = link_to_central
             // d.data.commit_count_central = link_to_central.commit_count
             d.r = scale_contributor_radius(d.data.link_central.commit_count)
-        }     
-        else {
+        } else if(d.type === "repo") {
             d.r = scale_repo_radius(d.data.stars)
+        } else { // "owner"
+            d.r = scale_repo_radius(d.data.stars) // TODO 
         }// else 
 
         d.color = d.data.color
@@ -510,9 +685,143 @@ function prepareData(contributors, repos, links) {
     central_repo.r = CENTRAL_RADIUS
     central_repo.padding = CENTRAL_RADIUS
     central_repo.special_type = "central"
-    central_repo.color = COLOR_REPO_MAIN
+    // central_repo.color = COLOR_REPO_MAIN
     
 }// function prepareData
+
+/////////////////////////////////////////////////////////////////////
+///////////////// Force Simulation | Per Owner ////////////////
+/////////////////////////////////////////////////////////////////////
+// Run a force simulation for per "owner" node for all the repos that fall under it
+function singleOwnerForceSimulation() {
+    // First fix the nodes in the center - this is only temporarily
+    nodes
+        .filter(d => d.type === "owner")
+        .forEach((d,i) => {
+                d.x = d.fx = 0
+                d.y = d.fy = 0
+
+                // // For testing
+                // // Place the contributors in a grid of 10 columns
+                // d.x = -WIDTH/4 + (i % 8) * 140
+                // d.y = -HEIGHT/4 + Math.floor(i / 8) * 150
+                // d.fx = d.x
+                // d.fy = d.y
+            })// forEach
+
+    // Next run a force simulation to place all the repositories
+    nodes
+        .filter(d => d.type === "owner")
+        .forEach(d => {
+            // Find all the nodes that are connected to this one with a degree of one, including the node itself
+            let nodes_connected = nodes.filter(n => links.find(l => l.source === d.id && l.target === n.id && n.degree === 1) || n.id === d.id)
+
+            // If there are no nodes connected to this one, skip it
+            // if(nodes_to_contributor.length <= 1) return
+
+            // Save the list of repositories that are connected to this node
+            d.connected_node_cloud = nodes_connected.filter(n => n.type === "repo")
+
+            // Get the links between this node and nodes_connected
+            let links_connected = links.filter(l => l.source === d.id && nodes_connected.find(n => n.id === l.target))
+
+            // Let the nodes start on the location of the contributor node
+            nodes_connected.forEach(n => {
+                n.x = d.fx + Math.random() * (Math.random() > 0.5 ? 1 : -1)
+                n.y = d.fy + Math.random() * (Math.random() > 0.5 ? 1 : -1)
+            })// forEach
+
+            /////////////////////////////////////////////////////////
+            /////////////////////// Simulation //////////////////////
+            /////////////////////////////////////////////////////////
+            // Define the simulation
+            let simulation = d3.forceSimulation()
+                .force("link",
+                    // There are links, but they have no strength
+                    d3.forceLink()
+                        .id(d => d.id)
+                        .strength(0)
+                )
+                .force("collide",
+                    // Use a non-overlap, but let it start out at strength 0
+                    d3.forceCollide()
+                        .radius(n => {
+                            let r
+                            if(n.id === d.id) {
+                                if(d.data.single_contributor) r = d.r + 2
+                                else r = d.r + Math.min(14, Math.max(10, d.r))
+                            } else r = n.r + Math.max(2, n.r * 0.2)
+                            return r
+                        })
+                        .strength(0)
+                )
+                // .force("charge",
+                //     d3.forceManyBody()
+                //         .strength(-20)
+                //         // .distanceMax(WIDTH / 3)
+                // )
+                // Keep the repo nodes want to stay close to the contributor node
+                // so they try to spread out evenly around it
+                .force("x", d3.forceX().x(d.fx).strength(0.1))
+                .force("y", d3.forceY().y(d.fy).strength(0.1))
+
+            simulation
+                .nodes(nodes_connected)
+                .stop()
+                // .on("tick", ticked)
+    
+            simulation.force("link").links(links_connected)
+
+            //Manually "tick" through the network
+            let n_ticks = 200
+            for (let i = 0; i < n_ticks; ++i) {
+                simulation.tick()
+                //Ramp up collision strength to provide smooth transition
+                simulation.force("collide").strength(Math.pow(i / n_ticks, 2) * 0.8)
+            }//for i
+            // TEST - Draw the result
+            // drawContributorBubbles(nodes_connected, links_connected)
+
+            // Determine the farthest distance of the nodes (including its radius) to the owner node
+            d.max_radius = d3.max(nodes_connected, n => Math.sqrt((n.x - d.x)**2 + (n.y - d.y)**2))
+            // Determine which node is the largest distance to the central node
+            let max_radius_node = nodes_connected.find(n => Math.sqrt((n.x - d.x)**2 + (n.y - d.y)**2) === d.max_radius)
+            // Get the overall radius to take into account for the next simulation and labeling
+            d.max_radius = Math.max(d.max_radius + max_radius_node.r, d.r)
+            // See this as the new "node" radius that includes all of it's repos
+
+            // Reset the fx and fy
+            delete d.fx
+            delete d.fy
+        })// forEach
+
+    function drawContributorBubbles(nodes, links) {
+            context.save()
+            context.translate(WIDTH / 2, HEIGHT / 2)
+
+            // Draw all the links as lines
+            links.forEach(l => {
+                if(l.source.x !== undefined && l.target.x !== undefined) {
+                    calculateEdgeCenters(l, 0.8)
+                    calculateLinkGradient(context, l)
+                    context.strokeStyle = l.gradient 
+                } else context.strokeStyle = COLOR_LINK
+                context.lineWidth = scale_link_width(l.commit_count) * SF
+                drawLine(context, l, SF)
+            })// forEach
+
+            // Draw all the nodes as circles
+            nodes
+                .filter(d => d.id !== central_repo.id)
+                .forEach(d => {
+                    context.fillStyle = d.color
+                    let r = d.r //d.type === "contributor" ? 10 : d.r
+                    drawCircle(context, d.x, d.y, SF, r)
+                })// forEach
+
+            context.restore()
+    }// function drawContributorBubbles
+}// function singleOwnerForceSimulation
 
 /////////////////////////////////////////////////////////////////////
 ///////////////// Force Simulation | Per Contributor ////////////////
@@ -541,13 +850,14 @@ function singleContributorForceSimulation() {
         .filter(d => d.type === "contributor")
         .forEach(d => {
             // Find all the nodes that are connected to this one with a degree of one, including the contributor node itself
-            let nodes_to_contributor = nodes.filter(n => links.find(l => l.source === d.id && l.target === n.id && n.degree === 1) || n.id === d.id)
+            // let nodes_to_contributor = nodes.filter(n => links.find(l => l.source === d.id && l.target === n.id && n.degree === 1) || n.id === d.id)
+            let nodes_to_contributor = nodes.filter(n => links.find(l => l.source === d.id && l.target === n.id && n.degree === 1) || links.find(l => l.source === d.id && l.target === n.id && n.type === "owner" && n.data.single_contributor === true) || n.id === d.id)
 
             // If there are no nodes connected to this one, skip it
             // if(nodes_to_contributor.length <= 1) return
 
             // Save the list of repositories that are connected to this contributor (with a degree of one)
-            d.connected_single_repo = nodes_to_contributor.filter(n => n.type === "repo")
+            d.connected_single_repo = nodes_to_contributor.filter(n => n.type === "repo" || n.type === "owner")
 
             // Get the links between this node and nodes_to_contributor
             let links_contributor = links.filter(l => l.source === d.id && nodes_to_contributor.find(n => n.id === l.target))
@@ -572,7 +882,16 @@ function singleContributorForceSimulation() {
                 .force("collide",
                     // Use a non-overlap, but let it start out at strength 0
                     d3.forceCollide()
-                        .radius(n => n.id === d.id ? d.r + Math.min(14,Math.max(10, d.r)) : n.r + Math.max(2, n.r * 0.2))
+                        .radius(n => {
+                            let r
+                            if(n.id === d.id) r = d.r + Math.min(14, Math.max(10, d.r))
+                            else if (n.max_radius) {
+                                r = n.max_radius
+                                // r -= 4
+                                // r = r + Math.max(r*0.1, 2)
+                            } else r = n.r + Math.max(2, n.r * 0.2)
+                            return r
+                        })
                         .strength(0)
                 )
                 // .force("charge",
@@ -659,6 +978,7 @@ function positionContributorNodes() {
     nodes
         .filter(d => d.type === "contributor")
         .forEach((d,i) => {
+            // console.log(d.id, d.connected_single_repo)
             // Subtract the contributor node position from all it's connected single-degree repos
             d.connected_single_repo.forEach(repo => {
                 repo.x -= d.x
@@ -726,7 +1046,8 @@ function collaborationRepoSimulation() {
         // .force("center", d3.forceCenter(0,0))
 
     // Keep the nodes that are an "contributor" or a repo that has a degree > 1 (and is thus committed to by more than one contributor)
-    nodes_central = nodes.filter(d => d.type === "contributor" || (d.type === "repo" && d.degree > 1))
+    // nodes_central = nodes.filter(d => d.type === "contributor" || d.type === "owner")
+    nodes_central = nodes.filter(d => d.type === "contributor" || (d.type === "owner" && d.data.single_contributor == false) || d.id === REPO_CENTRAL || (d.type === "repo" && d.data.multi_repo_owner === false && d.degree > 1))
     nodes_central.forEach(d => {
         d.node_central = true
     })// forEach
@@ -776,11 +1097,21 @@ function collaborationRepoSimulation() {
         })// forEach
     // })
 
+    // Update the position of the repositories connected to an "owner" node
+    nodes
+        .filter(d => d.type === "owner")
+        .forEach(d => {
+            d.connected_node_cloud.forEach(repo => {
+                repo.x = d.x + repo.x
+                repo.y = d.y + repo.y
+            })// forEach
+        })// forEach
+
     /////////////////////////////////////////////////////////////
     function simulationPlacementConstraints(nodes) {
         // Make sure the "repo" nodes cannot be placed farther away from the center than RADIUS_CONTRIBUTOR
         nodes.forEach(d => {
-            if(d.type === "repo") {
+            if(d.type === "repo" || d.type === "owner") {
                 const dist = Math.sqrt(d.x ** 2 + d.y ** 2)
                 if(dist > RADIUS_CONTRIBUTOR * INNER_RADIUS_FACTOR) {
                     d.x = d.x / dist * RADIUS_CONTRIBUTOR * INNER_RADIUS_FACTOR
@@ -921,6 +1252,7 @@ function drawLink(context, l) {
         context.strokeStyle = l.gradient 
     } else context.strokeStyle = COLOR_LINK
 
+    // TODO: add commit_count from contributor to owner, from owner to repo, and get the correct line width when hovering from the contributor to the repo (but then applied between the owner and the repo)
     let line_width = scale_link_width(l.commit_count)
     context.lineWidth = line_width * SF
     drawLine(context, l, SF)
@@ -988,10 +1320,16 @@ function calculateLinkGradient(context, l) {
     // l.gradient.addColorStop(0, l.source.color)
     // l.gradient.addColorStop(1, l.target.color)
 
+    // The opacity of the links depends on the number of links
+    const scale_alpha = d3.scaleLinear()
+        .domain([300,800])
+        .range([0.5, 0.2])
+        .clamp(true)
+
     // Incorporate opacity into gradient
     let alpha
     if(HOVER_ACTIVE) alpha = l.target.special_type ? 0.3 : 0.7
-    else alpha = l.target.special_type ? 0.15 : 0.5
+    else alpha = l.target.special_type ? 0.15 : scale_alpha(links.length)
     createGradient(l, alpha)
 
     function createGradient(l, alpha) {
@@ -1065,18 +1403,78 @@ function drawHoverState(context, d, FOUND) {
         canvas.style.opacity = '0.3'
 
         /////////////////////////////////////////////////
-        // Draw all the links to this node
-        links.filter(l => l.source.id === d.id || l.target.id === d.id)
-            .forEach(l => {
-                drawLink(context, l)
-            })// forEach
+        // Get all the connected links (if not done before)
+        if(d.neighbor_links === undefined) {
+            d.neighbor_links = links.filter(l => l.source.id === d.id || l.target.id === d.id)
+        }// if
+
+        // Get all the connected nodes (if not done before)
+        if(d.neighbors === undefined) {
+            d.neighbors = nodes.filter(n => links.find(l => l.source.id === d.id && l.target.id === n.id || l.target.id === d.id && l.source.id === n.id))
+
+            // If any of these neighbors are "owner" nodes, find what the original repo was from that owner that the contributor was connected to
+            // OR
+            // If this node is a repo and any of these neighbors are "owner" nodes, find what original contributor was connected to this repo
+            if(d.type === "contributor" || d.type === "repo") {
+                d.neighbors.forEach(n => {
+                    if(n.type === "owner") {
+                        // Go through all of the original links and see if this owner is in there
+                        d.data.links_original.forEach(l => {
+                            if(l.owner === n.id) {
+                                let node, link
+                                if(d.type === "contributor") {
+                                    // Find the repo node
+                                    node = nodes.find(r => r.id === l.repo)
+                                    // Also find the link between the repo and owner and add this to the neighbor_links
+                                    link = links.find(l => l.source.id === n.id && l.target.id === node.id)
+                                } else if (d.type === "repo") {
+                                    // Find the contributor node
+                                    node = nodes.find(r => r.id === l.contributor_name)
+                                    // Also find the link between the contributor and owner and add this to the neighbor_links
+                                    link = links.find(l => l.source.id === node.id && l.target.id === n.id)
+                                }// else if
+
+                                // Add it to the neighbors
+                                d.neighbors.push(node)
+                                if(link) d.neighbor_links.push(link)
+                            }// if
+                        })// forEach
+                    }// if
+                })// forEach
+            }// if
+
+            // 
+            // if(d.type === "repo") {
+            //     d.neighbors.forEach(n => {
+            //         if(n.type === "owner") {
+            //             // Go through all of the original links and see if this owner is in there
+            //             d.data.links_original.forEach(l => {
+            //                 if(l.owner === n.id) {
+            //                     // Find the contributor node
+            //                     let contributor = nodes.find(r => r.id === l.contributor_name)
+            //                     // Add it to the neighbors
+            //                     d.neighbors.push(contributor)
+            //                     // Also find the link between the contributor and owner and add this to the neighbor_links
+            //                     let link = links.find(l => l.source.id === contributor.id && l.target.id === n.id)
+            //                     if(link) {
+            //                         d.neighbor_links.push(link)
+            //                     }// if
+            //                 }// if
+            //             })// forEach
+            //         }// if
+            //     })// forEach
+            // }// if
+            
+        }// if
 
         /////////////////////////////////////////////////
-        // Get all the connected nodes (if not done before)
-        if(d.neighbors === undefined) d.neighbors = nodes.filter(n => links.find(l => l.source.id === d.id && l.target.id === n.id || l.target.id === d.id && l.source.id === n.id))
+        // Draw all the links to this node
+        d.neighbor_links.forEach(l => {
+            drawLink(context, l)
+        })// forEach
+
         // Draw all the connected nodes
         d.neighbors.forEach(n => {
-            // Draw the hovered node
             drawNode(context, SF, n)
             if(n.node_central) drawNodeLabel(context_hover, n)
         })// forEach
@@ -1089,7 +1487,7 @@ function drawHoverState(context, d, FOUND) {
         
         /////////////////////////////////////////////////
         // Show its label
-        // if(d.node_central && d.type === "contributor") drawNodeLabel(context, d)
+        if(d.node_central && d.type === "contributor") drawNodeLabel(context, d)
 
         /////////////////////////////////////////////////
         // Create a tooltip with more info
@@ -1107,17 +1505,21 @@ function drawHoverState(context, d, FOUND) {
 }// function drawHoverState
 
 function drawTooltip(context, d) {
+    let line_height = 1.2
+    let font_size
+    let text
+
     // Figure out the base x and y position of the tooltip
     const x_base = d.x
     const y_base = d.y - d.r
 
     /////////////////////////////////////////////////////////////////
     // Figure out the required height of the tooltip
-    let H
+    let H = 93
     if(d.type === "contributor") {
         if(d.data.orca_received) H = 130
         else H = 105
-    } else {
+    } else if(d.type === "repo") {
         if(d.data.languages.length > 3) H = 192
         else if(d.data.languages.length > 0) H = 180
         else H = 138
@@ -1132,7 +1534,11 @@ function drawTooltip(context, d) {
         // The contributor's name
         setFont(context, 15 * SF, 700, "normal")
         tW = context.measureText(d.data.contributor_name).width * 1.25
-    } else {
+    } else if(d.type === "owner") {
+        // The owner's name
+        setFont(context, 15 * SF, 700, "normal")
+        tW = context.measureText(d.data.owner).width * 1.25
+    } else if(d.type === "repo") {
         // The repo's owner and name
         setFont(context, 14 * SF, 700, "normal")
         tW = context.measureText(d.data.owner).width * 1.25
@@ -1150,12 +1556,39 @@ function drawTooltip(context, d) {
     // Update the max width if the text is wider
     if(tW + 40 * SF > W * SF) W = tW / SF + 40
 
+    // Write all the repos for the "owner" nodes, but make sure they are not wider than the box and save each line to write out
+    if(d.type === "owner") {
+        font_size = 11.5
+        setFont(context, font_size * SF, 400, "normal")
+        d.text_lines = []
+        text = ""
+        d.connected_node_cloud.forEach((repo, i) => {
+            // Check the length of the new text to add
+            let new_repo = `${repo.data.name}${i < d.connected_node_cloud.length - 1 ? ", " : ""}`
+            // If it's longer, push the current text to the array and start a new one
+            if(context.measureText(`${text}${new_repo}`).width * 1.25 > 0.85 * W * SF) {
+                d.text_lines.push(text)
+                text = new_repo
+            } else {
+                text += new_repo
+            }// else
+        })// forEach
+        // Add the final possible bit
+        if(text !== "") d.text_lines.push(text)
+        // Update the height of the tooltip
+        H += d.text_lines.length * (font_size * line_height)
+    }// if
+
     /////////////////////////////////////////////////////////////////
     context.save()
     context.translate(x_base * SF, (y_base - H - 20) * SF)
 
     let x = 0
     let y = 0
+    let COL
+    if(d.type === "contributor") COL = COLOR_CONTRIBUTOR
+    else if(d.type === "repo") COL = COLOR_REPO
+    else if (d.type === "owner") COL = COLOR_YELLOW
 
     // Background rectangle
     context.shadowBlur = 3 * SF
@@ -1165,22 +1598,24 @@ function drawTooltip(context, d) {
     context.shadowBlur = 0
     
     // Line along the side
-    context.fillStyle = d.type === "contributor" ? COLOR_CONTRIBUTOR : COLOR_REPO
+    context.fillStyle = COL
     context.fillRect((x - W/2 - 1)*SF, (y-1)*SF, (W+2)*SF, 6*SF)
 
     // Textual settings
     context.textAlign = "center"
     context.textBaseline = "middle"
-    let line_height = 1.2
-    let font_size
-    let text
 
-    // Contributor or repo
+
+    // Contributor, owner or repo
     y = 24
     font_size = 11
     setFont(context, font_size * SF, 400, "italic")
-    context.fillStyle = d.type === "contributor" ? COLOR_CONTRIBUTOR : COLOR_REPO
-    renderText(context, d.type === "contributor" ? "contributor" : "repository", x * SF, y * SF, 2.5 * SF)
+    context.fillStyle = COL
+    text = ""
+    if(d.type === "contributor") text = "Contributor"
+    else if(d.type === "repo") text = "Repository"
+    else if (d.type === "owner") text = "Owner" // TODO: Better wording?
+    renderText(context, text, x * SF, y * SF, 2.5 * SF)
 
     context.fillStyle = COLOR_TEXT
     y += 22
@@ -1223,7 +1658,30 @@ function drawTooltip(context, d) {
             renderText(context, "supported through ORCA", x * SF, y * SF, 1.5 * SF)
         }// if
 
-    } else {
+    } else if(d.type === "owner") {
+        // The name
+        font_size = 15
+        setFont(context, font_size * SF, 700, "normal")
+        renderText(context, d.data.owner, x * SF, y * SF, 1.25 * SF)
+
+        // Which repos fall under this owner in this visual
+        y += 26
+        font_size = 10.5
+        context.globalAlpha = 0.6
+        setFont(context, font_size * SF, 400, "italic")
+        renderText(context, "Included repositories", x * SF, y * SF, 2 * SF)
+
+        // Write out all the repositories
+        font_size = 11.5
+        y += font_size * line_height + 4
+        context.globalAlpha = 0.9
+        setFont(context, font_size * SF, 400, "normal")
+        d.text_lines.forEach((l, i) => {
+            renderText(context, l, x * SF, y * SF, 1.25 * SF)
+            y += font_size * line_height
+        })// forEach
+
+    } else if(d.type === "repo") {
         // The repo's name and owner
         font_size = 14
         setFont(context, font_size * SF, 700, "normal")
@@ -1349,12 +1807,16 @@ function drawNodeLabel(context, d) {
         context.textBaseline = "middle"
         renderText(context, `${d.data.owner}/`, d.x * SF, (d.y - 0.6 * 12) * SF, 1.25 * SF)
         renderText(context, d.label, d.x * SF, (d.y + 0.6 * 12) * SF, 1.25 * SF)
-    } else {
+    } else if(d.type === "repo") {
         context.textAlign = "center"
         context.textBaseline = "bottom"
         renderText(context, `${d.data.owner}/`, d.x * SF, (d.y - d.r - 3 - 1.1 * 12) * SF, 1.25 * SF)
         renderText(context, d.label, d.x * SF, (d.y - d.r - 3) * SF, 1.25 * SF)
-    }// else
+    } else {
+        context.textAlign = "center"
+        context.textBaseline = "bottom"
+        renderText(context, d.label, d.x * SF, (d.y - d.r - 3) * SF, 1.25 * SF)
+    }
 }// function drawNodeLabel
 
 /////////////////////////////////////////////////////////////////////
