@@ -8,7 +8,6 @@
 
 // TODO: On hover draw an arc around each connected repo to show the min and max date of involvement
 
-
 // TODO: Do network calculations through web workers
 
 // TODO: Maybe also draw the other repos that a contributor is connected to when hovering over an owner node
@@ -29,8 +28,6 @@
 // TODO: Look into label placement 
 // Look into SAT solver for label placement
 // Look into Cynthia Brewer paper for label
-
-// TODO: Is there a way to make it clear that if you use a subset of the data, that is just those that got ORCA, that it's that subset
 
 // TODO: Have the width be determined by the container, not the window. Or have someone set the width beforehand?
 
