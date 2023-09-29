@@ -1,7 +1,6 @@
 
 // TODO: Mark the repos that are impacted by ORCA
 
-// TODO: Make central node labels not overlap
 // TODO: Look into label placement 
 // Look into SAT solver for label placement
 // Look into Cynthia Brewer paper for label
@@ -1042,10 +1041,16 @@ function collaborationRepoSimulation() {
         }// else
 
         let text_size = context.measureText(d.label)
+
+        // In case the owner name is longer than the repo name
+        if(d.type === "repo") {
+            if(context.measureText(d.data.owner).width > text_size.width) text_size = context.measureText(d.data.owner)
+        }// if
+
         let text_height = text_size.fontBoundingBoxAscent + text_size.fontBoundingBoxDescent
         if(d.type === "repo") text_height *= 2
-        let r = d.type === "owner" ? d.max_radius : d.r
 
+        let r = d.type === "owner" ? d.max_radius : d.r
         let top = Math.max(r, d.r + text_height)
         let w = Math.max(r * 2, text_size.width * 1.25) + 10
 
