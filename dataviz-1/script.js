@@ -1,15 +1,12 @@
-// TODO: Make the owner node connected to the central repo
 
 // TODO: Mark the repos that are impacted by ORCA
-
-// TODO: On hover draw an arc around each connected repo to show the min and max date of involvement
-
-// TODO: Do network calculations through web workers
 
 // TODO: Make central node labels not overlap
 // TODO: Look into label placement 
 // Look into SAT solver for label placement
 // Look into Cynthia Brewer paper for label
+
+// TODO: On hover draw an arc around each connected repo to show the min and max date of involvement
 
 // TODO: Make big lines into tapered ones?
 
@@ -222,20 +219,23 @@ function createFullVisual(values) {
     links = values[2]
     remainingContributors = values[3]
     prepareData()
-
+    console.log("Data prepared")
+    
     /////////////////////////////////////////////////////////////////
     ///////////////// Run Force Simulation per Owner ////////////////
     /////////////////////////////////////////////////////////////////
     // Run a force simulation for per owner for all the repos that have the same "owner"
     // Like a little cloud of repos around them
     singleOwnerForceSimulation()
-
+    console.log("Contributor mini force simulation done")
+    
     /////////////////////////////////////////////////////////////////
     ////////////// Run Force Simulation per Contributor /////////////
     /////////////////////////////////////////////////////////////////
     // Run a force simulation for per contributor for all the repos that are not shared between other contributors
     // Like a little cloud of repos around them
     singleContributorForceSimulation()
+    console.log("Owner mini force simulation done")
 
     /////////////////////////////////////////////////////////////////
     /////////////////// Position Contributor Nodes //////////////////
@@ -247,63 +247,21 @@ function createFullVisual(values) {
     // Place the contributor nodes in a circle around the central repo
     // Taking into account the max_radius of single-degree repos around them
     positionContributorNodes()
+    console.log("Contributor nodes positioned")
 
     /////////////////////////////////////////////////////////////////
     ///////////// Run Force Simulation for Shared Repos /////////////
     /////////////////////////////////////////////////////////////////
     // Run a force simulation to position the repos that are shared between contributors 
     collaborationRepoSimulation()
+    console.log("Central force simulation done")
 
     /////////////////////////////////////////////////////////////////
     //////// Run Force Simulation for Remaining Contributors ////////
     /////////////////////////////////////////////////////////////////
     // Run a force simulation to position the remaining contributors around the central area
     remainingContributorSimulation()
-
-    function remainingContributorSimulation() {
-
-        const PAD = 50
-        let simulation = d3.forceSimulation()
-            .force("collide",
-                d3.forceCollide()
-                    .radius(d => d.r + Math.random() * 40 + 20)
-                    .strength(0)
-            )
-            .force("charge",
-                d3.forceManyBody()
-            )
-        .force("x", d3.forceX().x(0).strength(0.1)) //0.1
-        .force("y", d3.forceY().y(0).strength(0.1)) //0.1
-        // .force("center", d3.forceCenter(0,0))
-
-        // Add a dummy node to the dataset that is fixed in the center that is as big as the NON-ORCA circle
-        let LW = ((RADIUS_CONTRIBUTOR+RADIUS_CONTRIBUTOR_NON_ORCA)/2 - RADIUS_CONTRIBUTOR) * 2
-        remainingContributors.push({
-            x: 0,
-            y: 0,
-            fx: 0,
-            fy: 0,
-            r: RADIUS_CONTRIBUTOR_NON_ORCA + LW/2,
-            id: "dummy"
-        })
-
-        // Perform the simulation
-        simulation
-            .nodes(remainingContributors)
-            .stop()
-
-        //Manually "tick" through the network
-        let n_ticks = 200
-        for (let i = 0; i < n_ticks; ++i) {
-            simulation.tick()
-            //Ramp up collision strength to provide smooth transition
-            simulation.force("collide").strength(Math.pow(i / n_ticks, 2) * 0.7)
-        }//for i
-
-        // Remove the dummy node from the dataset again
-        remainingContributors.pop()
-
-    }// function remainingContributorSimulation
+    console.log("Remaining contributor force simulation done")
 
     /////////////////////////////////////////////////////////////////
     //////////////////////// Setup the Hover ////////////////////////
@@ -319,7 +277,7 @@ function createFullVisual(values) {
         // Set the scale factor
         SF = WIDTH / DEFAULT_SIZE
         // If this means that the ring won't fit, make the SF smaller        
-        let OUTER_RING = RADIUS_CONTRIBUTOR_NON_ORCA + ORCA_RING_WIDTH/2 + 30
+        let OUTER_RING = RADIUS_CONTRIBUTOR_NON_ORCA + ORCA_RING_WIDTH/2*2
         if(WIDTH/2 < OUTER_RING * SF) SF = WIDTH / (2*OUTER_RING)
         console.log("SF:", SF)
 
@@ -368,15 +326,14 @@ function createFullVisual(values) {
         })// forEach
 
         /////////////////////////////////////////////////////////////
-        // Draw the labels for the contributors and for the repositories in the center
-        // (those that have more than one contributor)
+        // Draw the labels for the contributors and for the nodes in the center
         nodes_central
-            .filter(d => {
-                return d.type === "contributor" || d.type === "owner" || (d.type === "repo" && d.degree > 3)
-            })
+            // .filter(d => {
+            //     return d.type === "contributor" || d.type === "owner" || (d.type === "repo" && d.degree > 3)
+            // })
             .forEach(d => {
-            drawNodeLabel(context, d)
-        })// forEach
+                drawNodeLabel(context, d)
+            })// forEach
 
         context.restore()
 
@@ -500,24 +457,24 @@ function prepareData() {
         d.links_original = links.filter(l => l.target === d.repo)
     })// forEach
 
-    ///////////// Calculate visual settings of Nodes ////////////
-    nodes.forEach(d => {
-        // Find the degree of each node
-        d.degree = links.filter(l => l.source === d.id || l.target === d.id).length
-        // d.in_degree = links.filter(l => l.target === d.id).length
-        // d.out_degree = links.filter(l => l.source === d.id).length
-
-        // Get all the connected nodes
-        // Takes too long, done on hover
-        // d.neighbors = nodes.filter(n => links.find(l => l.source === d.id && l.target === n.id || l.target === d.id && l.source === n.id))
-    })// forEach
+    /////////////////////////////////////////////////////////////////
+    // Which is the central repo, the one that connects everyone (the one with the highest degree)
+    central_repo = nodes.find(d => d.type === "repo" && d.id === REPO_CENTRAL)
 
     ///////////////////////////// OWNERS ////////////////////////////
     // Create a dataset for all the repos that have an owner that occurs more than once
     let owners = nodes.filter(d => d.type === "repo" && nodes.filter(n => n.id !== d.id && n.type === "repo" && n.data.owner === d.data.owner).length > 1).map(d => d.data)
+   
     // Create a unique entry per owner
     owners = d3.group(owners, d => d.owner)
-    owners = Array.from(owners, ([key, value]) => ({ owner: key, repos: value.map(n => n.name), color: COLOR_YELLOW, stars: d3.sum(value, d => d.stars), forks: d3.sum(value, d => d.forks) }))
+    owners = Array.from(owners, ([key, value]) => ({ 
+        owner: key, 
+        repos: value.map(n => n.name),
+        color: COLOR_OWNER, 
+        stars: d3.sum(value, d => d.stars), 
+        forks: d3.sum(value, d => d.forks) 
+    }))
+    
     // Sort by the owner name
     owners.sort((a,b) => {
         if(a.owner.toLowerCase() < b.owner.toLowerCase()) return -1
@@ -543,7 +500,7 @@ function prepareData() {
     })// forEach
 
     /////////////////////////////////////////////////////////////////
-    // Redo Links to take Owners into account as a grouping node
+    // Redo Links to take owners into account as a grouping node
 
     // Also for the links where the target is also in the owner dataset replace the link to the owner and make a new link from the owner to the repo
     let new_links_owner_repo = []
@@ -582,7 +539,7 @@ function prepareData() {
 
             // Delete this link
             d.to_remove = true
-        }// if
+        }
 
     })// forEach
     links = links.filter(d => !(d.to_remove === true))
@@ -622,6 +579,18 @@ function prepareData() {
 
     // Set-up the new links dataset
     links = [...links, ...new_links_owner_repo, ...new_links_contributor_owner]
+
+
+    // Add a link between the owner of the central repo and the central repo
+    links.push({
+        source: central_repo.data.owner,
+        target: central_repo.id,
+        owner: central_repo.data.owner,
+        commit_count: d3.sum(links.filter(l => l.target === central_repo.id), d => d.commit_count),
+        commit_sec_min: d3.min(links.filter(l => l.target === central_repo.id), d => d.commit_sec_min),
+        commit_sec_max: d3.max(links.filter(l => l.target === central_repo.id), d => d.commit_sec_max)
+    })
+
     console.log("Links:", links)
 
     /////////////////////////////////////////////////////////////////
@@ -636,10 +605,6 @@ function prepareData() {
         // Get all the repos that are connected to this owner
         d.repos = nodes.filter(n => n.type === "repo" && n.data.owner === d.owner).map(n => n.data)
     })// forEach
-
-    /////////////////////////////////////////////////////////////////
-    // Which is the central repo, the one that connects everyone (the one with the highest degree)
-    central_repo = nodes.find(d => d.type === "repo" && d.id === REPO_CENTRAL)
 
     /////////////////////////////////////////////////////////////////
     // Set scales
@@ -698,15 +663,6 @@ function prepareData() {
             else return 0
         }// else
     })// sort
-
-    // Some initial positioning
-    remainingContributors.forEach(d => {
-        // Initial settings
-        d.x = (Math.random() > 0.5 ? -1 : 1) * Math.random()
-        d.y = (Math.random() > 0.5 ? -1 : 1) * Math.random()
-
-        d.r = scale_contributor_radius(d.commit_count) / 2
-    })// forEach
 
     // Replace some values for the central repository
     central_repo.r = CENTRAL_RADIUS
@@ -1019,7 +975,6 @@ function positionContributorNodes() {
 /////////////////////////////////////////////////////////////////////
 /////////////// Force Simulation | Collaboration Repos //////////////
 /////////////////////////////////////////////////////////////////////
-
 // Run a force simulation to position the repos that are shared between contributors
 function collaborationRepoSimulation() {
     let simulation = d3.forceSimulation()
@@ -1123,6 +1078,59 @@ function collaborationRepoSimulation() {
         })// forEach
     }// simulationPlacementConstraints
 }// function collaborationRepoSimulation
+
+/////////////////////////////////////////////////////////////////////
+/////////////// Force Simulation | Other Contributors ///////////////
+/////////////////////////////////////////////////////////////////////
+// Run a force simulation to place the remaining contributors somewhere outside the outer NON-ORCA ring
+function remainingContributorSimulation() {
+    let LW = ((RADIUS_CONTRIBUTOR+RADIUS_CONTRIBUTOR_NON_ORCA)/2 - RADIUS_CONTRIBUTOR) * 2
+    let R = RADIUS_CONTRIBUTOR_NON_ORCA + LW * 2
+
+    // Initial random position, but outside of the ORCA ring
+    remainingContributors.forEach(d => {
+        let angle = Math.random() * TAU
+        d.x = (R + Math.random() * 50) * cos(angle)
+        d.y = (R + Math.random() * 50) * sin(angle)
+
+        d.r = scale_contributor_radius(d.commit_count) / 2
+    })// forEach
+
+    let simulation = d3.forceSimulation()
+        .force("collide",
+            d3.forceCollide()
+                .radius(d => d.r + Math.random() * 40 + 20)
+                .strength(1)
+        )
+        // .force("charge",
+        //     d3.forceManyBody()
+        // )
+    .force("x", d3.forceX().x(0).strength(0.01)) //0.1
+    .force("y", d3.forceY().y(0).strength(0.01)) //0.1
+
+    // Add a dummy node to the dataset that is fixed in the center that is as big as the NON-ORCA circle
+    remainingContributors.push({
+        x: 0,
+        y: 0,
+        fx: 0,
+        fy: 0,
+        r: RADIUS_CONTRIBUTOR_NON_ORCA + LW * 0.75,
+        id: "dummy"
+    })
+
+    // Perform the simulation
+    simulation
+        .nodes(remainingContributors)
+        .stop()
+
+    // Manually "tick" through the network
+    let n_ticks = 20
+    for (let i = 0; i < n_ticks; ++i) simulation.tick()
+
+    // Remove the dummy node from the dataset again
+    remainingContributors.pop()
+
+}// function remainingContributorSimulation
 
 /////////////////////////////////////////////////////////////////////
 //////////////////////// Background Elements ////////////////////////
@@ -1427,7 +1435,7 @@ function drawHoverState(context, d, FOUND) {
             // If any of these neighbors are "owner" nodes, find what the original repo was from that owner that the contributor was connected to
             // OR
             // If this node is a repo and any of these neighbors are "owner" nodes, find what original contributor was connected to this repo
-            if(d.type === "contributor" || d.type === "repo") {
+            if(d.type === "contributor" || (d.type === "repo" && d !== central_repo)) {
                 d.neighbors.forEach(n => {
                     if(n.type === "owner") {
                         // Go through all of the original links and see if this owner is in there
@@ -1453,6 +1461,9 @@ function drawHoverState(context, d, FOUND) {
                         })// forEach
                     }// if
                 })// forEach
+
+                // Filter out the possible link between the central_node and its owner, to not create a ring
+                d.neighbor_links = d.neighbor_links.filter(l => !(l.target.id === central_repo.id && l.source.id === central_repo.data.owner))
             }// if
 
             // 
