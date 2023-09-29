@@ -62,6 +62,9 @@ let voronoi
 let HOVER_ACTIVE = false
 let HOVERED_NODE = null
 
+// Simulation
+let collide
+
 // Settings
 const CENTRAL_RADIUS = 50 // The radius of the central repository node
 let RADIUS_CONTRIBUTOR // The eventual radius along which the contributor nodes are placed
@@ -334,6 +337,14 @@ function createFullVisual(values) {
             .forEach(d => {
                 drawNodeLabel(context, d)
             })// forEach
+
+        // // TEST
+        // // Draw a stroked rectangle around the bbox of the nodes
+        // context.strokeStyle = "red"
+        // context.lineWidth = 1
+        // nodes.filter(d => d.bbox).forEach(d => {
+        //     context.strokeRect(d.x * SF + d.bbox[0][0] * SF, d.y * SF + d.bbox[0][1] * SF, (d.bbox[1][0] - d.bbox[0][0]) * SF, (d.bbox[1][1] - d.bbox[0][1]) * SF)
+        // })// forEach 
 
         context.restore()
 
@@ -977,6 +988,7 @@ function positionContributorNodes() {
 /////////////////////////////////////////////////////////////////////
 // Run a force simulation to position the repos that are shared between contributors
 function collaborationRepoSimulation() {
+
     let simulation = d3.forceSimulation()
         .force("link",
             d3.forceLink()
@@ -985,13 +997,20 @@ function collaborationRepoSimulation() {
                 .distance(d => scale_link_distance(d.target.degree) * 5)
                 // .strength(d => scale_link_strength(d.source.degree))
         )
-        .force("collide",
-            d3.forceCollide()
-                .radius(d => {
-                    let r = d.max_radius ? d.max_radius : d.r
-                    return r + (d.padding ? d.padding : Math.max(r/2, 15))
-                })
+        // .force("collide",
+        //     d3.forceCollide()
+        //         .radius(d => {
+        //             let r = d.max_radius ? d.max_radius : d.r
+        //             return r + (d.padding ? d.padding : Math.max(r/2, 15))
+        //         })
+        //         .strength(0)
+        // )
+        .force("collide", 
+            //Make sure that the words don't overlap
+            //https://github.com/emeeks/d3-bboxCollide
+            d3.bboxCollide(d => d.bbox)
                 .strength(0)
+                .iterations(1)
         )
         .force("charge",
             d3.forceManyBody()
@@ -1007,6 +1026,30 @@ function collaborationRepoSimulation() {
     nodes_central = nodes.filter(d => d.type === "contributor" || (d.type === "owner" && d.data.single_contributor == false) || d.id === REPO_CENTRAL || (d.type === "repo" && d.data.multi_repo_owner === false && d.degree > 1))
     nodes_central.forEach(d => {
         d.node_central = true
+    })// forEach
+
+    // Calculate the bounding box around the nodes including their label
+    nodes_central.forEach(d => {
+        if(d.type === "contributor") {
+            d.bbox = [[-d.max_radius, -d.max_radius],[d.max_radius, d.max_radius]]
+            return
+        }// if
+
+        if(d.type === "owner") {
+            setOwnerFont(context, 1)
+        } else if(d.type === "repo") {
+            setRepoFont(context, 1)
+        }// else
+
+        let text_size = context.measureText(d.label)
+        let text_height = text_size.fontBoundingBoxAscent + text_size.fontBoundingBoxDescent
+        if(d.type === "repo") text_height *= 2
+        let r = d.type === "owner" ? d.max_radius : d.r
+
+        let top = Math.max(r, d.r + text_height)
+        let w = Math.max(r * 2, text_size.width * 1.25) + 10
+
+        d.bbox = [[-w/2, -top],[w/2, r]]
     })// forEach
 
     // Only keep the links that have the nodes that are in the nodes_central array
@@ -1465,28 +1508,6 @@ function drawHoverState(context, d, FOUND) {
                 // Filter out the possible link between the central_node and its owner, to not create a ring
                 d.neighbor_links = d.neighbor_links.filter(l => !(l.target.id === central_repo.id && l.source.id === central_repo.data.owner))
             }// if
-
-            // 
-            // if(d.type === "repo") {
-            //     d.neighbors.forEach(n => {
-            //         if(n.type === "owner") {
-            //             // Go through all of the original links and see if this owner is in there
-            //             d.data.links_original.forEach(l => {
-            //                 if(l.owner === n.id) {
-            //                     // Find the contributor node
-            //                     let contributor = nodes.find(r => r.id === l.contributor_name)
-            //                     // Add it to the neighbors
-            //                     d.neighbors.push(contributor)
-            //                     // Also find the link between the contributor and owner and add this to the neighbor_links
-            //                     let link = links.find(l => l.source.id === contributor.id && l.target.id === n.id)
-            //                     if(link) {
-            //                         d.neighbor_links.push(link)
-            //                     }// if
-            //                 }// if
-            //             })// forEach
-            //         }// if
-            //     })// forEach
-            // }// if
             
         }// if
 
@@ -1790,6 +1811,8 @@ function drawNodeLabel(context, d) {
 
     if(d.type === "contributor") {
         setContributorFont(context, SF)
+    } else if(d.type === "owner") {
+        setOwnerFont(context, SF)
     } else {
         setRepoFont(context, SF)
     }// else
@@ -1873,6 +1896,10 @@ function setFont(context, font_size, font_weight, font_style = "normal") {
 function setRepoFont(context, SF = 1, font_size = 12) {
     setFont(context, font_size * SF, 400, "normal")
 }//function setRepoFont
+
+function setOwnerFont(context, SF = 1, font_size = 12) {
+    setFont(context, font_size * SF, 700, "normal")
+}//function setOwnerFont
 
 function setContributorFont(context, SF = 1, font_size = 13) {
     setFont(context, font_size * SF, 700, "italic")
