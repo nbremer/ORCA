@@ -1,19 +1,15 @@
-// TODO: Hover to owners also shows the repos that are connected to it that the contributor has worked on
-// TODO: Make line strokes towards owner nodes (and from owner nodes to repos) correct thickness
-// TODO: Make the owner node of the central repo connected?
+// TODO: Make the owner node connected to the central repo
 
-// TODO: add parameter to switch repos
-
-// TODO: Check node label drawing order
+// TODO: Mark the repos that are impacted by ORCA
 
 // TODO: On hover draw an arc around each connected repo to show the min and max date of involvement
 
 // TODO: Do network calculations through web workers
 
-// TODO: Maybe also draw the other repos that a contributor is connected to when hovering over an owner node
-
-// TODO: A tiny mark for everyone else (like pebbles on the outside)
-// TODO: Add hover for tiny circles as well
+// TODO: Make central node labels not overlap
+// TODO: Look into label placement 
+// Look into SAT solver for label placement
+// Look into Cynthia Brewer paper for label
 
 // TODO: Make big lines into tapered ones?
 
@@ -24,12 +20,9 @@
 
 // TODO: Add a legend
 // TODO: Add credit
-// TODO: Make central nodes not overlap
-// TODO: Look into label placement 
-// Look into SAT solver for label placement
-// Look into Cynthia Brewer paper for label
 
-// TODO: Have the width be determined by the container, not the window. Or have someone set the width beforehand?
+// TODO: A tiny mark for everyone else (like pebbles on the outside)
+// TODO: Add hover for tiny circles, remaining contributors as well
 
 /////////////////////////////////////////////////////////////////////
 ///////////////////////////// CONSTANTS /////////////////////////////
@@ -70,11 +63,14 @@ let central_repo
 let delaunay
 let voronoi
 let HOVER_ACTIVE = false
+let HOVERED_NODE = null
 
 // Settings
 const CENTRAL_RADIUS = 50 // The radius of the central repository node
 let RADIUS_CONTRIBUTOR // The eventual radius along which the contributor nodes are placed
 let RADIUS_CONTRIBUTOR_NON_ORCA // The radius along which the contributor nodes are placed that have not received ORCA
+let ORCA_RING_WIDTH
+
 const INNER_RADIUS_FACTOR = 0.7 // The factor of the RADIUS_CONTRIBUTOR outside of which the inner repos are not allowed to go in the force simulation
 const MAX_CONTRIBUTOR_WIDTH = 55 // The maximum width (at SF = 1) of the contributor name before it gets wrapped
 const CONTRIBUTOR_PADDING = 20 // The padding between the contributor nodes around the circle (at SF = 1)
@@ -111,10 +107,6 @@ function resize() {
     WIDTH = round(width * PIXEL_RATIO)
     MARGIN_TOP = round(WIDTH * 0.2) // For the title and legend etc.
     HEIGHT = round(width * PIXEL_RATIO) + MARGIN_TOP
-
-    // Set the scale factor
-    SF = (width * PIXEL_RATIO) / DEFAULT_SIZE
-    console.log("SF:", SF)
 
     sizeCanvas(canvas)
     sizeCanvas(canvas_hover)
@@ -170,9 +162,9 @@ const scale_link_strength = d3.scaleLinear()
     .domain([1,50])
     .range([10,80])
 
-const scale_link_width = d3.scaleLinear()
-    .domain([1,10,200])
-    .range([1,2,5])
+const scale_link_width = d3.scalePow()
+    .exponent(0.75)
+    .range([1,2,60])
     // .clamp(true)
 
 // The scale for between which min and max date the contributor has been involved in the central repo
@@ -203,7 +195,7 @@ resize()
 
 // Draw
 function draw() {
-    render(canvas, context, WIDTH, HEIGHT, SF)
+    render(canvas, context, WIDTH, HEIGHT)
 }//function draw
 
 // Start
@@ -314,24 +306,39 @@ function createFullVisual(values) {
     }// function remainingContributorSimulation
 
     /////////////////////////////////////////////////////////////////
+    //////////////////////// Setup the Hover ////////////////////////
+    /////////////////////////////////////////////////////////////////
+    setupHover()
+
+    /////////////////////////////////////////////////////////////////
     ///////////////////////// Return Sketch /////////////////////////
     /////////////////////////////////////////////////////////////////
 
-    return (canvas, context, WIDTH, HEIGHT, SF) => {
+    return (canvas, context, WIDTH, HEIGHT) => {
+
+        // Set the scale factor
+        SF = WIDTH / DEFAULT_SIZE
+        // If this means that the ring won't fit, make the SF smaller        
+        let OUTER_RING = RADIUS_CONTRIBUTOR_NON_ORCA + ORCA_RING_WIDTH/2 + 30
+        if(WIDTH/2 < OUTER_RING * SF) SF = WIDTH / (2*OUTER_RING)
+        console.log("SF:", SF)
+
         // Reset the voronoi/delaunay for the mouse events
         delaunay = d3.Delaunay.from(nodes.map(d => [d.x, d.y]))
         voronoi = delaunay.voronoi([0,0, WIDTH, HEIGHT])
 
         // Some canvas settings
         context.lineJoin = "round" 
+        context.lineCap = "round"
         context_hover.lineJoin = "round" 
+        context_hover.lineCap = "round"
 
         // Fill the background with a color
         context.fillStyle = COLOR_BACKGROUND
         context.fillRect(0, 0, WIDTH, HEIGHT)
 
         // Move the visual to the center
-        // context.save()
+        context.save()
         context.translate(WIDTH / 2, MARGIN_TOP + WIDTH / 2)
 
         /////////////////////////////////////////////////////////////
@@ -346,12 +353,12 @@ function createFullVisual(values) {
 
         /////////////////////////////////////////////////////////////
         // Draw two rings that show the placement of the ORCA receiving contributors versus the non-ORCA receiving contributors
-        drawOrcaRings(context)
+        drawOrcaRings(context, SF)
 
         /////////////////////////////////////////////////////////////
         // Draw all the links as lines
         links.forEach(l => {
-            drawLink(context, l) 
+            drawLink(context, SF, l) 
         })// forEach
 
         /////////////////////////////////////////////////////////////
@@ -365,16 +372,13 @@ function createFullVisual(values) {
         // (those that have more than one contributor)
         nodes_central
             .filter(d => {
-                // console.log(d)
                 return d.type === "contributor" || d.type === "owner" || (d.type === "repo" && d.degree > 3)
             })
             .forEach(d => {
             drawNodeLabel(context, d)
         })// forEach
 
-        /////////////////////////////////////////////////////////////
-        // Setup the hover settings
-        setupHover()
+        context.restore()
 
     }// sketch
 }// createFullVisual
@@ -510,8 +514,7 @@ function prepareData() {
 
     ///////////////////////////// OWNERS ////////////////////////////
     // Create a dataset for all the repos that have an owner that occurs more than once
-    // For all the repos that have a degree > 0 (used to be 1) in the nodes dataset (those that appear in the center)
-    let owners = nodes.filter(d => d.type === "repo" && d.degree > 0 && nodes.filter(n => n.id !== d.id && n.type === "repo" && n.degree > 0 && n.data.owner === d.data.owner).length > 1).map(d => d.data)
+    let owners = nodes.filter(d => d.type === "repo" && nodes.filter(n => n.id !== d.id && n.type === "repo" && n.data.owner === d.data.owner).length > 1).map(d => d.data)
     // Create a unique entry per owner
     owners = d3.group(owners, d => d.owner)
     owners = Array.from(owners, ([key, value]) => ({ owner: key, repos: value.map(n => n.name), color: COLOR_YELLOW, stars: d3.sum(value, d => d.stars), forks: d3.sum(value, d => d.forks) }))
@@ -527,7 +530,7 @@ function prepareData() {
 
     // Check which of the repos are owned by those in the "owners" dataset
     nodes
-        .filter(d => d.type === "repo" && d.degree > 0)
+        .filter(d => d.type === "repo")
         .forEach(d => {
             d.data.multi_repo_owner = owners.find(o => o.owner === d.data.owner) ? true : false
         })// forEach
@@ -634,40 +637,35 @@ function prepareData() {
         d.repos = nodes.filter(n => n.type === "repo" && n.data.owner === d.owner).map(n => n.data)
     })// forEach
 
-    // Redo the degree
-    nodes.forEach(d => {
-        d.degree = links.filter(l => l.source === d.id || l.target === d.id).length
-        // TEST - set initial placement
-        d.x = 0
-        d.y = 0
-    })// forEach
-
-    // Sort the nodes by type and id
-    nodes.sort((a,b) => {
-        if(a.type === b.type) {
-            if(a.id.toLowerCase() < b.id.toLowerCase()) return -1
-            else if(a.id.toLowerCase() > b.id.toLowerCase()) return 1
-            else return 0
-        } else {
-            if(a.type < b.type) return -1
-            else if(a.type > b.type) return 1
-            else return 0
-        }// else
-    })// sort
-
+    /////////////////////////////////////////////////////////////////
     // Which is the central repo, the one that connects everyone (the one with the highest degree)
     central_repo = nodes.find(d => d.type === "repo" && d.id === REPO_CENTRAL)
-    // central_repo = nodes.find(d => d.type === "repo" && d.degree === d3.max(nodes.filter(d => d.type === "repo"), d => d.degree))
 
+    /////////////////////////////////////////////////////////////////
     // Set scales
     scale_repo_radius.domain(d3.extent(repos, d => d.stars))
     scale_contributor_radius.domain(d3.extent(links.filter(l => l.target === central_repo.id), d => d.commit_count))
     scale_involved_range.domain([central_repo.data.createdAt, central_repo.data.updatedAt])
+    scale_link_width.domain([1,10,d3.max(links, d => d.commit_count)])
 
+    /////////////////////////////////////////////////////////////////
     // Determine some visual settings for the nodes
     nodes.forEach((d,i) => {
         d.index = i
         d.data.index = i
+
+        // Find the degree of each node
+        d.degree = links.filter(l => l.source === d.id || l.target === d.id).length
+        // d.in_degree = links.filter(l => l.target === d.id).length
+        // d.out_degree = links.filter(l => l.source === d.id).length
+
+        // Get all the connected nodes
+        // Takes too long, done on hover
+        // d.neighbors = nodes.filter(n => links.find(l => l.source === d.id && l.target === n.id || l.target === d.id && l.source === n.id))
+
+        // TEST - set initial placement
+        d.x = 0
+        d.y = 0
 
         // If this node is an "contributor", find the number of commits they have on the central repo node
         if(d.type === "contributor") {
@@ -684,8 +682,11 @@ function prepareData() {
         d.color = d.data.color
     })// forEach
 
+    // Sort the nodes by their type and for the contributor nodes, by their min commit date to the central repo
     nodes.sort((a,b) => {
         if(a.type === b.type) {
+            // if(a.id.toLowerCase() < b.id.toLowerCase()) return -1
+            // else if(a.id.toLowerCase() > b.id.toLowerCase()) return 1
             if(a.data.link_central && b.data.link_central) {
                 if(a.data.link_central.commit_sec_min < b.data.link_central.commit_sec_min) return -1
                 else if(a.data.link_central.commit_sec_min > b.data.link_central.commit_sec_min) return 1
@@ -698,8 +699,7 @@ function prepareData() {
         }// else
     })// sort
 
-    // d.data.link_central.commit_sec_min
-
+    // Some initial positioning
     remainingContributors.forEach(d => {
         // Initial settings
         d.x = (Math.random() > 0.5 ? -1 : 1) * Math.random()
@@ -822,32 +822,6 @@ function singleOwnerForceSimulation() {
             delete d.fy
         })// forEach
 
-    function drawContributorBubbles(nodes, links) {
-            context.save()
-            context.translate(WIDTH / 2, HEIGHT / 2)
-
-            // Draw all the links as lines
-            links.forEach(l => {
-                if(l.source.x !== undefined && l.target.x !== undefined) {
-                    calculateEdgeCenters(l, 0.8)
-                    calculateLinkGradient(context, l)
-                    context.strokeStyle = l.gradient 
-                } else context.strokeStyle = COLOR_LINK
-                context.lineWidth = scale_link_width(l.commit_count) * SF
-                drawLine(context, l, SF)
-            })// forEach
-
-            // Draw all the nodes as circles
-            nodes
-                .filter(d => d.id !== central_repo.id)
-                .forEach(d => {
-                    context.fillStyle = d.color
-                    let r = d.r //d.type === "contributor" ? 10 : d.r
-                    drawCircle(context, d.x, d.y, SF, r)
-                })// forEach
-
-            context.restore()
-    }// function drawContributorBubbles
 }// function singleOwnerForceSimulation
 
 /////////////////////////////////////////////////////////////////////
@@ -970,7 +944,7 @@ function singleContributorForceSimulation() {
                     context.strokeStyle = l.gradient 
                 } else context.strokeStyle = COLOR_LINK
                 context.lineWidth = scale_link_width(l.commit_count) * SF
-                drawLine(context, l, SF)
+                drawLine(context, SF, l)
             })// forEach
 
             // Draw all the nodes as circles
@@ -998,6 +972,7 @@ function positionContributorNodes() {
     // This sum should be the circumference of the circle around the central node, what radius belongs to this -> 2*pi*R
     RADIUS_CONTRIBUTOR = sum_radius / TAU
     RADIUS_CONTRIBUTOR_NON_ORCA = RADIUS_CONTRIBUTOR * 1.3
+    ORCA_RING_WIDTH = ((RADIUS_CONTRIBUTOR+RADIUS_CONTRIBUTOR_NON_ORCA)/2 - RADIUS_CONTRIBUTOR) * 2
 
     // Fix the contributor nodes in a ring around the central node
     // const angle = TAU / (nodes.filter(d => d.type === "contributor").length)
@@ -1153,10 +1128,10 @@ function collaborationRepoSimulation() {
 //////////////////////// Background Elements ////////////////////////
 /////////////////////////////////////////////////////////////////////
 // Draw two rings around the central node to show those that receive ORCA vs those that do not
-function drawOrcaRings(context) {
+function drawOrcaRings(context, SF) {
     // Draw the ORCA rings
     context.fillStyle = context.strokeStyle = COLOR_PURPLE //COLOR_REPO_MAIN //spectral.mix("#e3e3e3", COLOR_REPO_MAIN, 0.75) 
-    let LW = ((RADIUS_CONTRIBUTOR+RADIUS_CONTRIBUTOR_NON_ORCA)/2 - RADIUS_CONTRIBUTOR) * 2
+    let LW = ORCA_RING_WIDTH
     let O = 4
     context.lineWidth = 1.5 * SF
     // context.lineWidth = LW * SF
@@ -1213,7 +1188,7 @@ function drawNode(context, SF, d) {
     context.strokeStyle = COLOR_BACKGROUND
     context.lineWidth = Math.max(HOVER_ACTIVE ? 1.5 : 1, d.r * 0.07) * SF
     context.stroke()
-    context.globalAlpha = 1
+    // context.globalAlpha = 1
 
     // Draw a tiny arc inside the contributor node to show how long they've been involved in the central repo's existence, based on their first and last commit
     if(d.type === "contributor") {
@@ -1272,41 +1247,50 @@ function drawCircle(context, x, y, SF, r = 10, begin = true) {
 /////////////////////////////////////////////////////////////////////
 
 //////////// Draw the link between the source and target ////////////
-function drawLink(context, l) {
+function drawLink(context, SF, l) {
     if(l.source.x !== undefined && l.target.x !== undefined) {
         calculateLinkGradient(context, l)
         calculateEdgeCenters(l, 1)
         context.strokeStyle = l.gradient 
     } else context.strokeStyle = COLOR_LINK
 
-    // TODO: add commit_count from contributor to owner, from owner to repo, and get the correct line width when hovering from the contributor to the repo (but then applied between the owner and the repo)
+    // Base line width
     let line_width = scale_link_width(l.commit_count)
+
+    // If a hover is active, and the hovered node is a contributor, and this is a link between an owner and repository, make the line width depend on the commit_count of the original link between the contributor and the repository
+    if(HOVER_ACTIVE && HOVERED_NODE.type === "contributor" && l.source.type === "owner" && l.target.type === "repo") {
+        // Find the link between this contributor and the repository in the links_original
+        let link_original = HOVERED_NODE.data.links_original.find(p => p.repo === l.target.id)
+        // Base the line width on this commit count
+        if(link_original) line_width = scale_link_width(link_original.commit_count)
+        else console.log(HOVERED_NODE)
+    }// if
+
     context.lineWidth = line_width * SF
-    drawLine(context, l, SF)
+    drawLine(context, SF, l)
 }// function drawLink
 
 /////////////////////////// Draw the lines //////////////////////////
-function drawLine(context, line, SF) {
+function drawLine(context, SF, line) {
     context.beginPath()
     context.moveTo(line.source.x * SF, line.source.y * SF)
-    if(line.center) drawCircleArc(context, line, SF)
+    if(line.center) drawCircleArc(context, SF, line)
     else context.lineTo(line.target.x * SF, line.target.y * SF)
     context.stroke()
 }//function drawLine
 
 //////////////////////// Draw a curved line /////////////////////////
-function drawCircleArc(context, line, SF) {
+function drawCircleArc(context, SF, line) {
     let center = line.center
-    let ang1 = Math.atan2(line.source.y - center.y, line.source.x - center.x)
-    let ang2 = Math.atan2(line.target.y - center.y, line.target.x - center.x)
+    let ang1 = Math.atan2(line.source.y * SF - center.y * SF, line.source.x * SF - center.x * SF)
+    let ang2 = Math.atan2(line.target.y * SF - center.y * SF, line.target.x * SF - center.x * SF)
     context.arc(center.x * SF, center.y * SF, line.r * SF, ang1, ang2, line.sign)
 }//function drawCircleArc
 
 /////////////////////// Calculate Line Centers //////////////////////
 function calculateEdgeCenters(l, size = 2, sign = true) {
-
     //Find a good radius
-    l.r = Math.sqrt(sq(l.target.x - l.source.x) + sq(l.target.y - l.source.y)) * size //Can run from > 0.5
+    l.r = Math.sqrt(sq((l.target.x - l.source.x)) + sq((l.target.y - l.source.y))) * size //Can run from > 0.5
     //Find center of the arc function
     let centers = findCenters(l.r, { x: l.source.x, y: l.source.y }, { x: l.target.x, y: l.target.y })
     l.sign = sign
@@ -1425,6 +1409,7 @@ function drawHoverState(context, d, FOUND) {
 
     if(FOUND) {
         HOVER_ACTIVE = true
+        HOVERED_NODE = d
 
         // Fade out the main canvas, using CSS
         canvas.style.opacity = '0.3'
@@ -1497,12 +1482,15 @@ function drawHoverState(context, d, FOUND) {
         /////////////////////////////////////////////////
         // Draw all the links to this node
         d.neighbor_links.forEach(l => {
-            drawLink(context, l)
+            drawLink(context, SF, l)
         })// forEach
 
         // Draw all the connected nodes
         d.neighbors.forEach(n => {
             drawNode(context, SF, n)
+        })// forEach
+        // Draw all the labels of the "central" connected nodes
+        d.neighbors.forEach(n => {
             if(n.node_central) drawNodeLabel(context_hover, n)
         })// forEach
 
@@ -1523,6 +1511,7 @@ function drawHoverState(context, d, FOUND) {
 
     } else {
         HOVER_ACTIVE = false
+        HOVERED_NODE = null
 
         // Fade the main canvas back in
         canvas.style.opacity = '1'
@@ -1531,6 +1520,7 @@ function drawHoverState(context, d, FOUND) {
     context.restore()
 }// function drawHoverState
 
+// Draw the tooltip above the node
 function drawTooltip(context, d) {
     let line_height = 1.2
     let font_size
@@ -1554,34 +1544,6 @@ function drawTooltip(context, d) {
 
     // Start with a minimum width
     let W = 240
-    // Check if any of the typically longer texts are wider than this
-    // Bit of a hack (if I change the font's settings later, I need to remember to do it here), but it works
-    let tW = 0
-    if(d.type === "contributor") {
-        // The contributor's name
-        setFont(context, 15 * SF, 700, "normal")
-        tW = context.measureText(d.data.contributor_name).width * 1.25
-    } else if(d.type === "owner") {
-        // The owner's name
-        setFont(context, 15 * SF, 700, "normal")
-        tW = context.measureText(d.data.owner).width * 1.25
-    } else if(d.type === "repo") {
-        // The repo's owner and name
-        setFont(context, 14 * SF, 700, "normal")
-        tW = context.measureText(d.data.owner).width * 1.25
-        if(context.measureText(d.data.name).width * 1.25 > tW) tW = context.measureText(d.data.name).width * 1.25
-        // Languages
-        if(d.data.languages.length > 0) {
-            setFont(context, 11.5 * SF, 400, "normal")
-            let text = ""
-            for(let i = 0; i < Math.min(3, d.data.languages.length); i++) {
-                text += `${d.data.languages[i]}${i < Math.min(3, d.data.languages.length) - 1 ? ", " : ""}`
-            }// for i
-            if(context.measureText(text).width * 1.25 > tW) tW = context.measureText(text).width * 1.24
-        }// if
-    }// else
-    // Update the max width if the text is wider
-    if(tW + 40 * SF > W * SF) W = tW / SF + 40
 
     // Write all the repos for the "owner" nodes, but make sure they are not wider than the box and save each line to write out
     if(d.type === "owner") {
@@ -1605,6 +1567,44 @@ function drawTooltip(context, d) {
         // Update the height of the tooltip
         H += d.text_lines.length * (font_size * line_height)
     }// if
+
+    /////////////////////////////////////////////////////////////////
+    // Figure out the required width of the tooltip
+
+    // Check if any of the typically longer texts are wider than this
+    // Bit of a hack (if I change the font's settings later, I need to remember to do it here), but it works
+    let tW = 0
+    if(d.type === "contributor") {
+        // The contributor's name
+        setFont(context, 15 * SF, 700, "normal")
+        tW = context.measureText(d.data.contributor_name).width * 1.25
+    } else if(d.type === "owner") {
+        // The owner's name
+        setFont(context, 15 * SF, 700, "normal")
+        tW = context.measureText(d.data.owner).width * 1.25
+        // Check if any of the "repo lines" are longer than the owner's name
+        setFont(context, 11.5 * SF, 400, "normal")
+        d.text_lines.forEach(t => {
+            let line_width = context.measureText(t).width * 1.25
+            if(line_width > tW) tW = line_width
+        })// forEach
+    } else if(d.type === "repo") {
+        // The repo's owner and name
+        setFont(context, 14 * SF, 700, "normal")
+        tW = context.measureText(d.data.owner).width * 1.25
+        if(context.measureText(d.data.name).width * 1.25 > tW) tW = context.measureText(d.data.name).width * 1.25
+        // Languages
+        if(d.data.languages.length > 0) {
+            setFont(context, 11.5 * SF, 400, "normal")
+            let text = ""
+            for(let i = 0; i < Math.min(3, d.data.languages.length); i++) {
+                text += `${d.data.languages[i]}${i < Math.min(3, d.data.languages.length) - 1 ? ", " : ""}`
+            }// for i
+            if(context.measureText(text).width * 1.25 > tW) tW = context.measureText(text).width * 1.24
+        }// if
+    }// else
+    // Update the max width if the text is wider
+    if(tW + 40 * SF > W * SF) W = tW / SF + 40
 
     /////////////////////////////////////////////////////////////////
     context.save()
@@ -1837,12 +1837,16 @@ function drawNodeLabel(context, d) {
     } else if(d.type === "repo") {
         context.textAlign = "center"
         context.textBaseline = "bottom"
-        renderText(context, `${d.data.owner}/`, d.x * SF, (d.y - d.r - 3 - 1.1 * 12) * SF, 1.25 * SF)
-        renderText(context, d.label, d.x * SF, (d.y - d.r - 3) * SF, 1.25 * SF)
-    } else {
+        context.strokeStyle = COLOR_BACKGROUND
+        context.lineWidth = 4 * SF
+        renderText(context, `${d.data.owner}/`, d.x * SF, (d.y - d.r - 3 - 1.1 * 12) * SF, 1.25 * SF, true)
+        renderText(context, d.label, d.x * SF, (d.y - d.r - 3) * SF, 1.25 * SF, true)
+    } else { // owner
         context.textAlign = "center"
         context.textBaseline = "bottom"
-        renderText(context, d.label, d.x * SF, (d.y - d.r - 3) * SF, 1.25 * SF)
+        context.strokeStyle = COLOR_BACKGROUND
+        context.lineWidth = 4 * SF
+        renderText(context, d.label, d.x * SF, (d.y - d.r - 3) * SF, 1.25 * SF, true)
     }
 }// function drawNodeLabel
 
@@ -1864,7 +1868,7 @@ function setContributorFont(context, SF = 1, font_size = 13) {
 }//function setContributorFont
 
 //////////////// Add tracking (space) between letters ///////////////
-function renderText(context, text, x, y, letterSpacing = 0) {
+function renderText(context, text, x, y, letterSpacing = 0, stroke = false) {
     //Based on http://jsfiddle.net/davidhong/hKbJ4/        
     let characters = String.prototype.split.call(text, '')
     let index = 0
@@ -1890,6 +1894,7 @@ function renderText(context, text, x, y, letterSpacing = 0) {
     start_position = currentPosition
     while (index < text.length) {
         current = characters[index++]
+        if(stroke) context.strokeText(current, currentPosition, y)
         context.fillText(current, currentPosition, y)
         currentPosition += context.measureText(current).width + letterSpacing
     }//while
