@@ -1,5 +1,3 @@
-// TODO: On hover draw an arc around each connected repo to show the min and max date of involvement
-
 // TODO: Make big lines into tapered ones?
 
 // TODO: Add title and intro (summary) - On canvas or via divs?
@@ -51,9 +49,11 @@ let central_repo
 
 // Hover options
 let delaunay
-let voronoi
+let nodes_delaunay
 let HOVER_ACTIVE = false
 let HOVERED_NODE = null
+let CLICK_ACTIVE = false
+let CLICKED_NODE = null
 
 // Simulation
 let collide
@@ -74,6 +74,9 @@ const CONTRIBUTOR_PADDING = 20 // The padding between the contributor nodes arou
 
 const canvas = document.getElementById("canvas")
 const context = canvas.getContext("2d")
+
+const canvas_click = document.getElementById("canvas-click")
+const context_click = canvas_click.getContext("2d")
 
 const canvas_hover = document.getElementById("canvas-hover")
 const context_hover = canvas_hover.getContext("2d")
@@ -102,6 +105,7 @@ function resize() {
     HEIGHT = round(width * PIXEL_RATIO) + MARGIN_TOP
 
     sizeCanvas(canvas)
+    sizeCanvas(canvas_click)
     sizeCanvas(canvas_hover)
 
     // Size the canvas
@@ -261,6 +265,7 @@ function createFullVisual(values) {
     //////////////////////// Setup the Hover ////////////////////////
     /////////////////////////////////////////////////////////////////
     setupHover()
+    setupClick()
 
     /////////////////////////////////////////////////////////////////
     ///////////////////////// Return Sketch /////////////////////////
@@ -275,9 +280,9 @@ function createFullVisual(values) {
         if(WIDTH/2 < OUTER_RING * SF) SF = WIDTH / (2*OUTER_RING)
         console.log("SF:", SF)
 
-        // Reset the voronoi/delaunay for the mouse events
+        // Reset the delaunay for the mouse events
         delaunay = d3.Delaunay.from(nodes.map(d => [d.x, d.y]))
-        voronoi = delaunay.voronoi([0,0, WIDTH, HEIGHT])
+        nodes_delaunay = nodes
 
         // Some canvas settings
         context.lineJoin = "round" 
@@ -338,7 +343,6 @@ function createFullVisual(values) {
         // })// forEach 
 
         context.restore()
-
     }// sketch
 }// createFullVisual
 
@@ -432,11 +436,6 @@ function prepareData() {
 
         d.type = "contributor"
     })// forEach
-
-    // console.log(contributors[0])
-    // console.log(repos[0])
-    // console.log(links[0])
-    // console.log(remainingContributors)
 
     ////////////////////////// Create Nodes /////////////////////////
     // Combine the contributors and repos into one variable to become the nodes
@@ -819,11 +818,7 @@ function singleContributorForceSimulation() {
         .filter(d => d.type === "contributor")
         .forEach(d => {
             // Find all the nodes that are connected to this one with a degree of one, including the contributor node itself
-            // let nodes_to_contributor = nodes.filter(n => links.find(l => l.source === d.id && l.target === n.id && n.degree === 1) || n.id === d.id)
             let nodes_to_contributor = nodes.filter(n => links.find(l => l.source === d.id && l.target === n.id && n.degree === 1) || links.find(l => l.source === d.id && l.target === n.id && n.type === "owner" && n.data.single_contributor === true) || n.id === d.id)
-
-            // If there are no nodes connected to this one, skip it
-            // if(nodes_to_contributor.length <= 1) return
 
             // Save the list of repositories that are connected to this contributor (with a degree of one)
             d.connected_single_repo = nodes_to_contributor.filter(n => n.type === "repo" || n.type === "owner")
@@ -948,7 +943,6 @@ function positionContributorNodes() {
     nodes
         .filter(d => d.type === "contributor")
         .forEach((d,i) => {
-            // console.log(d.id, d.connected_single_repo)
             // Subtract the contributor node position from all it's connected single-degree repos
             d.connected_single_repo.forEach(repo => {
                 repo.x -= d.x
@@ -1260,14 +1254,13 @@ function drawNode(context, SF, d) {
     context.stroke()
 
     // Draw a tiny arc inside the contributor node to show how long they've been involved in the central repo's existence, based on their first and last commit
-    if(d.type === "contributor") {
+    if(d.type === "contributor" && !CLICK_ACTIVE) {
         timeRangeArc(context, SF, d, central_repo, d.data.link_central)
     }// if
 
     // Draw an arc around the repository node that shows how long the contributor has been active in that repo for all its existence, based on the first and last commit time
     if(HOVER_ACTIVE && HOVERED_NODE.type === "contributor" && d.type === "repo") {
         let link = HOVERED_NODE.data.links_original.find(p => p.repo === d.id)
-        console.log(d, link)
         timeRangeArc(context, SF, d, d, link, COLOR_CONTRIBUTOR)
     }// if
 
@@ -1373,7 +1366,6 @@ function drawLink(context, SF, l) {
         let link_original = HOVERED_NODE.data.links_original.find(p => p.repo === l.target.id)
         // Base the line width on this commit count
         if(link_original) line_width = scale_link_width(link_original.commit_count)
-        else console.log(HOVERED_NODE)
     }// if
 
     context.lineWidth = line_width * SF
@@ -1463,7 +1455,6 @@ function calculateLinkGradient(context, l) {
         col = d3.rgb(l.target.color)
         color_rgb_target = "rgba(" + col.r + "," + col.g + "," + col.b + "," + alpha + ")"
 
-        // console.log(l.source.x, l.source.y, l.target.x, l.target.y)
         if(l.source.x !== undefined && l.target.x !== undefined) {
             l.gradient = context.createLinearGradient(l.source.x * SF, l.source.y * SF, l.target.x * SF, l.target.y * SF)
 
@@ -1486,20 +1477,30 @@ function calculateLinkGradient(context, l) {
 function setupHover() {
     d3.select("#canvas-hover").on("mousemove", function(event) {
         // Get the position of the mouse on the canvas
-        let [mx, my] = d3.pointer(event, this)
-        mx = ((mx * PIXEL_RATIO) - WIDTH / 2) / SF
-        my = ((my * PIXEL_RATIO) - (MARGIN_TOP + WIDTH / 2)) / SF
+        let [mx, my] = d3.pointer(event, this);
+        let [d, FOUND] = findNode(mx, my);
 
-        //Get the closest hovered node
-        let point = delaunay.find(mx, my)
-        let d = nodes[point]
-        // Get the distance from the mouse to the node
-        let dist = Math.sqrt((d.x - mx)**2 + (d.y - my)**2)
-        // If the distance is too big, don't show anything
-        let FOUND = dist < d.r + 50
-        
         // Draw the hover state on the top canvas
-        drawHoverState(context_hover, d, FOUND)
+        if(FOUND) {
+            HOVER_ACTIVE = true
+            HOVERED_NODE = d
+
+            // Fade out the main canvas, using CSS
+            canvas.style.opacity = d.type === "contributor" ? '0.15' : '0.3'
+
+            // Draw the hovered node and its neighbors and links
+            drawHoverState(context_hover, d)
+        } else {
+            context_hover.clearRect(0, 0, WIDTH, HEIGHT)
+            HOVER_ACTIVE = false
+            HOVERED_NODE = null
+    
+            if(!CLICK_ACTIVE) {
+                // Fade the main canvas back in
+                canvas.style.opacity = '1'
+            }// if
+        }// else
+
     })// on mousemove
 
     // canvas.ontouchmove =
@@ -1511,105 +1512,162 @@ function setupHover() {
 }// function setupHover
 
 // Draw the hovered node and its links and neighbors and a tooltip
-function drawHoverState(context, d, FOUND) {
+function drawHoverState(context, d, DO_TOOLTIP = true) {
     // Draw the hover canvas
     context.save()
     context.clearRect(0, 0, WIDTH, HEIGHT)
     context.translate(WIDTH / 2, MARGIN_TOP + WIDTH / 2)
 
-    if(FOUND) {
-        HOVER_ACTIVE = true
-        HOVERED_NODE = d
+    /////////////////////////////////////////////////
+    // Get all the connected links (if not done before)
+    if(d.neighbor_links === undefined) {
+        d.neighbor_links = links.filter(l => l.source.id === d.id || l.target.id === d.id)
+    }// if
 
-        // Fade out the main canvas, using CSS
-        canvas.style.opacity = d.type === "contributor" ? '0.15' : '0.3'
+    // Get all the connected nodes (if not done before)
+    if(d.neighbors === undefined) {
+        d.neighbors = nodes.filter(n => links.find(l => l.source.id === d.id && l.target.id === n.id || l.target.id === d.id && l.source.id === n.id))
 
-        /////////////////////////////////////////////////
-        // Get all the connected links (if not done before)
-        if(d.neighbor_links === undefined) {
-            d.neighbor_links = links.filter(l => l.source.id === d.id || l.target.id === d.id)
+        // If any of these neighbors are "owner" nodes, find what the original repo was from that owner that the contributor was connected to
+        // OR
+        // If this node is a repo and any of these neighbors are "owner" nodes, find what original contributor was connected to this repo
+        if(d.type === "contributor" || (d.type === "repo" && d !== central_repo)) {
+            d.neighbors.forEach(n => {
+                if(n.type === "owner") {
+                    // Go through all of the original links and see if this owner is in there
+                    d.data.links_original.forEach(l => {
+                        if(l.owner === n.id) {
+                            let node, link
+                            if(d.type === "contributor") {
+                                // Find the repo node
+                                node = nodes.find(r => r.id === l.repo)
+                                // Also find the link between the repo and owner and add this to the neighbor_links
+                                link = links.find(l => l.source.id === n.id && l.target.id === node.id)
+                            } else if (d.type === "repo") {
+                                // Find the contributor node
+                                node = nodes.find(r => r.id === l.contributor_name)
+                                // Also find the link between the contributor and owner and add this to the neighbor_links
+                                link = links.find(l => l.source.id === node.id && l.target.id === n.id)
+                            }// else if
+
+                            // Add it to the neighbors
+                            d.neighbors.push(node)
+                            if(link) d.neighbor_links.push(link)
+                        }// if
+                    })// forEach
+                }// if
+            })// forEach
+
+            // Filter out the possible link between the central_node and its owner, to not create a ring
+            d.neighbor_links = d.neighbor_links.filter(l => !(l.target.id === central_repo.id && l.source.id === central_repo.data.owner))
         }// if
-
-        // Get all the connected nodes (if not done before)
-        if(d.neighbors === undefined) {
-            d.neighbors = nodes.filter(n => links.find(l => l.source.id === d.id && l.target.id === n.id || l.target.id === d.id && l.source.id === n.id))
-
-            // If any of these neighbors are "owner" nodes, find what the original repo was from that owner that the contributor was connected to
-            // OR
-            // If this node is a repo and any of these neighbors are "owner" nodes, find what original contributor was connected to this repo
-            if(d.type === "contributor" || (d.type === "repo" && d !== central_repo)) {
-                d.neighbors.forEach(n => {
-                    if(n.type === "owner") {
-                        // Go through all of the original links and see if this owner is in there
-                        d.data.links_original.forEach(l => {
-                            if(l.owner === n.id) {
-                                let node, link
-                                if(d.type === "contributor") {
-                                    // Find the repo node
-                                    node = nodes.find(r => r.id === l.repo)
-                                    // Also find the link between the repo and owner and add this to the neighbor_links
-                                    link = links.find(l => l.source.id === n.id && l.target.id === node.id)
-                                } else if (d.type === "repo") {
-                                    // Find the contributor node
-                                    node = nodes.find(r => r.id === l.contributor_name)
-                                    // Also find the link between the contributor and owner and add this to the neighbor_links
-                                    link = links.find(l => l.source.id === node.id && l.target.id === n.id)
-                                }// else if
-
-                                // Add it to the neighbors
-                                d.neighbors.push(node)
-                                if(link) d.neighbor_links.push(link)
-                            }// if
-                        })// forEach
-                    }// if
-                })// forEach
-
-                // Filter out the possible link between the central_node and its owner, to not create a ring
-                d.neighbor_links = d.neighbor_links.filter(l => !(l.target.id === central_repo.id && l.source.id === central_repo.data.owner))
-            }// if
-            
-        }// if
-
-        /////////////////////////////////////////////////
-        // Draw all the links to this node
-        d.neighbor_links.forEach(l => {
-            drawLink(context, SF, l)
-        })// forEach
-
-        // Draw all the connected nodes
-        d.neighbors.forEach(n => {
-            drawNode(context, SF, n)
-        })// forEach
-        // Draw all the labels of the "central" connected nodes
-        d.neighbors.forEach(n => {
-            if(n.node_central) drawNodeLabel(context_hover, n)
-        })// forEach
-
-        /////////////////////////////////////////////////
-        // Draw the hovered node
-        drawNode(context, SF, d)
-        // Show a ring around the hovered node
-        drawHoverRing(context, d)
         
-        /////////////////////////////////////////////////
-        // Show its label
-        if(d.node_central && d.type === "contributor") drawNodeLabel(context, d)
+    }// if
 
-        /////////////////////////////////////////////////
-        // Create a tooltip with more info
-        drawTooltip(context, d)
+    /////////////////////////////////////////////////
+    // Draw all the links to this node
+    d.neighbor_links.forEach(l => {
+        drawLink(context, SF, l)
+    })// forEach
 
+    // Draw all the connected nodes
+    d.neighbors.forEach(n => {
+        drawNode(context, SF, n)
+    })// forEach
+    // Draw all the labels of the "central" connected nodes
+    d.neighbors.forEach(n => {
+        if(n.node_central) drawNodeLabel(context, n)
+    })// forEach
 
-    } else {
-        HOVER_ACTIVE = false
-        HOVERED_NODE = null
+    /////////////////////////////////////////////////
+    // Draw the hovered node
+    drawNode(context, SF, d)
+    // Show a ring around the hovered node
+    drawHoverRing(context, d)
+    
+    /////////////////////////////////////////////////
+    // Show its label
+    if(d.node_central && d.type === "contributor") drawNodeLabel(context, d)
 
-        // Fade the main canvas back in
-        canvas.style.opacity = '1'
-    }// else
+    /////////////////////////////////////////////////
+    // Create a tooltip with more info
+    if(DO_TOOLTIP) drawTooltip(context, d)
 
     context.restore()
 }// function drawHoverState
+
+/////////////////////////////////////////////////////////////////////
+////////////////////////// Click Functions //////////////////////////
+/////////////////////////////////////////////////////////////////////
+
+function setupClick() {
+    d3.select("#canvas-hover").on("click", function(event) {
+        // Get the position of the mouse on the canvas
+        let [mx, my] = d3.pointer(event, this);
+        let [d, FOUND] = findNode(mx, my);
+        
+        // Clear the "clicked" canvas
+        context_click.clearRect(0, 0, WIDTH, HEIGHT)
+
+        if(FOUND) {
+            CLICK_ACTIVE = true
+            CLICKED_NODE = d
+
+            // Reset the delaunay for the hover, taking only the neighbors into account of the clicked node
+            nodes_delaunay = [...d.neighbors, d]
+            delaunay = d3.Delaunay.from(nodes_delaunay.map(n => [n.x, n.y]))
+
+            // Copy the context_hovered to the context_click without the tooltip
+            drawHoverState(context_click, d, false)
+            // Empty the hovered canvas
+            context_hover.clearRect(0, 0, WIDTH, HEIGHT)
+
+            // TEST - Draw a (scaled wrong) version of the delaunay triangles
+            // context_hover.save()
+            // context_hover.translate(WIDTH / 2, MARGIN_TOP + WIDTH / 2)
+            // context_hover.beginPath()
+            // delaunay.render(context_hover)
+            // context_hover.strokeStyle = "silver"
+            // context_hover.lineWidth = 1 * SF
+            // context_hover.stroke()
+            // context_hover.restore()
+        } else {
+            CLICK_ACTIVE = false
+            CLICKED_NODE = null
+            HOVER_ACTIVE = false
+            HOVERED_NODE = null
+            
+            // Reset the delaunay to all the nodes
+            delaunay = d3.Delaunay.from(nodes.map(d => [d.x, d.y]))
+            nodes_delaunay = nodes
+
+            // Fade the main canvas back in
+            canvas.style.opacity = '1'
+        }// else
+
+    })// on mousemove
+}// function setupHover
+
+/////////////////////////////////////////////////////////////////////
+/////////////////// General Interaction Functions ///////////////////
+/////////////////////////////////////////////////////////////////////
+
+// Turn the mouse position into a canvas x and y location and see if it's close enough to a node
+function findNode(mx, my) {
+    mx = ((mx * PIXEL_RATIO) - WIDTH / 2) / SF
+    my = ((my * PIXEL_RATIO) - (MARGIN_TOP + WIDTH / 2)) / SF
+
+    //Get the closest hovered node
+    let point = delaunay.find(mx, my)
+    let d = nodes_delaunay[point]
+
+    // Get the distance from the mouse to the node
+    let dist = Math.sqrt((d.x - mx)**2 + (d.y - my)**2)
+    // If the distance is too big, don't show anything
+    let FOUND = dist < d.r + (CLICK_ACTIVE ? 10 : 50)
+
+    return [d, FOUND]
+}// function findNode
 
 // Draw the tooltip above the node
 function drawTooltip(context, d) {
