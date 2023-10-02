@@ -1,5 +1,7 @@
 // TODO: Make big lines into tapered ones?
 
+// TODO: Make tooltip scale independent?
+
 // TODO: Add title and intro (summary) - On canvas or via divs?
 // TODO: Add a legend
 // TODO: Add credit
@@ -320,9 +322,8 @@ function createFullVisual(values) {
 
         /////////////////////////////////////////////////////////////
         // Draw all the nodes as circles
-        nodes.forEach(d => {
-            drawNode(context, SF, d)
-        })// forEach
+        nodes.forEach(d => drawNodeArc(context, SF, d) )
+        nodes.forEach(d => drawNode(context, SF, d) )
 
         /////////////////////////////////////////////////////////////
         // Draw the labels for the contributors and for the nodes in the center
@@ -1252,7 +1253,9 @@ function drawNode(context, SF, d) {
     context.lineWidth = Math.max(HOVER_ACTIVE ? 1.5 : 1, d.r * 0.07) * SF
     drawCircle(context, d.x, d.y, SF, d.r, true, true)
     context.stroke()
+}// function drawNode
 
+function drawNodeArc(context, SF, d) {
     // Draw a tiny arc inside the contributor node to show how long they've been involved in the central repo's existence, based on their first and last commit
     if(d.type === "contributor" && !CLICK_ACTIVE) {
         timeRangeArc(context, SF, d, central_repo, d.data.link_central)
@@ -1264,12 +1267,12 @@ function drawNode(context, SF, d) {
         timeRangeArc(context, SF, d, d, link, COLOR_CONTRIBUTOR)
     }// if
 
-}// function drawNode
+}// function drawNodeArc
 
 ////////////////////////// Draw Hover Ring //////////////////////////
 // Draw a stroked ring around the hovered node
 function drawHoverRing(context, d) {
-    let r = d.r + (d.type === "contributor" ? 11 : d.special_type ? 14 : 5)
+    let r = d.r + (d.type === "contributor" ? 9 : d === central_repo ? 14 : 7)
     context.beginPath()
     context.moveTo((d.x + r) * SF, d.y * SF)
     context.arc(d.x * SF, d.y * SF, r * SF, 0, TAU)
@@ -1292,9 +1295,12 @@ function timeRangeArc(context, SF, d, repo, link, COL = COLOR_REPO_MAIN) {
         .domain([repo.data.createdAt, repo.data.updatedAt])
         .range([0, TAU])
 
+    let r_inner = d.r + (d.type === "contributor" || d === central_repo ? 2.5 : 1)
+    let r_outer = r_inner + 3
+
     const arc = d3.arc()
-        .innerRadius((d.r + 2.5) * SF)
-        .outerRadius((d.r + 2.5 + 3) * SF)
+        .innerRadius(r_inner * SF)
+        .outerRadius(r_outer * SF)
         .startAngle(scale_involved_range(link.commit_sec_min))
         .endAngle(scale_involved_range(link.commit_sec_max))
         .context(context)
@@ -1571,9 +1577,8 @@ function drawHoverState(context, d, DO_TOOLTIP = true) {
     })// forEach
 
     // Draw all the connected nodes
-    d.neighbors.forEach(n => {
-        drawNode(context, SF, n)
-    })// forEach
+    d.neighbors.forEach(n => drawNodeArc(context, SF, n))
+    d.neighbors.forEach(n => drawNode(context, SF, n))
     // Draw all the labels of the "central" connected nodes
     d.neighbors.forEach(n => {
         if(n.node_central) drawNodeLabel(context, n)
@@ -1614,7 +1619,7 @@ function setupClick() {
             CLICKED_NODE = d
 
             // Reset the delaunay for the hover, taking only the neighbors into account of the clicked node
-            nodes_delaunay = [...d.neighbors, d]
+            nodes_delaunay = d.neighbors ? [...d.neighbors, d] : nodes
             delaunay = d3.Delaunay.from(nodes_delaunay.map(n => [n.x, n.y]))
 
             // Copy the context_hovered to the context_click without the tooltip
