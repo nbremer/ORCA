@@ -160,9 +160,7 @@ const scale_link_width = d3.scalePow()
     .range([1,2,60])
     // .clamp(true)
 
-// The scale for between which min and max date the contributor has been involved in the central repo
-const scale_involved_range = d3.scaleLinear()
-    .range([0, TAU])
+
 
 /////////////////////////////////////////////////////////////////////
 /////////////////////////////// START ///////////////////////////////
@@ -625,7 +623,6 @@ function prepareData() {
     // Set scales
     scale_repo_radius.domain(d3.extent(repos, d => d.stars))
     scale_contributor_radius.domain(d3.extent(links.filter(l => l.target === central_repo.id), d => d.commit_count))
-    scale_involved_range.domain([central_repo.data.createdAt, central_repo.data.updatedAt])
     scale_link_width.domain([1,10,d3.max(links, d => d.commit_count)])
 
     /////////////////////////////////////////////////////////////////
@@ -1264,9 +1261,16 @@ function drawNode(context, SF, d) {
 
     // Draw a tiny arc inside the contributor node to show how long they've been involved in the central repo's existence, based on their first and last commit
     if(d.type === "contributor") {
-        timeRangeArc(context, SF, d, d.data.link_central)
+        timeRangeArc(context, SF, d, central_repo, d.data.link_central)
     }// if
-    
+
+    // Draw an arc around the repository node that shows how long the contributor has been active in that repo for all its existence, based on the first and last commit time
+    if(HOVER_ACTIVE && HOVERED_NODE.type === "contributor" && d.type === "repo") {
+        let link = HOVERED_NODE.data.links_original.find(p => p.repo === d.id)
+        console.log(d, link)
+        timeRangeArc(context, SF, d, d, link, COLOR_CONTRIBUTOR)
+    }// if
+
 }// function drawNode
 
 ////////////////////////// Draw Hover Ring //////////////////////////
@@ -1283,18 +1287,23 @@ function drawHoverRing(context, d) {
 
 ///////////////////////// Arc around Circle /////////////////////////
 // Draw a tiny arc around the node to show how long they've been involved in a certain repo's existence, based on their first and last commit
-function timeRangeArc(context, SF, d, data_commit, COL = COLOR_REPO_MAIN) {
+function timeRangeArc(context, SF, d, repo, link, COL = COLOR_REPO_MAIN) {
     context.save()
     context.translate(d.x * SF, d.y * SF)
 
     context.fillStyle = COL
     context.strokeStyle = COL
 
+    // The scale for between which min and max date the contributor has been involved in the central repo
+    const scale_involved_range = d3.scaleLinear()
+        .domain([repo.data.createdAt, repo.data.updatedAt])
+        .range([0, TAU])
+
     const arc = d3.arc()
         .innerRadius((d.r + 2.5) * SF)
         .outerRadius((d.r + 2.5 + 3) * SF)
-        .startAngle(scale_involved_range(data_commit.commit_sec_min))
-        .endAngle(scale_involved_range(data_commit.commit_sec_max))
+        .startAngle(scale_involved_range(link.commit_sec_min))
+        .endAngle(scale_involved_range(link.commit_sec_max))
         .context(context)
 
     // Create the arc
@@ -1302,12 +1311,12 @@ function timeRangeArc(context, SF, d, data_commit, COL = COLOR_REPO_MAIN) {
     arc()
     context.fill()
 
-    // Draw a tiny marker at the top to show where the "start" is
-    context.beginPath()
-    context.moveTo(0, - (d.r + 2) * SF)
-    context.lineTo(0, - (d.r + 2 + 5) * SF)
-    context.lineWidth = 1 * SF
-    context.stroke()
+    // // Draw a tiny marker at the top to show where the "start" is
+    // context.beginPath()
+    // context.moveTo(0, - (d.r + 2) * SF)
+    // context.lineTo(0, - (d.r + 2 + 5) * SF)
+    // context.lineWidth = 1 * SF
+    // context.stroke()
 
     context.restore()
 }// function timeRangeArc
@@ -1610,7 +1619,7 @@ function drawTooltip(context, d) {
 
     // Figure out the base x and y position of the tooltip
     const x_base = d.x
-    const y_base = d.y - d.r
+    const y_base = d.y - (d.max_radius ? d.max_radius : d.r)
 
     /////////////////////////////////////////////////////////////////
     // Figure out the required height of the tooltip
