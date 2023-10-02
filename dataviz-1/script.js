@@ -1,24 +1,18 @@
-
-// TODO: Mark the repos that are impacted by ORCA
-
-// TODO: Look into label placement 
-// Look into SAT solver for label placement
-// Look into Cynthia Brewer paper for label
-
 // TODO: On hover draw an arc around each connected repo to show the min and max date of involvement
 
 // TODO: Make big lines into tapered ones?
 
 // TODO: Add title and intro (summary) - On canvas or via divs?
+// TODO: Add a legend
+// TODO: Add credit
 // Top contributors by count are these people
 // These people have also contributed to X other repos
 // Tiny histogram of the number of people that have done Y commits - with those top contributors highlighted
 
-// TODO: Add a legend
-// TODO: Add credit
-
 // TODO: A tiny mark for everyone else (like pebbles on the outside)
 // TODO: Add hover for tiny circles, remaining contributors as well
+
+// TODO: Look into label placement again (SAT solver or Cynthia Brewer paper for label placement)
 
 /////////////////////////////////////////////////////////////////////
 ///////////////////////////// CONSTANTS /////////////////////////////
@@ -221,7 +215,7 @@ function createFullVisual(values) {
     links = values[2]
     remainingContributors = values[3]
     prepareData()
-    console.log("Data prepared")
+    // console.log("Data prepared")
     
     /////////////////////////////////////////////////////////////////
     ///////////////// Run Force Simulation per Owner ////////////////
@@ -229,7 +223,7 @@ function createFullVisual(values) {
     // Run a force simulation for per owner for all the repos that have the same "owner"
     // Like a little cloud of repos around them
     singleOwnerForceSimulation()
-    console.log("Contributor mini force simulation done")
+    // console.log("Contributor mini force simulation done")
     
     /////////////////////////////////////////////////////////////////
     ////////////// Run Force Simulation per Contributor /////////////
@@ -237,7 +231,7 @@ function createFullVisual(values) {
     // Run a force simulation for per contributor for all the repos that are not shared between other contributors
     // Like a little cloud of repos around them
     singleContributorForceSimulation()
-    console.log("Owner mini force simulation done")
+    // console.log("Owner mini force simulation done")
 
     /////////////////////////////////////////////////////////////////
     /////////////////// Position Contributor Nodes //////////////////
@@ -249,21 +243,21 @@ function createFullVisual(values) {
     // Place the contributor nodes in a circle around the central repo
     // Taking into account the max_radius of single-degree repos around them
     positionContributorNodes()
-    console.log("Contributor nodes positioned")
+    // console.log("Contributor nodes positioned")
 
     /////////////////////////////////////////////////////////////////
     ///////////// Run Force Simulation for Shared Repos /////////////
     /////////////////////////////////////////////////////////////////
     // Run a force simulation to position the repos that are shared between contributors 
     collaborationRepoSimulation()
-    console.log("Central force simulation done")
+    // console.log("Central force simulation done")
 
     /////////////////////////////////////////////////////////////////
     //////// Run Force Simulation for Remaining Contributors ////////
     /////////////////////////////////////////////////////////////////
     // Run a force simulation to position the remaining contributors around the central area
     remainingContributorSimulation()
-    console.log("Remaining contributor force simulation done")
+    // console.log("Remaining contributor force simulation done")
 
     /////////////////////////////////////////////////////////////////
     //////////////////////// Setup the Hover ////////////////////////
@@ -467,6 +461,17 @@ function prepareData() {
         d.links_original = links.filter(l => l.target === d.repo)
     })// forEach
 
+    /////////////////////////////////////////////////////////////////
+    // Mark all the repositories that have a link to at least one contributor that has received ORCA
+    repos.forEach(d => {
+        d.orca_impacted = false
+        d.links_original.forEach(l => {
+            if(contributors.find(c => c.contributor_name === l.contributor_name && c.orca_received === true)) {
+                d.orca_impacted = true
+            }// if
+        })// forEach
+    })// forEach
+    
     /////////////////////////////////////////////////////////////////
     // Which is the central repo, the one that connects everyone (the one with the highest degree)
     central_repo = nodes.find(d => d.type === "repo" && d.id === REPO_CENTRAL)
@@ -1032,7 +1037,11 @@ function collaborationRepoSimulation() {
         if(d.type === "contributor") {
             d.bbox = [[-d.max_radius, -d.max_radius],[d.max_radius, d.max_radius]]
             return
-        }// if
+        } else if(d.id === REPO_CENTRAL) {
+            let r = d.r + 14
+            d.bbox = [[-r, -r],[r, r]]
+            return
+        }// else
 
         if(d.type === "owner") {
             setOwnerFont(context, 1)
@@ -1231,53 +1240,36 @@ function drawOrcaRings(context, SF) {
 /////////////////////////////////////////////////////////////////////
 
 function drawNode(context, SF, d) {
+    // Is this a node that is a repo that is not impacted by ORCA?
+    let REPO_NOT_ORCA = d.type === "repo" && !d.data.orca_impacted
+
+    // Draw a circle for the node
     context.shadowBlur = HOVER_ACTIVE ? 0 : Math.max(2, d.r * 0.2) * SF
-    context.shadowColor = "#f7f7f7"//d.color
+    context.shadowColor = "#f7f7f7"
+
+    context.globalAlpha = REPO_NOT_ORCA ? 0.4 : 1
     context.fillStyle = d.color
-    // context.globalAlpha = d.type === "contributor" ? 1 : scale_node_opacity(d.degree)
-    let r = d.r //d.type === "contributor" ? 10 : d.r
-    drawCircle(context, d.x, d.y, SF, r)
+    drawCircle(context, d.x, d.y, SF, d.r)
+    context.globalAlpha = 1
     context.shadowBlur = 0
 
+    // Draw a small circle in the center for the not ORCA impacted repos
+    if(REPO_NOT_ORCA) drawCircle(context, d.x, d.y, SF, d.r * 0.3)
+
     // Also draw a stroke around the node
-    // context.globalAlpha = 0.5
     context.strokeStyle = COLOR_BACKGROUND
     context.lineWidth = Math.max(HOVER_ACTIVE ? 1.5 : 1, d.r * 0.07) * SF
+    drawCircle(context, d.x, d.y, SF, d.r, true, true)
     context.stroke()
-    // context.globalAlpha = 1
 
     // Draw a tiny arc inside the contributor node to show how long they've been involved in the central repo's existence, based on their first and last commit
     if(d.type === "contributor") {
-        context.save()
-        context.translate(d.x * SF, d.y * SF)
-
-        // TODO: Check that the angle is not too small
-        // let angle = scale_involved_range(d.data.link_central.commit_sec_max) - scale_involved_range(d.data.link_central.commit_sec_min)
-        const arc = d3.arc()
-            .innerRadius((d.r + 2.5) * SF)
-            .outerRadius((d.r + 2.5 + 3) * SF)
-            .startAngle(scale_involved_range(d.data.link_central.commit_sec_min))
-            .endAngle(scale_involved_range(d.data.link_central.commit_sec_max))
-            .context(context)
-
-        // Create the arc
-        context.beginPath()
-        arc()
-        context.fillStyle = COLOR_REPO_MAIN
-        context.fill()
-
-        // Draw a tiny marker at the top to show where the "start" is
-        context.strokeStyle = COLOR_REPO_MAIN
-        context.lineWidth = 1 * SF
-        context.beginPath()
-        context.moveTo(0, - (d.r + 2) * SF)
-        context.lineTo(0, - (d.r + 2 + 5) * SF)
-        context.stroke()
-
-        context.restore()
+        timeRangeArc(context, SF, d, d.data.link_central)
     }// if
+    
 }// function drawNode
 
+////////////////////////// Draw Hover Ring //////////////////////////
 // Draw a stroked ring around the hovered node
 function drawHoverRing(context, d) {
     let r = d.r + (d.type === "contributor" ? 11 : d.special_type ? 14 : 5)
@@ -1289,12 +1281,65 @@ function drawHoverRing(context, d) {
     context.stroke()
 }// function drawHoverRing
 
+///////////////////////// Arc around Circle /////////////////////////
+// Draw a tiny arc around the node to show how long they've been involved in a certain repo's existence, based on their first and last commit
+function timeRangeArc(context, SF, d, data_commit, COL = COLOR_REPO_MAIN) {
+    context.save()
+    context.translate(d.x * SF, d.y * SF)
+
+    context.fillStyle = COL
+    context.strokeStyle = COL
+
+    const arc = d3.arc()
+        .innerRadius((d.r + 2.5) * SF)
+        .outerRadius((d.r + 2.5 + 3) * SF)
+        .startAngle(scale_involved_range(data_commit.commit_sec_min))
+        .endAngle(scale_involved_range(data_commit.commit_sec_max))
+        .context(context)
+
+    // Create the arc
+    context.beginPath()
+    arc()
+    context.fill()
+
+    // Draw a tiny marker at the top to show where the "start" is
+    context.beginPath()
+    context.moveTo(0, - (d.r + 2) * SF)
+    context.lineTo(0, - (d.r + 2 + 5) * SF)
+    context.lineWidth = 1 * SF
+    context.stroke()
+
+    context.restore()
+}// function timeRangeArc
+
+//////////// Fill a circle with a diagonal hatch pattern ////////////
+function drawHatchPattern(context, radius, angle) {
+    context.save()
+    context.beginPath()
+    context.arc(0, 0, radius, 0, TAU)
+    context.clip()
+  
+    const lW = 1.5 * SF
+    // const lW = Math.min(0.3 * radius, 2.5)
+    const step = 4 * lW * Math.sin(angle / 2)
+    
+    context.lineWidth = lW
+    context.strokeStyle = d.color
+    for (let x = -2.5*radius; x < 2.5*radius; x += step) {
+      context.beginPath()
+      context.moveTo(x, -radius)
+      context.lineTo(x + radius * Math.tan(angle / 2), radius)
+      context.stroke()
+    }// for x
+    context.restore()
+}// function drawHatchPattern
+
 /////////////////////////// Draw a circle ///////////////////////////
-function drawCircle(context, x, y, SF, r = 10, begin = true) {
-    if(begin) context.beginPath()
+function drawCircle(context, x, y, SF, r = 10, begin = true, stroke = false) {
+    if(begin === true) context.beginPath()
     context.moveTo((x+r) * SF, y * SF)
     context.arc(x * SF, y * SF, r * SF, 0, TAU)
-    if(begin) context.fill()
+    if(begin && stroke == false) context.fill()
     // if(begin) { context.lineWidth = 1.5 * SF; context.stroke() }
 }//function drawCircle
 
@@ -1468,7 +1513,7 @@ function drawHoverState(context, d, FOUND) {
         HOVERED_NODE = d
 
         // Fade out the main canvas, using CSS
-        canvas.style.opacity = '0.3'
+        canvas.style.opacity = d.type === "contributor" ? '0.15' : '0.3'
 
         /////////////////////////////////////////////////
         // Get all the connected links (if not done before)
