@@ -23,16 +23,20 @@
                 /* justify-content: center; */
                 /* align-items: center; */
                 /* flex-direction: row; */
-                /* margin: 0; */
+                margin: 0;
                 font-family: 'Atkinson Hyperlegible', sans-serif;
             }
 
             #chart-container {
+                position: relative;
                 background-color: #f7f7f7;
+                max-width: 1600px;
+                min-width: 900px;
             }
 
             canvas {
                 display: block;
+                margin: 0;
             }
 
             #canvas, #canvas-click {
@@ -59,11 +63,13 @@
         <script src="lib/d3-delaunay.js"></script>
         <script src="lib/d3-bboxCollide.min.js"></script>
         <!-- <script src="lib/spectral.js"></script> -->
-        
+
+        <!-- Custom JavaScript file -->
+        <script src="createORCAVisual.js"></script>
+
 	</head>
 	<body>
         <div id="chart-intro">
-
         </div>
         <div id="chart-container">
             <canvas id="canvas"></canvas>
@@ -71,9 +77,86 @@
             <canvas id="canvas-hover"></canvas>
         </div>
 
-        <!-- Custom JavaScript file -->
-        <script src="script.js"></script>
+        <script>
+            let params = new URLSearchParams(window.location.search)
+            const REPOSITORY = [
+                "pdfjs",
+                "terraform"
+            ].indexOf(params.get("repo")) === -1 ? "pdfjs" : params.get("repo")
 
-        
+            let REPOSITORY_FULL = "mozilla/pdf.js" // Default
+            if (REPOSITORY === "terraform") REPOSITORY_FULL = "hashicorp/terraform"
+
+            /////////////////////////////////////////////////////////
+            ///////////////////////// START /////////////////////////
+            /////////////////////////////////////////////////////////
+
+            ////////////////// Datasets to Read in //////////////////
+            let promises = []
+            promises.push(d3.csv(`data/${REPOSITORY}/authorInfo-${REPOSITORY}.csv`))
+            promises.push(d3.csv(`data/${REPOSITORY}/baseRepoInfo-${REPOSITORY}.csv`))
+            promises.push(d3.csv(`data/${REPOSITORY}/links-${REPOSITORY}.csv`))
+            promises.push(d3.csv(`data/${REPOSITORY}/remainingContributors-${REPOSITORY}.csv`))
+
+            /////////////////// Fonts to activate ///////////////////
+            const FONT_FAMILY = "Atkinson Hyperlegible"
+            document.fonts.load(`normal 400 10px "${FONT_FAMILY}"`)
+            document.fonts.load(`italic 400 10px "${FONT_FAMILY}"`)
+            document.fonts.load(`normal 700 10px "${FONT_FAMILY}"`)
+            document.fonts.load(`italic 700 10px "${FONT_FAMILY}"`)
+
+            /////////////////// Figure out sizing ///////////////////
+            // Get the div container that will hold the chart
+            let container = document.getElementById("chart-container")
+            // Get the width of the container
+            let width = container.offsetWidth
+            // You can set the height to anything you want, but the same as the width is the default
+            let height = width
+
+            ///////////////////// Start Drawing /////////////////////
+            // Set-up the visual - Doesn't draw anything yet
+            let ORCAVisual = createORCAVisual()
+                .width(width)
+                .height(height)
+                .repository(REPOSITORY_FULL)
+
+            // Read in the data and create the visual
+            document.fonts.ready.then(() => {
+                Promise.all(promises).then(values => {
+                    // It expects the four datasets of contributors (authors), repositories, links between contributors and repositories, and remaining contributors, in that order
+                    ORCAVisual(values)       
+                })//promises
+            })//fonts.ready
+
+            /////////////////////////////////////////////////////////
+            ////////////////// Handle page resizing /////////////////
+            /////////////////////////////////////////////////////////
+
+            let current_width = window.innerWidth
+            let resizeTimer = null
+            window.addEventListener("resize", function () {
+                // Reset timer - Only resize if something truly appears to happen
+                // So added a little timeout
+                clearTimeout(resizeTimer)
+
+                resizeTimer = setTimeout(() => {
+                    // Only resize if the width is changed
+                    if (window.innerWidth !== current_width) {
+                        current_width = window.innerWidth
+
+                        // Get the new sizes
+                        let width = container.offsetWidth
+                        let height = width
+
+                        //Update the visual
+                        ORCAVisual
+                            .width(width)
+                            .height(height)
+                            .resize()
+                    }// if
+                }, 300)
+            })//on resize
+
+        </script>
 	</body>
 </html>
