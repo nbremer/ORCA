@@ -9,16 +9,17 @@
 
         <style>
             html {
-                width: 100%;
-                /* display: flex; */
-                /* justify-content: center; */
-                /* align-items: center; */
-                /* flex-direction: column; */
+                /* width: 100%; */
+                --color-repo-main: #a682e8;
+                --color-repo: #64d6d3;
+                --color-owner: #f2a900;
+                --color-contributor: #ea9df5;
+                --color-text: #4d4950;
             }
 
             body {
-                width: 100%;
-                height: 100%;
+                /* width: 100%; */
+                /* height: 100%; */
                 /* display: flex; */
                 /* justify-content: center; */
                 /* align-items: center; */
@@ -27,14 +28,66 @@
                 font-family: 'Atkinson Hyperlegible', sans-serif;
             }
 
-            #chart-container {
-                position: relative;
-                background-color: #f7f7f7;
-                max-width: 1600px;
-                min-width: 900px;
+            #chart-wrapper {
+                min-width: 900px; /* Min size that the visual can becom */
+                max-width: 1600px; /* Max size that the visual can become */
+
+                /* Add a top stroke to this that is a linear gradient between the main repo color and the owner color */
+                border-top: 10px solid var(--color-repo-main);
+                border-image: linear-gradient(to right, var(--color-contributor), var(--color-repo-main), var(--color-repo)) 1;
             }
 
-            canvas {
+            #chart-textual {
+                /* Create a linear gradient for the background going from transparent #f7f7f7 to #f7f7f7 downward */
+                background: linear-gradient(to bottom, rgba(247, 247, 247, 0) 50%, rgba(247, 247, 247, 1) 100%);
+                min-height: 200px;
+                padding: 3em 5em 2em 5em;
+
+                display: grid;
+                justify-content: center;
+                align-items: top;
+
+                grid-template-columns: 1fr 2fr;
+                column-gap: 7em;
+                row-gap: 5em;
+            }
+
+            #chart-title {
+                grid-column-start: 1;
+                grid-column-end: 1;
+            }
+            #chart-title h1 {
+                font-weight: 400;
+                font-size: 2.4em;
+                font-style: italic;
+                margin-bottom: 0.2em; 
+                margin-top: 0em;
+            }
+            #chart-title h1#title-repo-name {
+                font-weight: 700;
+                font-size: 2.6em;
+                margin-top: 0.2em;
+                font-style: normal;
+            }
+
+            #chart-intro-text {
+                grid-column-start: 2;
+                grid-column-end: 2;
+                font-weight: 400;
+                font-size: 1.2em;
+            }
+
+            .central-repo {
+                color: var(--color-repo-main);
+            }
+
+            /* CHART */
+            #chart-container {
+                position: relative;
+                background-color: #f7f7f7; /* Same as the COLOR_BACKGROUND in the visual */
+            }
+
+            #chart-container canvas {
                 display: block;
                 margin: 0;
             }
@@ -69,12 +122,21 @@
 
 	</head>
 	<body>
-        <div id="chart-intro">
-        </div>
-        <div id="chart-container">
-            <canvas id="canvas"></canvas>
-            <canvas id="canvas-click"></canvas>
-            <canvas id="canvas-hover"></canvas>
+        <div id="chart-wrapper">
+            <div id="chart-textual">
+                <div id="chart-title">
+                    <h1>The Top Contributor Network of</h1>
+                    <h1 id="title-repo-name" class="central-repo">mozilla/pdf.js</h1>
+                </div>
+                <div id="chart-intro-text">
+                    lorem ipsum dolor sit amet, consectetur adipiscing elit. sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.
+                </div>
+            </div>
+            <div id="chart-container">
+                <canvas id="canvas"></canvas>
+                <canvas id="canvas-click"></canvas>
+                <canvas id="canvas-hover"></canvas>
+            </div>
         </div>
 
         <script>
@@ -86,6 +148,9 @@
 
             let REPOSITORY_FULL = "mozilla/pdf.js" // Default
             if (REPOSITORY === "terraform") REPOSITORY_FULL = "hashicorp/terraform"
+
+            // Replace the "title-repo-name" with the repository name
+            document.getElementById("title-repo-name").innerHTML = REPOSITORY_FULL
 
             /////////////////////////////////////////////////////////
             ///////////////////////// START /////////////////////////
@@ -107,7 +172,7 @@
 
             /////////////////// Figure out sizing ///////////////////
             // Get the div container that will hold the chart
-            let container = document.getElementById("chart-container")
+            let container = document.getElementById("chart-wrapper")
             // Get the width of the container
             let width = container.offsetWidth
             // You can set the height to anything you want, but the same as the width is the default

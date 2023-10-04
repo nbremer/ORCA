@@ -1,6 +1,7 @@
-// TODO: Make big lines into tapered ones?
-
 // TODO: Make tooltip scale independent?
+
+// "Top Contributor Network" for mozilla/pdf.js
+// Add some of the statistics to the text
 
 // TODO: Add title and intro (summary) - On canvas or via divs?
 // TODO: Add a legend
@@ -9,10 +10,20 @@
 // These people have also contributed to X other repos
 // Tiny histogram of the number of people that have done Y commits - with those top contributors highlighted
 
+// TODO: Add link to download the raw data
+
+// TODO: Update min and max commit time of contributor when click active in the tooltip
+
+// TODO: Panel with information about the person being - in short prose - first commit, last commit, number of repos that they have (use colors from the visual)
+
+// TODO: Tooltip add the number of contributors that "supported via 5 ORCA recipients" / "no ORCA recipients"
+
 // TODO: A tiny mark for everyone else (like pebbles on the outside)
 // TODO: Add hover for tiny circles, remaining contributors as well
 
+// ~~ MAYBE ~~
 // TODO: Look into label placement again (SAT solver or Cynthia Brewer paper for label placement)
+// TODO: Make big lines into tapered ones? But I think I like the non-tapered lines more than possible tapered ones?
 
 /////////////////////////////////////////////////////////////////////
 /////////////// Visualization designed & developed by ///////////////
@@ -94,14 +105,15 @@ const createORCAVisual = () => {
     /////////////////////////////// Colors //////////////////////////////
     /////////////////////////////////////////////////////////////////////
 
-    const COLOR_YELLOW = "#f2a900"
+    const COLOR_BACKGROUND = "#f7f7f7"
+
     const COLOR_PURPLE = "#783ce6"
 
-    const COLOR_BACKGROUND = "#f7f7f7"
     const COLOR_REPO_MAIN = "#a682e8"
     const COLOR_REPO = "#64d6d3" // "#b2faf8"
-    const COLOR_OWNER = COLOR_YELLOW
+    const COLOR_OWNER = "#f2a900"
     const COLOR_CONTRIBUTOR = "#ea9df5"
+
     const COLOR_LINK = "#e8e8e8"
     const COLOR_TEXT = "#4d4950"
 
@@ -1972,7 +1984,7 @@ const createORCAVisual = () => {
             context.textBaseline = "bottom"
             context.strokeStyle = COLOR_BACKGROUND
             context.lineWidth = 4 * SF
-            renderText(context, d.label, d.x * SF, (d.y - d.r - 3) * SF, 1.25 * SF, true)
+            renderText(context, `${d.label}/`, d.x * SF, (d.y - d.r - 3) * SF, 1.25 * SF, true)
         }
     }// function drawNodeLabel
 
