@@ -103,7 +103,7 @@ function resize() {
 
     // It's the width that determines the size
     WIDTH = round(width * PIXEL_RATIO)
-    MARGIN_TOP = round(WIDTH * 0.2) // For the title and legend etc.
+    MARGIN_TOP = 0//round(WIDTH * 0.2) // For the title and legend etc.
     HEIGHT = round(width * PIXEL_RATIO) + MARGIN_TOP
 
     sizeCanvas(canvas)
@@ -152,6 +152,8 @@ const scale_repo_radius = d3.scaleSqrt()
 // Based on the number of commits to the central repo
 const scale_contributor_radius = d3.scaleSqrt()
     .range([8, 30])
+const scale_remaining_contributor_radius = d3.scaleSqrt()
+    .range([1, 8])
 
 const scale_link_distance = d3.scaleLinear()
     .domain([1,50])
@@ -165,8 +167,6 @@ const scale_link_width = d3.scalePow()
     .exponent(0.75)
     .range([1,2,60])
     // .clamp(true)
-
-
 
 /////////////////////////////////////////////////////////////////////
 /////////////////////////////// START ///////////////////////////////
@@ -624,6 +624,8 @@ function prepareData() {
     scale_repo_radius.domain(d3.extent(repos, d => d.stars))
     scale_contributor_radius.domain(d3.extent(links.filter(l => l.target === central_repo.id), d => d.commit_count))
     scale_link_width.domain([1,10,d3.max(links, d => d.commit_count)])
+    scale_remaining_contributor_radius.domain([0, scale_contributor_radius.domain()[0]])
+    // scale_remaining_contributor_radius.domain(d3.extent(remainingContributors, d => d.commit_count))
 
     /////////////////////////////////////////////////////////////////
     // Determine some visual settings for the nodes
@@ -1142,13 +1144,13 @@ function remainingContributorSimulation() {
         d.x = (R + Math.random() * 50) * cos(angle)
         d.y = (R + Math.random() * 50) * sin(angle)
 
-        d.r = scale_contributor_radius(d.commit_count) / 2
+        d.r = scale_remaining_contributor_radius(d.commit_count)
     })// forEach
 
     let simulation = d3.forceSimulation()
         .force("collide",
             d3.forceCollide()
-                .radius(d => d.r + Math.random() * 40 + 20)
+                .radius(d => d.r + Math.random() * 20 + 10)
                 .strength(1)
         )
         // .force("charge",
@@ -1173,7 +1175,7 @@ function remainingContributorSimulation() {
         .stop()
 
     // Manually "tick" through the network
-    let n_ticks = 20
+    let n_ticks = 30
     for (let i = 0; i < n_ticks; ++i) simulation.tick()
 
     // Remove the dummy node from the dataset again
