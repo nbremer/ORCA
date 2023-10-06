@@ -9,38 +9,66 @@
 
         <style>
             html {
-                /* width: 100%; */
                 --color-repo-main: #a682e8;
                 --color-repo: #64d6d3;
                 --color-owner: #f2a900;
                 --color-contributor: #ea9df5;
                 --color-text: #4d4950;
+                --color-background: #f7f7f7;
+                --color-gradient: linear-gradient(to right, var(--color-contributor), var(--color-repo-main), var(--color-repo)) 1;
             }
 
             body {
-                /* width: 100%; */
-                /* height: 100%; */
-                /* display: flex; */
-                /* justify-content: center; */
-                /* align-items: center; */
-                /* flex-direction: row; */
                 margin: 0;
                 font-family: 'Atkinson Hyperlegible', sans-serif;
             }
+
+            .central-repo, .repo-name {
+                /* color: var(--color-repo-main); */
+                background: var(--color-repo-main);
+                padding: 0.1em 0.3em;
+                font-weight: 700;
+                color: white
+            }
+
+            .contributor {
+                /* color: var(--color-contributor); */
+                background: var(--color-contributor);
+                padding: 0.1em 0.3em;
+                font-weight: 700;
+            }
+
+            .repository {
+                background: var(--color-repo);
+                padding: 0.1em 0.3em;
+                /* border-bottom: 0.3em solid var(--color-repo); */
+                font-weight: 700;
+            }
+
+            .owner {
+                /* color: var(--color-owner); */
+                background: var(--color-owner);
+                padding: 0.1em 0.3em;
+                font-weight: 700;
+            }
+
+            p {
+                line-height: 140%;
+                color: var(--color-text);
+            }
+
 
             #chart-wrapper {
                 min-width: 900px; /* Min size that the visual can becom */
                 max-width: 1600px; /* Max size that the visual can become */
 
-                /* Add a top stroke to this that is a linear gradient between the main repo color and the owner color */
                 border-top: 10px solid var(--color-repo-main);
-                border-image: linear-gradient(to right, var(--color-contributor), var(--color-repo-main), var(--color-repo)) 1;
+                border-image: var(--color-gradient);
             }
 
             #chart-textual {
                 /* Create a linear gradient for the background going from transparent #f7f7f7 to #f7f7f7 downward */
                 background: linear-gradient(to bottom, rgba(247, 247, 247, 0) 50%, rgba(247, 247, 247, 1) 100%);
-                min-height: 200px;
                 padding: 3em 5em 2em 5em;
 
                 display: grid;
@@ -48,9 +76,48 @@
                 align-items: top;
 
                 grid-template-columns: 1fr 2fr;
-                column-gap: 7em;
+                column-gap: 5em;
                 row-gap: 5em;
             }
+
+            #chart-explanation {
+                background: linear-gradient(to bottom, rgba(247, 247, 247, 1) 50%, rgba(247, 247, 247, 0) 100%);
+                min-height: 200px;
+                padding: 3em 5em 2em 5em;
+
+                font-size: 1.2em;
+
+                display: grid;
+                justify-content: center;
+                align-items: top;
+
+                grid-template-columns: 1fr 1fr;
+                column-gap: 7em;
+                row-gap: 1em;
+            }
+
+            #chart-explanation p {
+                line-height: 160%;
+                font-size: 0.8em;
+                /* color:#6e6a71; */
+                /* opacity: 0.6; */
+                /* font-style: italic; */
+            }
+
+            #chart-explanation .title {
+                grid-column-start: 1;
+                grid-column-end: 3;
+                grid-row-start: 1;
+                grid-row-end: 1;
+                text-align: center;
+                font-size: 1em;
+                padding-bottom: 0.5em;
+                margin-bottom: 0;
+
+                border-bottom: 3px solid var(--color-repo-main);
+                border-image: var(--color-gradient);
+            }
+
 
             #chart-title {
                 grid-column-start: 1;
@@ -77,14 +144,18 @@
                 font-size: 1.2em;
             }
 
-            .central-repo {
-                color: var(--color-repo-main);
+            #explanation-note {
+                border-bottom: 2px solid var(--color-repo-main);
+                border-image:linear-gradient(to right, var(--color-owner), var(--color-contributor), var(--color-repo)) 1;
+                /* border-image: var(--color-gradient); */
             }
+
+
 
             /* CHART */
             #chart-container {
                 position: relative;
-                background-color: #f7f7f7; /* Same as the COLOR_BACKGROUND in the visual */
+                background-color: var(--color-background); /* Same as the COLOR_BACKGROUND in the visual */
             }
 
             #chart-container canvas {
@@ -126,16 +197,43 @@
             <div id="chart-textual">
                 <div id="chart-title">
                     <h1>The Top Contributor Network of</h1>
-                    <h1 id="title-repo-name" class="central-repo">mozilla/pdf.js</h1>
+                    <h1><span id="title-repo-name" class="central-repo">mozilla/pdf.js</span></h1>
                 </div>
                 <div id="chart-intro-text">
-                    lorem ipsum dolor sit amet, consectetur adipiscing elit. sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.
+                    <p>The <span class="repo-name">mozilla/pdf.js</span> repository has seen many improvements from its <span id="repo-num-contributors" class="contributor">contributors</span> since it was created<span id="repo-start-date"></span>.</p>
+
+                    <p>This visual shows all of these contributors and focuses on the <span id="top-contributor-num"></span>contributors that have made the most commits. Revealing how they are involved with many other <span class="repository">repositories</span> as well. And seeing their connections to each other by their shared work for other repositories and/or working on repositories from the same <span class="owner">owner</span>.</p>
+
+                    <p>Mention ORCA here, or too complex for this top text? The inner (darker purple) ring shows the contributors that have received payment(?) via <strong>ORCA</strong> through their involvement in <span class="repo-name">mozilla/pdf.js</span></p>
+
+                    <p><strong><span id="explanation-note">For a full explanation on how to read this visual, see the bottom of this page.</span></strong></p>
                 </div>
             </div>
+
             <div id="chart-container">
                 <canvas id="canvas"></canvas>
                 <canvas id="canvas-click"></canvas>
                 <canvas id="canvas-hover"></canvas>
+            </div>
+
+            <div id="chart-explanation">
+                <p class="title"><strong>HOW TO READ THIS VISUAL</strong></p>
+
+                <div>
+                    <p><strong>COLOR</strong> | The <span class="central-repo">central repository</span> that the visual is based on is shown in purple in the center. The <span class="contributor">contributors</span> to this repository are pink. Even the smaller pink circles around the outside are contributors to the central repository (just not those with the most commits). Apart from that central repository, all other <span class="repository">repositories</span> are turquoise. When there are at least two repositories from the same owner, a circle for that <span class="owner">owner</span> is shown in yellow. </p>
+
+                    <p><strong>CIRCLE SIZE</strong> | The size of the <span class="contributor">contributor</span> circles is based on the number of commits they made to the central <span class="repo-name">mozilla/pdf.js</span> repository. The size of the <span class="repository">repositories</span> circles is based on the number of stars it has received on GitHub. For <span class="owner">owner</span> circles it is the combined number of stars from all the <span class="repository">repositories</span> that are linked to it in this visual. There is one exception, the size of the central "main" repository <span class="repo-name"></span> is always enlarged to a fixed size and not determined by the number of stars.</p>
+                    
+                    <p><strong>LINE THICKNESS</strong> | The thickness of each line is determined by the number of commits made from the <span class="contributor">contributor</span> on one end to the <span class="repository">repository</span> on the other end (or the combined repositories for an <span class="owner">owner</span> circle).</p>
+
+                    <p><strong>ARCS around CIRCLES</strong> | ...</p>
+                    <p><strong>INNER & OUTER PURPLE RINGS</strong> | ...</p>
+                </div>
+                <div>                    
+                    <p><strong>INTERACTION</strong> | <strong>Hover over any circle</strong> to see all of its connections; From a <span class="contributor">contributor</span> to all the repositories that they've worked on or from one <span class="repository">repository</span> to all of the (top) contributors that have worked on it. <strong>Click on a circle</strong> to fix the visual with all the circle's links highlighted to better investigate its network of direct connections.</p>
+
+                    <p><strong>NOTE</strong> | Only repositories that have at least 30 stars have been taken into account to visualize. Contributors could have made more commits to repositories with fewer stars. These repositories are not visualized here.</p>
+                </div>
             </div>
         </div>
 
@@ -151,6 +249,8 @@
 
             // Replace the "title-repo-name" with the repository name
             document.getElementById("title-repo-name").innerHTML = REPOSITORY_FULL
+            // Replace all the classed "repo-name" with the repository name
+            document.querySelectorAll(".repo-name").forEach(d => d.innerHTML = REPOSITORY_FULL)
 
             /////////////////////////////////////////////////////////
             ///////////////////////// START /////////////////////////
@@ -180,6 +280,7 @@
 
             ///////////////////// Start Drawing /////////////////////
             // Set-up the visual - Doesn't draw anything yet
+            // NOTE: This visual still uses a random "ORCA_LEVEL" variable for now
             let ORCAVisual = createORCAVisual()
                 .width(width)
                 .height(height)
@@ -188,8 +289,28 @@
             // Read in the data and create the visual
             document.fonts.ready.then(() => {
                 Promise.all(promises).then(values => {
+                    let formatDigit = d3.format(",.2r")
+
+                    // Very specific to this example, but get some statistics on the data and put this in the intro text
+                    let num_contributors = values[0].length + values[3].length
+                    document.getElementById("repo-num-contributors").innerHTML = `~${formatDigit(num_contributors)} contributors`
+                    
+                    // How many contributors are there in the inner two rings
+                    document.getElementById("top-contributor-num").innerHTML = `${formatDigit(values[0].length)} `
+
                     // It expects the four datasets of contributors (authors), repositories, links between contributors and repositories, and remaining contributors, in that order
-                    ORCAVisual(values)       
+                    ORCAVisual(values)
+
+                    // Get the start date of the central repository
+                    // Find the REPOSITORY_FULL in the links dataset
+                    let central_repo = values[1].find(d => d.repo === REPOSITORY_FULL)
+                    let formatDate = d3.timeFormat("%B %Y")
+                    // let start_date = new Date(values[1][0].created_at)
+                    console.log(central_repo)
+                    document.getElementById("repo-start-date").innerHTML = ` in ${formatDate(central_repo.createdAt)}`
+
+
+                    
                 })//promises
             })//fonts.ready
 

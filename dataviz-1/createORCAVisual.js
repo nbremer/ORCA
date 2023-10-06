@@ -140,10 +140,6 @@ const createORCAVisual = () => {
         .domain([1,50])
         .range([10,80])
 
-    // const scale_link_strength = d3.scaleLinear()
-    //     .domain([1,50])
-    //     .range([10,80])
-
     const scale_link_width = d3.scalePow()
         .exponent(0.75)
         .range([1,2,60])
@@ -154,7 +150,6 @@ const createORCAVisual = () => {
     /////////////////////////////////////////////////////////////////////
 
     function chart(values) {
-
         /////////////////////////////////////////////////////////////////
         //////////////////////// Data Preparation ///////////////////////
         /////////////////////////////////////////////////////////////////
@@ -213,9 +208,8 @@ const createORCAVisual = () => {
         setupHover()
         setupClick()
 
-
         /////////////////////////////////////////////////////////////////
-        //////////////////////// Draw the visual ////////////////////////
+        /////////////// Set the Sizes and Draw the Visual ///////////////
         /////////////////////////////////////////////////////////////////
         chart.resize()
     }// function chart
@@ -225,23 +219,7 @@ const createORCAVisual = () => {
     /////////////////////////////////////////////////////////////////
 
     function draw() {
-        // Set the scale factor
-        SF = WIDTH / DEFAULT_SIZE
-        // If this means that the ring won't fit, make the SF smaller        
-        let OUTER_RING = RADIUS_CONTRIBUTOR_NON_ORCA + ORCA_RING_WIDTH/2*2
-        if(WIDTH/2 < OUTER_RING * SF) SF = WIDTH / (2*OUTER_RING)
-        console.log("SF:", SF)
-
-        // Reset the delaunay for the mouse events
-        delaunay = d3.Delaunay.from(nodes.map(d => [d.x, d.y]))
-        nodes_delaunay = nodes
-
-        // Some canvas settings
-        context.lineJoin = "round" 
-        context.lineCap = "round"
-        context_hover.lineJoin = "round" 
-        context_hover.lineCap = "round"
-
+        /////////////////////////////////////////////////////////////
         // Fill the background with a color
         context.fillStyle = COLOR_BACKGROUND
         context.fillRect(0, 0, WIDTH, HEIGHT)
@@ -251,7 +229,7 @@ const createORCAVisual = () => {
         context.translate(WIDTH / 2, MARGIN_TOP + WIDTH / 2)
 
         /////////////////////////////////////////////////////////////
-        // Draw the remaining contributors
+        // Draw the remaining contributors as small circles outside the ORCA circles
         context.fillStyle = COLOR_CONTRIBUTOR
         context.globalAlpha = 0.4
         remainingContributors.forEach(d => {
@@ -276,14 +254,8 @@ const createORCAVisual = () => {
         nodes.forEach(d => drawNode(context, SF, d) )
 
         /////////////////////////////////////////////////////////////
-        // Draw the labels for the contributors and for the nodes in the center
-        nodes_central
-            // .filter(d => {
-            //     return d.type === "contributor" || d.type === "owner" || (d.type === "repo" && d.degree > 3)
-            // })
-            .forEach(d => {
-                drawNodeLabel(context, d)
-            })// forEach
+        // Draw the labels
+        nodes_central.forEach(d => drawNodeLabel(context, d) )
 
         // // TEST
         // // Draw a stroked rectangle around the bbox of the nodes
@@ -293,6 +265,7 @@ const createORCAVisual = () => {
         //     context.strokeRect(d.x * SF + d.bbox[0][0] * SF, d.y * SF + d.bbox[0][1] * SF, (d.bbox[1][0] - d.bbox[0][0]) * SF, (d.bbox[1][1] - d.bbox[0][1]) * SF)
         // })// forEach 
 
+        /////////////////////////////////////////////////////////////
         context.restore()
     }// function draw
 
@@ -311,17 +284,32 @@ const createORCAVisual = () => {
         MARGIN_TOP = 0 // round(WIDTH * 0.2) // For the title and legend etc.
         HEIGHT = round(height * PIXEL_RATIO) // round(width * PIXEL_RATIO) + MARGIN_TOP
 
-        sizeCanvas(canvas)
-        sizeCanvas(canvas_click)
-        sizeCanvas(canvas_hover)
+        sizeCanvas(canvas, context)
+        sizeCanvas(canvas_click, context_click)
+        sizeCanvas(canvas_hover, context_hover)
 
         // Size the canvas
-        function sizeCanvas(canvas) {
+        function sizeCanvas(canvas, context) {
             canvas.width = WIDTH
             canvas.height = HEIGHT
             canvas.style.width = `${width}px`
             canvas.style.height = `${HEIGHT / PIXEL_RATIO}px`
+
+            // Some canvas settings
+            context.lineJoin = "round" 
+            context.lineCap = "round"
         }// function sizeCanvas
+
+        // Set the scale factor
+        SF = WIDTH / DEFAULT_SIZE
+        // If this means that the ring won't fit, make the SF smaller        
+        let OUTER_RING = RADIUS_CONTRIBUTOR_NON_ORCA + ORCA_RING_WIDTH/2*2
+        if(WIDTH/2 < OUTER_RING * SF) SF = WIDTH / (2*OUTER_RING)
+        console.log("SF:", SF)
+
+        // Reset the delaunay for the mouse events
+        delaunay = d3.Delaunay.from(nodes.map(d => [d.x, d.y]))
+        nodes_delaunay = nodes
 
         // Draw the visual
         draw()
@@ -971,9 +959,7 @@ const createORCAVisual = () => {
             .force("link",
                 d3.forceLink()
                     .id(d => d.id)
-                    // .distance(50)
                     .distance(d => scale_link_distance(d.target.degree) * 5)
-                    // .strength(d => scale_link_strength(d.source.degree))
             )
             // .force("collide",
             //     d3.forceCollide()
@@ -1970,6 +1956,7 @@ const createORCAVisual = () => {
         } else if(d.id === central_repo.id) {
             context.textAlign = "center"
             context.textBaseline = "middle"
+            context.fillStyle = COLOR_BACKGROUND
             renderText(context, `${d.data.owner}/`, d.x * SF, (d.y - 0.6 * 12) * SF, 1.25 * SF)
             renderText(context, d.label, d.x * SF, (d.y + 0.6 * 12) * SF, 1.25 * SF)
         } else if(d.type === "repo") {
