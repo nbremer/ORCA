@@ -358,7 +358,6 @@
                     let central_repo = values[1].find(d => d.repo === REPOSITORY_FULL)
                     let formatDate = d3.timeFormat("%B %Y")
                     // let start_date = new Date(values[1][0].created_at)
-                    console.log(central_repo)
                     document.getElementById("repo-start-date").innerHTML = ` in ${formatDate(central_repo.createdAt)}`
 
                     /////////////////////////////////////////////////////////

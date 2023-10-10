@@ -1,12 +1,9 @@
-// TODO: Update min and max commit time of contributor when click active in the tooltip
-
 // TODO: Panel with information about the person being - in short prose - first commit, last commit, number of repos that they have (use colors from the visual)
 
 // TODO: Add a legend
 // Top contributors by count are these people
 // These people have also contributed to X other repos
 // Tiny histogram of the number of people that have done Y commits - with those top contributors highlighted
-
 
 // TODO: Make tooltip scale independent?
 // TODO: Add hover for tiny circles, remaining contributors as well
@@ -114,6 +111,7 @@ const createORCAVisual = () => {
     let parseDate = d3.timeParse("%Y-%m-%dT%H:%M:%SZ")
     let parseDateUnix = d3.timeParse("%s")
     let formatDate = d3.timeFormat("%b %Y")
+    let formatDateExact = d3.timeFormat("%b %d, %Y")
     let formatDigit = d3.format(",.2s")
     // let formatDigit = d3.format(",.2r")
 
@@ -1651,16 +1649,18 @@ const createORCAVisual = () => {
         // Figure out the required height of the tooltip
         let H = 93
         if(d.type === "contributor") {
-            if(d.data.orca_received) H = 130
-            else H = 105
+            if(d.data.orca_received) H = 134
+            else H = 109
         } else if(d.type === "repo") {
-            if(d.data.languages.length > 3) H = 214
-            else if(d.data.languages.length > 0) H = 204
-            else H = 165
+            if(d.data.languages.length > 3) H = 222
+            else if(d.data.languages.length > 0) H = 210
+            else H = 169
+
+            if(CLICK_ACTIVE && CLICKED_NODE.type === "contributor") H+= 63
         }// else
 
         // Start with a minimum width
-        let W = 260
+        let W = 280
 
         // Write all the repos for the "owner" nodes, but make sure they are not wider than the box and save each line to write out
         if(d.type === "owner") {
@@ -1751,8 +1751,8 @@ const createORCAVisual = () => {
 
 
         // Contributor, owner or repo
-        y = 24
-        font_size = 11
+        y = 20
+        font_size = 12
         setFont(context, font_size * SF, 400, "italic")
         context.fillStyle = COL
         text = ""
@@ -1762,27 +1762,24 @@ const createORCAVisual = () => {
         renderText(context, text, x * SF, y * SF, 2.5 * SF)
 
         context.fillStyle = COLOR_TEXT
-        y += 22
+        y += 24
 
         if (d.type === "contributor") {
             // The contributor's name
-            font_size = 15
+            font_size = 16
             setFont(context, font_size * SF, 700, "normal")
             renderText(context, d.data.contributor_name, x * SF, y * SF, 1.25 * SF)
-            // d.data.contributor_lines.forEach((l, i) => {
-            //     renderText(context, l, x * SF, (y + i * line_height * font_size) * SF, 1.25 * SF)
-            // })
 
             // Number of commits to the central repo
-            y += 25
-            font_size = 12
+            y += 26
+            font_size = 12.5
             setFont(context, font_size * SF, 400, "normal")
-            context.globalAlpha = 0.8
+            context.globalAlpha = 0.9
             renderText(context, `${formatDigit(d.data.link_central.commit_count)} commits to ${central_repo.label}`, x * SF, y * SF, 1.25 * SF)
             
             // First and last commit to main repo
-            font_size = 10.5
-            context.globalAlpha = 0.6
+            font_size = 11.5
+            context.globalAlpha = 0.7
             setFont(context, font_size * SF, 400, "normal")
             y += font_size * line_height + 4
             // Check if the start and end date are in the same month of the same year
@@ -1805,13 +1802,13 @@ const createORCAVisual = () => {
 
         } else if(d.type === "owner") {
             // The name
-            font_size = 15
+            font_size = 16
             setFont(context, font_size * SF, 700, "normal")
             renderText(context, d.data.owner, x * SF, y * SF, 1.25 * SF)
 
             // Which repos fall under this owner in this visual
-            y += 26
-            font_size = 10.5
+            y += 28
+            font_size = 11
             context.globalAlpha = 0.6
             setFont(context, font_size * SF, 400, "italic")
             renderText(context, "Included repositories", x * SF, y * SF, 2 * SF)
@@ -1828,15 +1825,15 @@ const createORCAVisual = () => {
 
         } else if(d.type === "repo") {
             // The repo's name and owner
-            font_size = 14
+            font_size = 15
             setFont(context, font_size * SF, 700, "normal")
             renderText(context, `${d.data.owner}/`, x * SF, y * SF, 1.25 * SF)
             renderText(context, d.data.name, x * SF, (y + line_height * font_size) * SF, 1.25 * SF)
 
             // The creation date
-            y += 39
-            font_size = 10
-            context.globalAlpha = 0.6
+            y += 42
+            font_size = 11
+            context.globalAlpha = 0.7
             setFont(context, font_size * SF, 400, "normal")
             renderText(context, `Created in ${formatDate(d.data.createdAt)}`, x * SF, y * SF, 1.25 * SF)
             // The most recent updated date
@@ -1844,40 +1841,19 @@ const createORCAVisual = () => {
             renderText(context, `Last updated in ${formatDate(d.data.updatedAt)}`, x * SF, y * SF, 1.25 * SF)
 
             // The number of stars & forks
-            y += 21
-            font_size = 11
+            y += 23
+            font_size = 12
             setFont(context, font_size * SF, 400, "normal")
-            context.globalAlpha = 0.9
+            context.globalAlpha = 1
             let stars = d.data.stars
             let forks = d.data.forks
             renderText(context, `${stars < 10 ? stars : formatDigit(stars)} stars | ${forks < 10 ? forks : formatDigit(forks)} forks`, x * SF, y * SF, 1.25 * SF)
             context.globalAlpha = 1
 
-            // Number of ORCA recipients
-            // console.log(d.data.contributors)
-            // Calculate the number of ORCA recipients of this repo's contributors
-            let ORCA_RECEIVED = 0
-            d.data.contributors.forEach(c => {
-                if(c.orca_received) ORCA_RECEIVED++
-            })
-            if(ORCA_RECEIVED > 0) {
-                text = `supported by ${ORCA_RECEIVED} ORCA recipient`
-                if(ORCA_RECEIVED > 1) text += "s"
-            }
-            else text = "not supported by ORCA"
-            y += 26
-            font_size = 12
-            context.globalAlpha = 0.7
-            context.fillStyle = COLOR_PURPLE
-            setFont(context, font_size * SF, 700, "normal")
-            renderText(context, text, x * SF, y * SF, 1.25 * SF)
-            context.fillStyle = COLOR_TEXT
-            context.globalAlpha = 0.9
-
             // Languages
             if(d.data.languages.length > 0) {
                 y += 24
-                font_size = 10.5
+                font_size = 11
                 context.globalAlpha = 0.6
                 setFont(context, font_size * SF, 400, "italic")
                 renderText(context, "Languages", x * SF, y * SF, 2 * SF)
@@ -1897,6 +1873,61 @@ const createORCAVisual = () => {
                     renderText(context, text, x * SF, y * SF, 1.25 * SF)
                 }// if
 
+            }// if
+
+            // Number of ORCA recipients
+            let ORCA_RECEIVED = 0
+            let weight = 400
+            context.globalAlpha = 0.8
+            font_size = 11
+
+            d.data.contributors.forEach(c => {
+                if(c.orca_received) ORCA_RECEIVED++
+            })
+            if(ORCA_RECEIVED > 0) {
+                font_size = 12
+                context.globalAlpha = 0.7
+                context.fillStyle = COLOR_PURPLE
+                weight = 700
+                text = `supported by ${ORCA_RECEIVED} ORCA recipient`
+                if(ORCA_RECEIVED > 1) text += "s"
+            }
+            else text = "not supported by ORCA"
+            y += 26
+            
+            setFont(context, font_size * SF, weight, "normal")
+            renderText(context, text, x * SF, y * SF, 1.25 * SF)
+            context.fillStyle = COLOR_TEXT
+            context.globalAlpha = 0.9
+
+            // First and last commit the the hovered repo if a click is active
+            if(CLICK_ACTIVE && CLICKED_NODE.type === "contributor") {
+                // Get the first and last commit of the contributor to this repo
+                let link = CLICKED_NODE.data.links_original.find(l => l.repo === d.id)
+                let num_commits = link.commit_count
+
+                y += 28
+                font_size = 11
+                context.globalAlpha = 0.6
+                setFont(context, font_size * SF, 400, "italic")
+                text = num_commits === 1 ? "1 commit by" : `${num_commits} commits by`
+                renderText(context, text, x * SF, y * SF, 2 * SF)
+                // renderText(context, "First and Last Commit by", x * SF, y * SF, 2 * SF)
+
+                y += 16
+                font_size = 11.5
+                context.globalAlpha = 0.9
+                setFont(context, font_size * SF, 700, "normal")
+                renderText(context, CLICKED_NODE.data.contributor_name, x * SF, y * SF, 1.25 * SF)
+
+                y += 18
+                font_size = 11
+                context.globalAlpha = 0.6
+                setFont(context, font_size * SF, 400, "normal")
+                if(formatDateExact(link.commit_sec_min) === formatDateExact(link.commit_sec_max)) text = `On ${formatDateExact(link.commit_sec_max)}`
+                else if(formatDate(link.commit_sec_min) === formatDate(link.commit_sec_max)) text = `In ${formatDate(link.commit_sec_max)}`
+                else text = `Between ${formatDate(link.commit_sec_min)} / ${formatDate(link.commit_sec_max)}`
+                renderText(context, text, x * SF, y * SF, 1.25 * SF)
             }// if
 
         }// else
