@@ -23,7 +23,7 @@
                 font-family: 'Atkinson Hyperlegible', sans-serif;
             }
 
-            .central-repo, .repo-name {
+            .central-repo {
                 /* color: var(--color-repo-main); */
                 background: var(--color-repo-main);
                 padding: 0.1em 0.3em;
@@ -60,10 +60,11 @@
 
             #chart-wrapper {
                 min-width: 900px; /* Min size that the visual can becom */
-                max-width: 1600px; /* Max size that the visual can become */
+                max-width: 1400px; /* Max size that the visual can become */
 
                 border-top: 10px solid var(--color-repo-main);
                 border-image: var(--color-gradient);
+                margin: 0 auto;
             }
 
             #chart-textual {
@@ -148,6 +149,44 @@
                 border-bottom: 2px solid var(--color-repo-main);
                 border-image:linear-gradient(to right, var(--color-owner), var(--color-contributor), var(--color-repo)) 1;
                 /* border-image: var(--color-gradient); */
+                font-size: 0.9em;
+                font-style: italic;
+            }
+
+            #chart-extra {
+                position: relative;
+                text-align: center;
+            }
+
+            #dataviz-download-data {
+                text-align: center;
+                background: var(--color-repo-main);
+                color: white;
+                border: none;
+                padding: 0.5em 1em;
+                font-size: 1.0em;
+                font-weight: 700;
+                cursor: pointer;
+                margin: 1em auto;
+            }
+
+            #dataviz-credit {
+                font-style: italic;
+                text-align: center;
+                margin-top: 2em;
+                margin-bottom: 2em;
+                opacity: 0.8;
+                font-size: 0.9em;
+            }
+
+            #dataviz-credit a {
+                border-bottom: 3px solid var(--color-repo-main);
+                border-image:linear-gradient(to right, var(--color-contributor), var(--color-repo)) 1;
+                /* padding: 0.1em 0.3em; */
+                font-weight: 700;
+                cursor: pointer;
+                color: var(--color-text);
+                text-decoration: none;
             }
 
 
@@ -200,9 +239,9 @@
                     <h1><span id="title-repo-name" class="central-repo">mozilla/pdf.js</span></h1>
                 </div>
                 <div id="chart-intro-text">
-                    <p>The <span class="repo-name">mozilla/pdf.js</span> repository has seen many improvements from its <span id="repo-num-contributors" class="contributor">contributors</span> since it was created<span id="repo-start-date"></span>.</p>
+                    <p>The <span class="repo-name central-repo">mozilla/pdf.js</span> repository has seen many improvements from its <span id="repo-num-contributors"></span><span class="contributor">contributors</span> since it was created<span id="repo-start-date"></span>.</p>
 
-                    <p>This visual shows all of these contributors and focuses on the <span id="top-contributor-num"></span>contributors that have made the most commits. Revealing how they are involved with many other <span class="repository">repositories</span> as well. And seeing their connections to each other by their shared work for other repositories and/or working on repositories from the same <span class="owner">owner</span>.</p>
+                    <p>This visual shows all of the contributors to <span class="repo-name">mozilla/pdf.js</span> and focuses on the <span id="top-contributor-num"></span>contributors that have made the most commits. Revealing how they are involved with many other <span class="repository">repositories</span> as well. And seeing their connections to each other by their shared work for other repositories and/or working on repositories from the same <span class="owner">owner</span>.</p>
 
                     <p>Mention ORCA here, or too complex for this top text? The inner (darker purple) ring shows the contributors that have received payment(?) via <strong>ORCA</strong> through their involvement in <span class="repo-name">mozilla/pdf.js</span></p>
 
@@ -232,8 +271,14 @@
                 <div>                    
                     <p><strong>INTERACTION</strong> | <strong>Hover over any circle</strong> to see all of its connections; From a <span class="contributor">contributor</span> to all the repositories that they've worked on or from one <span class="repository">repository</span> to all of the (top) contributors that have worked on it. <strong>Click on a circle</strong> to fix the visual with all the circle's links highlighted to better investigate its network of direct connections.</p>
 
-                    <p><strong>NOTE</strong> | Only repositories that have at least 30 stars have been taken into account to visualize. Contributors could have made more commits to repositories with fewer stars. These repositories are not visualized here.</p>
+                    <p><strong>NOTE 1</strong> | Only repositories that have at least 30 stars have been taken into account to visualize. Contributors could have made more commits to repositories with fewer stars. These repositories are not visualized here.</p>
+                    <p><strong>NOTE 2</strong> | How we tried to group the top contributors by their shared emails and names...</p>
                 </div>
+            </div>
+
+            <div id="chart-extra">
+                <button id="dataviz-download-data">Download the RAW data</button>
+                <p id="dataviz-credit">Visualization Designed & Created by Nadieh Bremer | <a href="https://www.visualcinnamon.com/" target="_blank">Visual Cinnamon</a></p>
             </div>
         </div>
 
@@ -258,10 +303,10 @@
 
             ////////////////// Datasets to Read in //////////////////
             let promises = []
-            promises.push(d3.csv(`data/${REPOSITORY}/authorInfo-${REPOSITORY}.csv`))
-            promises.push(d3.csv(`data/${REPOSITORY}/baseRepoInfo-${REPOSITORY}.csv`))
-            promises.push(d3.csv(`data/${REPOSITORY}/links-${REPOSITORY}.csv`))
-            promises.push(d3.csv(`data/${REPOSITORY}/remainingContributors-${REPOSITORY}.csv`))
+            promises.push(d3.csv(`data/${REPOSITORY}/top_contributors.csv`))
+            promises.push(d3.csv(`data/${REPOSITORY}/repositories.csv`))
+            promises.push(d3.csv(`data/${REPOSITORY}/links.csv`))
+            promises.push(d3.csv(`data/${REPOSITORY}/remaining_contributors.csv`))
 
             /////////////////// Fonts to activate ///////////////////
             const FONT_FAMILY = "Atkinson Hyperlegible"
@@ -291,9 +336,16 @@
                 Promise.all(promises).then(values => {
                     let formatDigit = d3.format(",.2r")
 
+                    // Create a deep copy of the data in values
+                    let data_raw = []
+                    data_raw.push(JSON.parse(JSON.stringify(values[0]))) // top contributors
+                    data_raw.push(JSON.parse(JSON.stringify(values[1]))) // repositories
+                    data_raw.push(JSON.parse(JSON.stringify(values[2]))) // links
+                    data_raw.push(JSON.parse(JSON.stringify(values[3]))) // remaining contributors
+
                     // Very specific to this example, but get some statistics on the data and put this in the intro text
                     let num_contributors = values[0].length + values[3].length
-                    document.getElementById("repo-num-contributors").innerHTML = `~${formatDigit(num_contributors)} contributors`
+                    document.getElementById("repo-num-contributors").innerHTML = `~${formatDigit(num_contributors)} `
                     
                     // How many contributors are there in the inner two rings
                     document.getElementById("top-contributor-num").innerHTML = `${formatDigit(values[0].length)} `
@@ -309,8 +361,28 @@
                     console.log(central_repo)
                     document.getElementById("repo-start-date").innerHTML = ` in ${formatDate(central_repo.createdAt)}`
 
+                    /////////////////////////////////////////////////////////
+                    // Let people download the raw data
+                    const download_button = document.getElementById("dataviz-download-data")
+                    download_button.addEventListener("click", () => {
 
-                    
+                        // Download all four datasets
+                        downloadData(data_raw[0], `${REPOSITORY}-top_contributors`)
+                        downloadData(data_raw[1], `${REPOSITORY}-repositories`)
+                        downloadData(data_raw[2], `${REPOSITORY}-links`)
+                        downloadData(data_raw[3], `${REPOSITORY}-remaining_contributors`)
+
+                        function downloadData(data, filename) {
+                            // Create a blob of the data
+                            let blob = new Blob([d3.csvFormat(data)], {type: "text/csv;charset=utf-8"})
+                            // Create a link to download it
+                            let link = document.createElement("a")
+                            link.href = window.URL.createObjectURL(blob)
+                            link.download = `${filename}.csv`
+                            // Click the link
+                            link.click()
+                        }// function downloadData
+                    })//on click
                 })//promises
             })//fonts.ready
 
