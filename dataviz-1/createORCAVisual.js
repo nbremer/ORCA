@@ -2,8 +2,6 @@
 
 // TODO: Panel with information about the person being - in short prose - first commit, last commit, number of repos that they have (use colors from the visual)
 
-// TODO: Tooltip add the number of contributors that "supported via 5 ORCA recipients" / "no ORCA recipients"
-
 // TODO: Add a legend
 // Top contributors by count are these people
 // These people have also contributed to X other repos
@@ -414,9 +412,14 @@ const createORCAVisual = () => {
         // Save all the original links
         contributors.forEach(d => {
             d.links_original = links.filter(l => l.source === d.contributor_name)
+            // To which repositories did this contributor contribute
+            d.repos = d.links_original.map(l => repos.find(r => r.repo === l.repo))
+
         })// forEach
         repos.forEach(d => {
             d.links_original = links.filter(l => l.target === d.repo)
+            // Who contributed to this repository
+            d.contributors = d.links_original.map(l => contributors.find(r => r.contributor_name === l.contributor_name))
         })// forEach
 
         /////////////////////////////////////////////////////////////////
@@ -1651,13 +1654,13 @@ const createORCAVisual = () => {
             if(d.data.orca_received) H = 130
             else H = 105
         } else if(d.type === "repo") {
-            if(d.data.languages.length > 3) H = 192
-            else if(d.data.languages.length > 0) H = 180
-            else H = 138
+            if(d.data.languages.length > 3) H = 214
+            else if(d.data.languages.length > 0) H = 204
+            else H = 165
         }// else
 
         // Start with a minimum width
-        let W = 240
+        let W = 260
 
         // Write all the repos for the "owner" nodes, but make sure they are not wider than the box and save each line to write out
         if(d.type === "owner") {
@@ -1794,6 +1797,7 @@ const createORCAVisual = () => {
             if(d.data.orca_received) {
                 y += 25
                 font_size = 12
+                context.globalAlpha = 0.7
                 context.fillStyle = COLOR_PURPLE
                 setFont(context, font_size * SF, 700, "normal")
                 renderText(context, "supported through ORCA", x * SF, y * SF, 1.5 * SF)
@@ -1849,9 +1853,30 @@ const createORCAVisual = () => {
             renderText(context, `${stars < 10 ? stars : formatDigit(stars)} stars | ${forks < 10 ? forks : formatDigit(forks)} forks`, x * SF, y * SF, 1.25 * SF)
             context.globalAlpha = 1
 
+            // Number of ORCA recipients
+            // console.log(d.data.contributors)
+            // Calculate the number of ORCA recipients of this repo's contributors
+            let ORCA_RECEIVED = 0
+            d.data.contributors.forEach(c => {
+                if(c.orca_received) ORCA_RECEIVED++
+            })
+            if(ORCA_RECEIVED > 0) {
+                text = `supported by ${ORCA_RECEIVED} ORCA recipient`
+                if(ORCA_RECEIVED > 1) text += "s"
+            }
+            else text = "not supported by ORCA"
+            y += 26
+            font_size = 12
+            context.globalAlpha = 0.7
+            context.fillStyle = COLOR_PURPLE
+            setFont(context, font_size * SF, 700, "normal")
+            renderText(context, text, x * SF, y * SF, 1.25 * SF)
+            context.fillStyle = COLOR_TEXT
+            context.globalAlpha = 0.9
+
             // Languages
             if(d.data.languages.length > 0) {
-                y += 26
+                y += 24
                 font_size = 10.5
                 context.globalAlpha = 0.6
                 setFont(context, font_size * SF, 400, "italic")
