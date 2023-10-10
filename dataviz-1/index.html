@@ -45,6 +45,10 @@
                 font-weight: 700;
             }
 
+            .repo-name-only {
+                font-style: italic;
+            }
+
             .owner {
                 /* color: var(--color-owner); */
                 background: var(--color-owner);
@@ -161,7 +165,7 @@
                 grid-column-start: 2;
                 grid-column-end: 2;
                 font-weight: 400;
-                font-size: 1.2em;
+                font-size: 1.1em;
             }
 
             #explanation-note {
@@ -170,6 +174,8 @@
                 /* border-image: var(--color-gradient); */
                 font-size: 0.9em;
                 font-style: italic;
+                color: var(--color-text);
+                text-decoration: none;
             }
 
             #chart-extra {
@@ -260,13 +266,15 @@
                 <div id="chart-intro-text">
                     <p>The <span class="repo-name central-repo">mozilla/pdf.js</span> repository has seen many improvements from its <span id="repo-num-contributors"></span><span class="contributor">contributors</span> since it was created<span id="repo-start-date"></span>.</p>
 
-                    <p><strong>This visual shows all of the contributors to <span class="repo-name">mozilla/pdf.js</span> and focuses on the <span id="top-contributor-num"></span>contributors that have made the most commits.</strong> Revealing how they are involved with<span id="top-repo-num"> other</span> <span class="repository">repositories</span> as well. <span style="font-size: 0.7em; opacity: 0.6; font-style: italic;">(only counting repos with at least 30 stars)</span></p>
-                    
-                    <p>In the center we focus on the connections amongst contributors. Where we can find those repositories that multiple contributors have worked on (and the repo <span class="owner">owners</span>, if there is more than one of their repos present) .</p>
+                    <p><strong>The visual below shows all of the contributors to <span class="repo-name-only">pdf.js</span> and focuses on the <span id="top-contributor-num"></span>contributors that have made the most commits.</strong> Revealing how they are involved with<span id="top-repo-num"> other</span> <span class="repository">repositories</span> as well. <span style="font-size: 0.7em; opacity: 0.6; font-style: italic;">(only counting repos with at least 30 stars)</span></p>
 
-                    <p>The top contributors are separated into two outer rings. In the inner ring we find those that have been supported via ORCA (the <strong>"Open Retrospective Compensation Agreement"</strong>) for their work on <span class="repo-name">mozilla/pdf.js</span>. Whereas in the outer ring we find those that have not (yet).</p>
+                    <p>The top contributors are separated into two outer rings. In the inner ring we find those that have been supported via ORCA (the <strong>"Open Retrospective Compensation Agreement"</strong>) for their work on <span class="repo-name-only">pdf.js</span>. Whereas in the outer ring we find those that have not (yet).</p>
 
-                    <p><strong><span id="explanation-note">For a full explanation on how to read this visual, see the bottom of this page.</span></strong></p>
+                    <p>In the <strong>center we focus on the connections <i>amongst</i> contributors</strong>. Where we can find those repositories that multiple contributors have worked on (and the <span class="owner">owners</span>, if there is more than one of their repos present).</p>
+
+                    <p>Explore the ecosystem of open source projects that are touched by the top contributors to <span class="repo-name-only">pdf.js</span>. See how the impact of ORCA <i>could</i> reach far wider than just that one repository.</p>
+
+                    <p><a id="explanation-note" href="#chart-explanation"><strong>For a full explanation on how to read this visual, see the bottom of this page.</strong></a></p>
                 </div>
             </div>
 
@@ -319,10 +327,13 @@
             let REPOSITORY_FULL = "mozilla/pdf.js" // Default
             if (REPOSITORY === "terraform") REPOSITORY_FULL = "hashicorp/terraform"
 
+            let REPOSITORY_NAME = REPOSITORY_FULL.substring(REPOSITORY_FULL.indexOf("/") + 1)
+
             // Replace the "title-repo-name" with the repository name
             document.getElementById("title-repo-name").innerHTML = REPOSITORY_FULL
             // Replace all the classed "repo-name" with the repository name
             document.querySelectorAll(".repo-name").forEach(d => d.innerHTML = REPOSITORY_FULL)
+            document.querySelectorAll(".repo-name-only").forEach(d => d.innerHTML = REPOSITORY_NAME)
 
             /////////////////////////////////////////////////////////
             ///////////////////////// START /////////////////////////
