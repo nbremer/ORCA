@@ -1,0 +1,308 @@
+/*************************************/
+/************* VARIABLES *************/
+/*************************************/
+
+html {
+    --color-repo-main: #a682e8;
+    --color-repo: #64d6d3;
+    --color-owner: #f2a900;
+    --color-contributor: #ea9df5;
+    --color-text: #4d4950;
+    --color-background: #f7f7f7;
+    --color-gradient: linear-gradient(to right, var(--color-contributor), var(--color-repo-main), var(--color-repo)) 1;
+}
+
+body {
+    margin: 0;
+    font-family: 'Atkinson Hyperlegible', sans-serif;
+}
+
+.central-repo {
+    /* color: var(--color-repo-main); */
+    background: var(--color-repo-main);
+    padding: 0.1em 0.3em;
+    font-weight: 700;
+    color: white
+}
+
+.contributor {
+    /* color: var(--color-contributor); */
+    background: var(--color-contributor);
+    padding: 0.1em 0.3em;
+    font-weight: 700;
+}
+
+.repository {
+    background: var(--color-repo);
+    padding: 0.1em 0.3em;
+    /* border-bottom: 0.3em solid var(--color-repo); */
+    font-weight: 700;
+}
+
+.repo-name-only {
+    font-style: italic;
+}
+
+.owner {
+    /* color: var(--color-owner); */
+    background: var(--color-owner);
+    padding: 0.1em 0.3em;
+    font-weight: 700;
+}
+
+p {
+    line-height: 140%;
+    color: var(--color-text);
+}
+
+.header {
+    text-align: center;
+    font-size: 1.0em;
+    padding-bottom: 0.5em;
+    margin-bottom: 0;
+
+    border-bottom: 3px solid var(--color-repo-main);
+    border-image: var(--color-gradient);
+}
+
+/*************************************/
+/*************** INTRO ***************/
+/*************************************/
+
+#chart-wrapper {
+    min-width: 900px; /* Min size that the visual can becom */
+    max-width: 1400px; /* Max size that the visual can become */
+
+    border-top: 10px solid var(--color-repo-main);
+    border-image: var(--color-gradient);
+    margin: 0 auto;
+}
+
+#chart-introduction {
+    /* Create a linear gradient for the background going from transparent #f7f7f7 to #f7f7f7 downward */
+    background: linear-gradient(to bottom, rgba(247, 247, 247, 0) 50%, rgba(247, 247, 247, 1) 100%);
+    padding: 3em 5em 2em 5em;
+
+    display: grid;
+    justify-content: center;
+    align-items: top;
+
+    grid-template-columns: 1fr 2fr;
+    column-gap: 5em;
+    row-gap: 5em;
+}
+
+#chart-title {
+    grid-column-start: 1;
+    grid-column-end: 1;
+}
+#chart-title h1 {
+    font-weight: 400;
+    font-size: 2.4em;
+    font-style: italic;
+    margin-bottom: 0.2em; 
+    margin-top: 0em;
+}
+#chart-title h1#title-repo-name {
+    font-weight: 700;
+    font-size: 2.6em;
+    margin-top: 0.2em;
+    font-style: normal;
+}
+
+#chart-intro-text {
+    grid-column-start: 2;
+    grid-column-end: 2;
+    font-weight: 400;
+    font-size: 1.1em;
+}
+
+#explanation-link {
+    border-bottom: 2px solid var(--color-repo-main);
+    border-image:linear-gradient(to right, var(--color-owner), var(--color-contributor), var(--color-repo)) 1;
+    /* border-image: var(--color-gradient); */
+    font-size: 0.9em;
+    font-style: italic;
+    color: var(--color-text);
+    text-decoration: none;
+}
+
+/*************************************/
+/************* BAR CHART *************/
+/*************************************/
+
+#commit-bar-chart {
+    overflow: hidden;
+    width: 80%;
+    height: 1.5em;
+    text-align: center;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    opacity: 0;
+}
+
+#bar-remaining {
+    background: #e0e0e0;
+}
+
+#bar-non-orca {
+    background: var(--color-contributor);
+    opacity: 0.7;
+}
+
+#bar-orca {
+    background: var(--color-contributor);
+}
+
+#legend-bar-chart {
+    width: 80%;
+    margin: 0 auto;
+    font-size: 0.7em;
+    color:#69656c;
+}
+
+#legend-bar-chart li {
+    list-style-type: none;
+    position: relative; 
+}
+
+#legend-bar-chart li::before {
+    content: '⬤';
+    position: absolute;
+    left: -1.5em;
+    top: -0em;
+    font-size: 0.8em;
+}
+
+li#item-orca::before {
+    color: var(--color-contributor);
+}
+li#item-non-orca::before {
+    color: var(--color-contributor);
+    opacity: 0.5;
+}
+li#item-remaining::before {
+    color: #e0e0e0;
+}
+
+
+/*************************************/
+/******* EXPLANATION / LEGEND ********/
+/*************************************/
+
+#chart-explanation {
+    background: linear-gradient(to bottom, rgba(247, 247, 247, 1) 50%, rgba(247, 247, 247, 0) 100%);
+    min-height: 200px;
+    padding: 3em 5em 2em 5em;
+
+    font-size: 1.2em;
+
+    display: grid;
+    justify-content: center;
+    align-items: top;
+
+    grid-template-columns: 1fr 1fr;
+    column-gap: 7em;
+    row-gap: 1em;
+}
+
+#chart-explanation p {
+    line-height: 160%;
+    font-size: 0.8em;
+    /* color:#6e6a71; */
+    /* opacity: 0.6; */
+    /* font-style: italic; */
+}
+
+#chart-explanation .header {
+    grid-column-start: 1;
+    grid-column-end: 3;
+    grid-row-start: 1;
+    grid-row-end: 1;
+    font-size: 1.0em;
+}
+
+/*************************************/
+/**************** ORCA ***************/
+/*************************************/
+
+#orca-explanation {
+    padding: 3em 5em 2em 5em;
+
+    font-size: 1.2em;
+
+    display: grid;
+    justify-content: center;
+    align-items: top;
+
+    grid-template-columns: 1fr;
+    column-gap: 7em;
+    row-gap: 1em;
+}
+
+/*************************************/
+/************** CREDITS **************/
+/*************************************/
+
+#chart-extra {
+    position: relative;
+    text-align: center;
+}
+
+#dataviz-download-data {
+    text-align: center;
+    background: var(--color-repo-main);
+    color: white;
+    border: none;
+    padding: 0.5em 1em;
+    font-size: 1.0em;
+    font-weight: 700;
+    cursor: pointer;
+    margin: 1em auto;
+}
+
+#dataviz-credit {
+    font-style: italic;
+    text-align: center;
+    margin-top: 2em;
+    margin-bottom: 2em;
+    opacity: 0.8;
+    font-size: 0.9em;
+}
+
+#dataviz-credit a {
+    border-bottom: 3px solid var(--color-repo-main);
+    border-image:linear-gradient(to right, var(--color-contributor), var(--color-repo)) 1;
+    /* padding: 0.1em 0.3em; */
+    font-weight: 700;
+    cursor: pointer;
+    color: var(--color-text);
+    text-decoration: none;
+}
+
+/*************************************/
+/*************** CHART ***************/
+/*************************************/
+#chart-container {
+    position: relative;
+    background-color: var(--color-background); /* Same as the COLOR_BACKGROUND in the visual */
+}
+
+#chart-container canvas {
+    display: block;
+    margin: 0;
+}
+
+#canvas, #canvas-click {
+    position: absolute;
+    top: 0;
+    pointer-events: none;
+    z-index: 0;
+    transition: opacity 200ms ease-in;
+}
+
+#canvas-hover {
+    position: relative;
+    z-index: 1
+}

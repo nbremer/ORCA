@@ -1,12 +1,17 @@
-// TODO: Panel with information about the person being - in short prose - first commit, last commit, number of repos that they have (use colors from the visual)
+// TODO: Add to tooltip with information about the person being - in short prose - first commit, last commit, number of repos that they have (use colors from the visual)
 
-// TODO: Add a legend
+// TODO: Add a visual legend
 // These people have also contributed to X other repos
-// Tiny histogram of the number of people that have done Y commits - with those top contributors highlighted
+// Tiny histogram of the number of people that have done Y commits - with those top contributors highlighted - How many commits made by people that are not in the top
+// "A lot of people that are not here" - Show the scale
+// Time line tick marks per commit
+// Bar chart: grey #commits every else, light pink (top contributors not orca), dark pink (top contributors orca)
 
 // TODO: Make tooltip scale independent?
 // TODO: Add hover for tiny circles (remaining contributors) as well
 // TODO: Make sure the central repo's name fits in the center and is readable
+
+// TODO: Create explanation github repo like UNESCO
 
 // ~~ MAYBE ~~
 // TODO: Look into label placement again (SAT solver or Cynthia Brewer paper for label placement)
@@ -18,9 +23,9 @@
 ///////////////////////// VisualCinnamon.com ////////////////////////
 /////////////////////////////////////////////////////////////////////
 const createORCAVisual = () => {
-    /////////////////////////////////////////////////////////////////////
-    /////////////////////// CONSTANTS & VARIABLES ///////////////////////
-    /////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////
+    ///////////////////// CONSTANTS & VARIABLES /////////////////////
+    /////////////////////////////////////////////////////////////////
 
     // NOTE: Because there is no ORCA data yet, this is a dummy factor that will randomly determine roughly how many contributors are randomly selected to receive ORCA
     // Should be taken out once there is actual data
@@ -65,9 +70,9 @@ const createORCAVisual = () => {
     const MAX_CONTRIBUTOR_WIDTH = 55 // The maximum width (at SF = 1) of the contributor name before it gets wrapped
     const CONTRIBUTOR_PADDING = 20 // The padding between the contributor nodes around the circle (at SF = 1)
 
-    /////////////////////////////////////////////////////////////////////
-    /////////////////////////// Create Canvas ///////////////////////////
-    /////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////
+    ///////////////////////// Create Canvas /////////////////////////
+    /////////////////////////////////////////////////////////////////
 
     const canvas = document.getElementById("canvas")
     const context = canvas.getContext("2d")
@@ -78,9 +83,9 @@ const createORCAVisual = () => {
     const canvas_hover = document.getElementById("canvas-hover")
     const context_hover = canvas_hover.getContext("2d")
 
-    /////////////////////////////////////////////////////////////////////
-    ///////////////////////////// Set Sizes /////////////////////////////
-    /////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////
+    /////////////////////////// Set Sizes ///////////////////////////
+    /////////////////////////////////////////////////////////////////
 
     //Sizes
     const DEFAULT_SIZE = 1500
@@ -88,9 +93,9 @@ const createORCAVisual = () => {
     let width, height
     let SF, PIXEL_RATIO
 
-    /////////////////////////////////////////////////////////////////////
-    /////////////////////////////// Colors //////////////////////////////
-    /////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////
+    ///////////////////////////// Colors ////////////////////////////
+    /////////////////////////////////////////////////////////////////
 
     const COLOR_BACKGROUND = "#f7f7f7"
 
@@ -104,9 +109,9 @@ const createORCAVisual = () => {
     const COLOR_LINK = "#e8e8e8"
     const COLOR_TEXT = "#4d4950"
 
-    /////////////////////////////////////////////////////////////////////
-    ////////////////////////// Create Functions /////////////////////////
-    /////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////
+    //////////////////////// Create Functions ///////////////////////
+    /////////////////////////////////////////////////////////////////
 
     let parseDate = d3.timeParse("%Y-%m-%dT%H:%M:%SZ")
     let parseDateUnix = d3.timeParse("%s")
@@ -133,14 +138,14 @@ const createORCAVisual = () => {
         .range([1,2,60])
         // .clamp(true)
 
-    /////////////////////////////////////////////////////////////////////
-    ////////////////////////// Draw the Visual //////////////////////////
-    /////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////
+    //////////////////////// Draw the Visual ////////////////////////
+    /////////////////////////////////////////////////////////////////
 
     function chart(values) {
-        /////////////////////////////////////////////////////////////////
-        //////////////////////// Data Preparation ///////////////////////
-        /////////////////////////////////////////////////////////////////
+        /////////////////////////////////////////////////////////////
+        ////////////////////// Data Preparation /////////////////////
+        /////////////////////////////////////////////////////////////
         contributors = values[0]
         repos = values[1]
         links = values[2]
@@ -148,25 +153,25 @@ const createORCAVisual = () => {
         prepareData()
         // console.log("Data prepared")
         
-        /////////////////////////////////////////////////////////////////
-        ///////////////// Run Force Simulation per Owner ////////////////
-        /////////////////////////////////////////////////////////////////
+        /////////////////////////////////////////////////////////////
+        /////////////// Run Force Simulation per Owner //////////////
+        /////////////////////////////////////////////////////////////
         // Run a force simulation for per owner for all the repos that have the same "owner"
         // Like a little cloud of repos around them
         singleOwnerForceSimulation()
         // console.log("Contributor mini force simulation done")
         
-        /////////////////////////////////////////////////////////////////
-        ////////////// Run Force Simulation per Contributor /////////////
-        /////////////////////////////////////////////////////////////////
+        /////////////////////////////////////////////////////////////
+        //////////// Run Force Simulation per Contributor ///////////
+        /////////////////////////////////////////////////////////////
         // Run a force simulation for per contributor for all the repos that are not shared between other contributors
         // Like a little cloud of repos around them
         singleContributorForceSimulation()
         // console.log("Owner mini force simulation done")
 
-        /////////////////////////////////////////////////////////////////
-        /////////////////// Position Contributor Nodes //////////////////
-        /////////////////////////////////////////////////////////////////
+        /////////////////////////////////////////////////////////////
+        ///////////////// Position Contributor Nodes ////////////////
+        /////////////////////////////////////////////////////////////
         // Place the central repo in the middle
         central_repo.x = central_repo.fx = 0
         central_repo.y = central_repo.fy = 0
@@ -176,29 +181,29 @@ const createORCAVisual = () => {
         positionContributorNodes()
         // console.log("Contributor nodes positioned")
 
-        /////////////////////////////////////////////////////////////////
-        ///////////// Run Force Simulation for Shared Repos /////////////
-        /////////////////////////////////////////////////////////////////
+        /////////////////////////////////////////////////////////////
+        /////////// Run Force Simulation for Shared Repos ///////////
+        /////////////////////////////////////////////////////////////
         // Run a force simulation to position the repos that are shared between contributors 
         collaborationRepoSimulation()
         // console.log("Central force simulation done")
 
-        /////////////////////////////////////////////////////////////////
-        //////// Run Force Simulation for Remaining Contributors ////////
-        /////////////////////////////////////////////////////////////////
+        /////////////////////////////////////////////////////////////
+        ////// Run Force Simulation for Remaining Contributors //////
+        /////////////////////////////////////////////////////////////
         // Run a force simulation to position the remaining contributors around the central area
         remainingContributorSimulation()
         // console.log("Remaining contributor force simulation done")
 
-        /////////////////////////////////////////////////////////////////
-        //////////////////////// Setup the Hover ////////////////////////
-        /////////////////////////////////////////////////////////////////
+        /////////////////////////////////////////////////////////////
+        ////////////////////// Setup the Hover //////////////////////
+        /////////////////////////////////////////////////////////////
         setupHover()
         setupClick()
 
-        /////////////////////////////////////////////////////////////////
-        /////////////// Set the Sizes and Draw the Visual ///////////////
-        /////////////////////////////////////////////////////////////////
+        /////////////////////////////////////////////////////////////
+        ///////////// Set the Sizes and Draw the Visual /////////////
+        /////////////////////////////////////////////////////////////
         chart.resize()
     }// function chart
 
@@ -296,22 +301,25 @@ const createORCAVisual = () => {
         console.log("SF:", SF)
 
         // Reset the delaunay for the mouse events
-        delaunay = d3.Delaunay.from(nodes.map(d => [d.x, d.y]))
-        nodes_delaunay = nodes
+        delaunay = d3.Delaunay.from([...nodes.map(d => [d.x, d.y],...remainingContributors.map(d => [d.x, d.y]))])
+        nodes_delaunay = [...nodes, ...remainingContributors]
+        // delaunay = d3.Delaunay.from(nodes.map(d => [d.x, d.y]))
+        // nodes_delaunay = nodes
+        console.log(nodes_delaunay)
 
         // Draw the visual
         draw()
     }//function resize
 
-    /////////////////////////////////////////////////////////////////////
-    ///////////////////// Data Preparation Functions ////////////////////
-    /////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////
+    /////////////////// Data Preparation Functions //////////////////
+    /////////////////////////////////////////////////////////////////
 
-    ////////////////// Prepare the data for the visual //////////////////
+    //////////////// Prepare the data for the visual ////////////////
     function prepareData() {
-        /////////////////////////////////////////////////////////////////
-        /////////////////////// Initial Data Prep ///////////////////////
-        /////////////////////////////////////////////////////////////////
+        /////////////////////////////////////////////////////////////
+        ///////////////////// Initial Data Prep /////////////////////
+        /////////////////////////////////////////////////////////////
 
         ////////////////////////// CONTRIBUTORS /////////////////////////
         contributors.forEach(d => {
@@ -329,7 +337,7 @@ const createORCAVisual = () => {
             delete d.contributor_name_top
         })// forEach
 
-        ////////////////////////// REPOSITORIES /////////////////////////
+        //////////////////////// REPOSITORIES ///////////////////////
         repos.forEach(d => {
             d.repo = d.base_repo_original
             d.forks = +d.repo_forks
@@ -358,7 +366,7 @@ const createORCAVisual = () => {
             delete d.repo_updatedAt
         })// forEach
 
-        ///////////////////////////// LINKS /////////////////////////////
+        /////////////////////////// LINKS ///////////////////////////
         links.forEach(d => {
             // Source
             d.contributor_name = d.author_name_top
@@ -385,7 +393,7 @@ const createORCAVisual = () => {
             delete d.author_name_top
         })// forEach
 
-        /////////////////////// OTHER CONTRIBUTORS //////////////////////
+        ///////////////////// OTHER CONTRIBUTORS ////////////////////
         remainingContributors.forEach(d => {
             d.commit_count = +d.commit_count
             d.contributor_sec_min = parseDateUnix(d.author_sec_min)
@@ -394,7 +402,7 @@ const createORCAVisual = () => {
             d.type = "contributor"
         })// forEach
 
-        ////////////////////////// Create Nodes /////////////////////////
+        //////////////////////// Create Nodes ///////////////////////
         // Combine the contributors and repos into one variable to become the nodes
         contributors.forEach((d,i) => {
             nodes.push({
@@ -420,7 +428,7 @@ const createORCAVisual = () => {
             d.contributors = d.links_original.map(l => contributors.find(r => r.contributor_name === l.contributor_name))
         })// forEach
 
-        /////////////////////////////////////////////////////////////////
+        /////////////////////////////////////////////////////////////
         // Mark all the repositories that have a link to at least one contributor that has received ORCA
         repos.forEach(d => {
             d.orca_impacted = false
@@ -431,11 +439,11 @@ const createORCAVisual = () => {
             })// forEach
         })// forEach
         
-        /////////////////////////////////////////////////////////////////
+        /////////////////////////////////////////////////////////////
         // Which is the central repo, the one that connects everyone (the one with the highest degree)
         central_repo = nodes.find(d => d.type === "repo" && d.id === REPO_CENTRAL)
 
-        ///////////////////////////// OWNERS ////////////////////////////
+        /////////////////////////// OWNERS //////////////////////////
         // Create a dataset for all the repos that have an owner that occurs more than once
         let owners = nodes.filter(d => d.type === "repo" && nodes.filter(n => n.id !== d.id && n.type === "repo" && n.data.owner === d.data.owner).length > 1).map(d => d.data)
     
@@ -473,7 +481,7 @@ const createORCAVisual = () => {
             })
         })// forEach
 
-        /////////////////////////////////////////////////////////////////
+        /////////////////////////////////////////////////////////////
         // Redo Links to take owners into account as a grouping node
 
         // Also for the links where the target is also in the owner dataset replace the link to the owner and make a new link from the owner to the repo
@@ -518,7 +526,7 @@ const createORCAVisual = () => {
         })// forEach
         links = links.filter(d => !(d.to_remove === true))
 
-        /////////////////////////////////////////////////////////////////
+        /////////////////////////////////////////////////////////////
         // Get the unique set of new_links
 
         // Group all the new_links_contributor_owner by their source and target and add the commit counts, and take the min and max of the commit_sec_min and commit_sec_max
@@ -567,7 +575,7 @@ const createORCAVisual = () => {
 
         console.log("Links:", links)
 
-        /////////////////////////////////////////////////////////////////
+        /////////////////////////////////////////////////////////////
         // Which of these owner types have links that are all to the same contributor node
         // If so, mark them as "single-contributor"
         owners.forEach(d => {
@@ -580,7 +588,7 @@ const createORCAVisual = () => {
             d.repos = nodes.filter(n => n.type === "repo" && n.data.owner === d.owner).map(n => n.data)
         })// forEach
 
-        /////////////////////////////////////////////////////////////////
+        /////////////////////////////////////////////////////////////
         // Set scales
         scale_repo_radius.domain(d3.extent(repos, d => d.stars))
         scale_contributor_radius.domain(d3.extent(links.filter(l => l.target === central_repo.id), d => d.commit_count))
@@ -588,7 +596,7 @@ const createORCAVisual = () => {
         scale_remaining_contributor_radius.domain([0, scale_contributor_radius.domain()[0]])
         // scale_remaining_contributor_radius.domain(d3.extent(remainingContributors, d => d.commit_count))
 
-        /////////////////////////////////////////////////////////////////
+        /////////////////////////////////////////////////////////////
         // Determine some visual settings for the nodes
         nodes.forEach((d,i) => {
             d.index = i
@@ -647,9 +655,9 @@ const createORCAVisual = () => {
         
     }// function prepareData
 
-    /////////////////////////////////////////////////////////////////////
-    ///////////////// Force Simulation | Per Owner ////////////////
-    /////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////
+    ///////////////// Force Simulation | Per Owner //////////////////
+    /////////////////////////////////////////////////////////////////
     // Run a force simulation for per "owner" node for all the repos that fall under it
     function singleOwnerForceSimulation() {
         // First fix the nodes in the center - this is only temporarily
@@ -755,9 +763,9 @@ const createORCAVisual = () => {
 
     }// function singleOwnerForceSimulation
 
-    /////////////////////////////////////////////////////////////////////
-    ///////////////// Force Simulation | Per Contributor ////////////////
-    /////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////
+    /////////////// Force Simulation | Per Contributor //////////////
+    /////////////////////////////////////////////////////////////////
 
     // Run a force simulation for per contributor for all the repos that are not shared between other contributors
     // Like a little cloud of repos around them
@@ -942,9 +950,9 @@ const createORCAVisual = () => {
             })// forEach
     }// function positionContributorNodes
 
-    /////////////////////////////////////////////////////////////////////
-    /////////////// Force Simulation | Collaboration Repos //////////////
-    /////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////
+    ///////////// Force Simulation | Collaboration Repos ////////////
+    /////////////////////////////////////////////////////////////////
     // Run a force simulation to position the repos that are shared between contributors
     function collaborationRepoSimulation() {
 
@@ -1089,9 +1097,9 @@ const createORCAVisual = () => {
         }// simulationPlacementConstraints
     }// function collaborationRepoSimulation
 
-    /////////////////////////////////////////////////////////////////////
-    /////////////// Force Simulation | Other Contributors ///////////////
-    /////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////
+    ///////////// Force Simulation | Other Contributors /////////////
+    /////////////////////////////////////////////////////////////////
     // Run a force simulation to place the remaining contributors somewhere outside the outer NON-ORCA ring
     function remainingContributorSimulation() {
         let LW = ((RADIUS_CONTRIBUTOR+RADIUS_CONTRIBUTOR_NON_ORCA)/2 - RADIUS_CONTRIBUTOR) * 2
@@ -1142,9 +1150,9 @@ const createORCAVisual = () => {
 
     }// function remainingContributorSimulation
 
-    /////////////////////////////////////////////////////////////////////
-    //////////////////////// Background Elements ////////////////////////
-    /////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////
+    ////////////////////// Background Elements //////////////////////
+    /////////////////////////////////////////////////////////////////
     // Draw two rings around the central node to show those that receive ORCA vs those that do not
     function drawOrcaRings(context, SF) {
         // Draw the ORCA rings
@@ -1188,9 +1196,9 @@ const createORCAVisual = () => {
         context.globalAlpha = 1
     }// function drawOrcaRings
 
-    /////////////////////////////////////////////////////////////////////
-    /////////////////////// Node Drawing Functions //////////////////////
-    /////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////
+    ///////////////////// Node Drawing Functions ////////////////////
+    /////////////////////////////////////////////////////////////////
 
     function drawNode(context, SF, d) {
         // Is this a node that is a repo that is not impacted by ORCA?
@@ -1230,7 +1238,7 @@ const createORCAVisual = () => {
 
     }// function drawNodeArc
 
-    ////////////////////////// Draw Hover Ring //////////////////////////
+    //////////////////////// Draw Hover Ring ////////////////////////
     // Draw a stroked ring around the hovered node
     function drawHoverRing(context, d) {
         let r = d.r + (d.type === "contributor" ? 9 : d === central_repo ? 14 : 7)
@@ -1242,7 +1250,7 @@ const createORCAVisual = () => {
         context.stroke()
     }// function drawHoverRing
 
-    ///////////////////////// Arc around Circle /////////////////////////
+    /////////////////////// Arc around Circle ///////////////////////
     // Draw a tiny arc around the node to show how long they've been involved in a certain repo's existence, based on their first and last commit
     function timeRangeArc(context, SF, d, repo, link, COL = COLOR_REPO_MAIN) {
         context.save()
@@ -1281,7 +1289,7 @@ const createORCAVisual = () => {
         context.restore()
     }// function timeRangeArc
 
-    //////////// Fill a circle with a diagonal hatch pattern ////////////
+    ////////// Fill a circle with a diagonal hatch pattern //////////
     function drawHatchPattern(context, radius, angle) {
         context.save()
         context.beginPath()
@@ -1303,7 +1311,7 @@ const createORCAVisual = () => {
         context.restore()
     }// function drawHatchPattern
 
-    /////////////////////////// Draw a circle ///////////////////////////
+    ///////////////////////// Draw a circle /////////////////////////
     function drawCircle(context, x, y, SF, r = 10, begin = true, stroke = false) {
         if(begin === true) context.beginPath()
         context.moveTo((x+r) * SF, y * SF)
@@ -1312,11 +1320,11 @@ const createORCAVisual = () => {
         // if(begin) { context.lineWidth = 1.5 * SF; context.stroke() }
     }//function drawCircle
 
-    /////////////////////////////////////////////////////////////////////
-    /////////////////////// Line Drawing Functions //////////////////////
-    /////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////
+    ///////////////////// Line Drawing Functions ////////////////////
+    /////////////////////////////////////////////////////////////////
 
-    //////////// Draw the link between the source and target ////////////
+    ////////// Draw the link between the source and target //////////
     function drawLink(context, SF, l) {
         if(l.source.x !== undefined && l.target.x !== undefined) {
             calculateLinkGradient(context, l)
@@ -1339,7 +1347,7 @@ const createORCAVisual = () => {
         drawLine(context, SF, l)
     }// function drawLink
 
-    /////////////////////////// Draw the lines //////////////////////////
+    ///////////////////////// Draw the lines ////////////////////////
     function drawLine(context, SF, line) {
         context.beginPath()
         context.moveTo(line.source.x * SF, line.source.y * SF)
@@ -1348,7 +1356,7 @@ const createORCAVisual = () => {
         context.stroke()
     }//function drawLine
 
-    //////////////////////// Draw a curved line /////////////////////////
+    ////////////////////// Draw a curved line ///////////////////////
     function drawCircleArc(context, SF, line) {
         let center = line.center
         let ang1 = Math.atan2(line.source.y * SF - center.y * SF, line.source.x * SF - center.x * SF)
@@ -1356,7 +1364,7 @@ const createORCAVisual = () => {
         context.arc(center.x * SF, center.y * SF, line.r * SF, ang1, ang2, line.sign)
     }//function drawCircleArc
 
-    /////////////////////// Calculate Line Centers //////////////////////
+    ///////////////////// Calculate Line Centers ////////////////////
     function calculateEdgeCenters(l, size = 2, sign = true) {
         //Find a good radius
         l.r = sqrt(sq((l.target.x - l.source.x)) + sq((l.target.y - l.source.y))) * size //Can run from > 0.5
@@ -1393,7 +1401,7 @@ const createORCAVisual = () => {
         }//function findCenters
     }//function calculateEdgeCenters
 
-    /////////////////// Create gradients for the links //////////////////
+    ///////////////// Create gradients for the links ////////////////
     function calculateLinkGradient(context, l) {
 
         // l.gradient = context.createLinearGradient(l.source.x, l.source.y, l.target.x, l.target.y)
@@ -1437,9 +1445,9 @@ const createORCAVisual = () => {
         }//function createGradient
     }//function calculateLinkGradient
 
-    /////////////////////////////////////////////////////////////////////
-    ////////////////////////// Hover Functions //////////////////////////
-    /////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////
+    //////////////////////// Hover Functions ////////////////////////
+    /////////////////////////////////////////////////////////////////
     // Setup the hover on the top canvas, get the mouse position and call the drawing functions
     function setupHover() {
         d3.select("#canvas-hover").on("mousemove", function(event) {
@@ -1562,9 +1570,9 @@ const createORCAVisual = () => {
         context.restore()
     }// function drawHoverState
 
-    /////////////////////////////////////////////////////////////////////
-    ////////////////////////// Click Functions //////////////////////////
-    /////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////
+    //////////////////////// Click Functions ////////////////////////
+    /////////////////////////////////////////////////////////////////
 
     function setupClick() {
         d3.select("#canvas-hover").on("click", function(event) {
@@ -1604,8 +1612,8 @@ const createORCAVisual = () => {
                 HOVERED_NODE = null
                 
                 // Reset the delaunay to all the nodes
-                delaunay = d3.Delaunay.from(nodes.map(d => [d.x, d.y]))
-                nodes_delaunay = nodes
+                delaunay = d3.Delaunay.from([...nodes.map(d => [d.x, d.y],...remainingContributors.map(d => [d.x, d.y]))])
+                nodes_delaunay = [...nodes, ...remainingContributors]
 
                 // Fade the main canvas back in
                 canvas.style.opacity = '1'
@@ -1614,9 +1622,9 @@ const createORCAVisual = () => {
         })// on mousemove
     }// function setupHover
 
-    /////////////////////////////////////////////////////////////////////
-    /////////////////// General Interaction Functions ///////////////////
-    /////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////
+    ///////////////// General Interaction Functions /////////////////
+    /////////////////////////////////////////////////////////////////
 
     // Turn the mouse position into a canvas x and y location and see if it's close enough to a node
     function findNode(mx, my) {
@@ -1627,10 +1635,15 @@ const createORCAVisual = () => {
         let point = delaunay.find(mx, my)
         let d = nodes_delaunay[point]
 
+        // console.log(point, d)
+
         // Get the distance from the mouse to the node
         let dist = sqrt((d.x - mx)**2 + (d.y - my)**2)
         // If the distance is too big, don't show anything
         let FOUND = dist < d.r + (CLICK_ACTIVE ? 10 : 50)
+
+
+
 
         return [d, FOUND]
     }// function findNode
@@ -1645,7 +1658,7 @@ const createORCAVisual = () => {
         const x_base = d.x
         const y_base = d.y - (d.max_radius ? d.max_radius : d.r)
 
-        /////////////////////////////////////////////////////////////////
+        /////////////////////////////////////////////////////////////
         // Figure out the required height of the tooltip
         let H = 93
         if(d.type === "contributor") {
@@ -1935,9 +1948,9 @@ const createORCAVisual = () => {
         context.restore()
     }// function drawTooltip
 
-    /////////////////////////////////////////////////////////////////////
-    /////////////////////////// Text Functions //////////////////////////
-    /////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////
+    ///////////////////////// Text Functions ////////////////////////
+    /////////////////////////////////////////////////////////////////
 
     function drawNodeLabel(context, d) {
         // Draw the name above each node

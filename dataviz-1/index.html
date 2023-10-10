@@ -7,239 +7,7 @@
 	    <meta name="description" content="">
         <link rel="shortcut icon" href="#">
 
-        <style>
-            html {
-                --color-repo-main: #a682e8;
-                --color-repo: #64d6d3;
-                --color-owner: #f2a900;
-                --color-contributor: #ea9df5;
-                --color-text: #4d4950;
-                --color-background: #f7f7f7;
-                --color-gradient: linear-gradient(to right, var(--color-contributor), var(--color-repo-main), var(--color-repo)) 1;
-            }
-
-            body {
-                margin: 0;
-                font-family: 'Atkinson Hyperlegible', sans-serif;
-            }
-
-            .central-repo {
-                /* color: var(--color-repo-main); */
-                background: var(--color-repo-main);
-                padding: 0.1em 0.3em;
-                font-weight: 700;
-                color: white
-            }
-
-            .contributor {
-                /* color: var(--color-contributor); */
-                background: var(--color-contributor);
-                padding: 0.1em 0.3em;
-                font-weight: 700;
-            }
-
-            .repository {
-                background: var(--color-repo);
-                padding: 0.1em 0.3em;
-                /* border-bottom: 0.3em solid var(--color-repo); */
-                font-weight: 700;
-            }
-
-            .repo-name-only {
-                font-style: italic;
-            }
-
-            .owner {
-                /* color: var(--color-owner); */
-                background: var(--color-owner);
-                padding: 0.1em 0.3em;
-                font-weight: 700;
-            }
-
-            p {
-                line-height: 140%;
-                color: var(--color-text);
-            }
-
-
-            #chart-wrapper {
-                min-width: 900px; /* Min size that the visual can becom */
-                max-width: 1400px; /* Max size that the visual can become */
-
-                border-top: 10px solid var(--color-repo-main);
-                border-image: var(--color-gradient);
-                margin: 0 auto;
-            }
-
-            #chart-textual {
-                /* Create a linear gradient for the background going from transparent #f7f7f7 to #f7f7f7 downward */
-                background: linear-gradient(to bottom, rgba(247, 247, 247, 0) 50%, rgba(247, 247, 247, 1) 100%);
-                padding: 3em 5em 2em 5em;
-
-                display: grid;
-                justify-content: center;
-                align-items: top;
-
-                grid-template-columns: 1fr 2fr;
-                column-gap: 5em;
-                row-gap: 5em;
-            }
-
-            #chart-explanation {
-                background: linear-gradient(to bottom, rgba(247, 247, 247, 1) 50%, rgba(247, 247, 247, 0) 100%);
-                min-height: 200px;
-                padding: 3em 5em 2em 5em;
-
-                font-size: 1.2em;
-
-                display: grid;
-                justify-content: center;
-                align-items: top;
-
-                grid-template-columns: 1fr 1fr;
-                column-gap: 7em;
-                row-gap: 1em;
-            }
-
-            #chart-explanation p {
-                line-height: 160%;
-                font-size: 0.8em;
-                /* color:#6e6a71; */
-                /* opacity: 0.6; */
-                /* font-style: italic; */
-            }
-
-            #chart-explanation .title {
-                grid-column-start: 1;
-                grid-column-end: 3;
-                grid-row-start: 1;
-                grid-row-end: 1;
-                font-size: 1.0em;
-            }
-
-
-            #orca-explanation {
-                padding: 3em 5em 2em 5em;
-
-                font-size: 1.2em;
-
-                display: grid;
-                justify-content: center;
-                align-items: top;
-
-                grid-template-columns: 1fr;
-                column-gap: 7em;
-                row-gap: 1em;
-            }
-
-            .title {
-                text-align: center;
-                font-size: 1.0em;
-                padding-bottom: 0.5em;
-                margin-bottom: 0;
-
-                border-bottom: 3px solid var(--color-repo-main);
-                border-image: var(--color-gradient);
-            }
-
-
-            #chart-title {
-                grid-column-start: 1;
-                grid-column-end: 1;
-            }
-            #chart-title h1 {
-                font-weight: 400;
-                font-size: 2.4em;
-                font-style: italic;
-                margin-bottom: 0.2em; 
-                margin-top: 0em;
-            }
-            #chart-title h1#title-repo-name {
-                font-weight: 700;
-                font-size: 2.6em;
-                margin-top: 0.2em;
-                font-style: normal;
-            }
-
-            #chart-intro-text {
-                grid-column-start: 2;
-                grid-column-end: 2;
-                font-weight: 400;
-                font-size: 1.1em;
-            }
-
-            #explanation-note {
-                border-bottom: 2px solid var(--color-repo-main);
-                border-image:linear-gradient(to right, var(--color-owner), var(--color-contributor), var(--color-repo)) 1;
-                /* border-image: var(--color-gradient); */
-                font-size: 0.9em;
-                font-style: italic;
-                color: var(--color-text);
-                text-decoration: none;
-            }
-
-            #chart-extra {
-                position: relative;
-                text-align: center;
-            }
-
-            #dataviz-download-data {
-                text-align: center;
-                background: var(--color-repo-main);
-                color: white;
-                border: none;
-                padding: 0.5em 1em;
-                font-size: 1.0em;
-                font-weight: 700;
-                cursor: pointer;
-                margin: 1em auto;
-            }
-
-            #dataviz-credit {
-                font-style: italic;
-                text-align: center;
-                margin-top: 2em;
-                margin-bottom: 2em;
-                opacity: 0.8;
-                font-size: 0.9em;
-            }
-
-            #dataviz-credit a {
-                border-bottom: 3px solid var(--color-repo-main);
-                border-image:linear-gradient(to right, var(--color-contributor), var(--color-repo)) 1;
-                /* padding: 0.1em 0.3em; */
-                font-weight: 700;
-                cursor: pointer;
-                color: var(--color-text);
-                text-decoration: none;
-            }
-
-
-
-            /* CHART */
-            #chart-container {
-                position: relative;
-                background-color: var(--color-background); /* Same as the COLOR_BACKGROUND in the visual */
-            }
-
-            #chart-container canvas {
-                display: block;
-                margin: 0;
-            }
-
-            #canvas, #canvas-click {
-                position: absolute;
-                top: 0;
-                pointer-events: none;
-                z-index: 0;
-                transition: opacity 200ms ease-in;
-            }
-
-            #canvas-hover {
-                position: relative;
-                z-index: 1
-            }
-        </style>
+        <link rel="stylesheet" href="css/style.css">
 		
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -258,7 +26,7 @@
 	</head>
 	<body>
         <div id="chart-wrapper">
-            <div id="chart-textual">
+            <div id="chart-introduction">
                 <div id="chart-title">
                     <h1>The Top Contributor Network of</h1>
                     <h1><span id="title-repo-name" class="central-repo">mozilla/pdf.js</span></h1>
@@ -266,15 +34,31 @@
                 <div id="chart-intro-text">
                     <p>The <span class="repo-name central-repo">mozilla/pdf.js</span> repository has seen many improvements from its <span id="repo-num-contributors"></span><span class="contributor">contributors</span> since it was created<span id="repo-start-date"></span>.</p>
 
-                    <p><strong>The visual below shows all of the contributors to <span class="repo-name-only">pdf.js</span> and focuses on the <span id="top-contributor-num"></span>contributors that have made the most commits.</strong> Revealing how they are involved with<span id="top-repo-num"> other</span> <span class="repository">repositories</span> as well. <span style="font-size: 0.7em; opacity: 0.6; font-style: italic;">(only counting repos with at least 30 stars)</span></p>
+                    <p>The visual below shows all of the contributors to <span class="repo-name-only">pdf.js</span> and focuses on the <span class="top-contributor-num"></span>contributors that have made the most commits and/or are supported through ORCA (the <strong>"Open Retrospective Compensation Agreement"</strong>). Revealing how they are involved with<span id="top-repo-num"> other</span> <span class="repository">repositories</span> as well. <span style="font-size: 0.7em; opacity: 0.6; font-style: italic;">(only counting repos with at least 30 stars)</span></p>
 
-                    <p>The top contributors are separated into two outer rings. In the inner ring we find those that have been supported via ORCA (the <strong>"Open Retrospective Compensation Agreement"</strong>) for their work on <span class="repo-name-only">pdf.js</span>. Whereas in the outer ring we find those that have not (yet).</p>
+                    <div id="bar-chart-wrapper">
+                        <p>The <span id="num-commits-top"></span>commits by these <span class="top-contributor-num"></span> contributors, make up <span id="percentage-commits-top"></span> of the total number of commits made to <span class="repo-name-only">pdf.js</span>.</p>
+                        <div id="commit-bar-chart">
+                            <div id="bar-orca"></div>
+                            <div id="bar-non-orca"></div>
+                            <div id="bar-remaining"></div>
+                        </div>
+                        <div id="legend-bar-chart">
+                            <ul>
+                                <li id="item-orca"><span id="num-orca"></span>Supported via ORCA</li>
+                                <li id="item-non-orca"><span id="num-non-orca"></span>Top contributor, but no supported via ORCA</li>
+                                <li id="item-remaining"><span id="num-remaining"></span>Remaining contributors</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <p>The top contributors are separated into two outer rings. In the inner ring we find those that have been supported via ORCA for their work on <span class="repo-name-only">pdf.js</span>. Whereas in the outer ring we find those that have not (yet).</p>
 
                     <p>In the <strong>center we focus on the connections <i>amongst</i> contributors</strong>. Where we can find those repositories that multiple contributors have worked on (and the <span class="owner">owners</span>, if there is more than one of their repos present).</p>
 
                     <p>Explore the ecosystem of open source projects that are touched by the top contributors to <span class="repo-name-only">pdf.js</span>. See how the impact of ORCA <i>could</i> reach far wider than just that one repository.</p>
 
-                    <p><a id="explanation-note" href="#chart-explanation"><strong>For a full explanation on how to read this visual, see the bottom of this page.</strong></a></p>
+                    <p><a id="explanation-link" href="#chart-explanation"><strong>For a full explanation on how to read this visual, see the bottom of this page.</strong></a></p>
                 </div>
             </div>
 
@@ -285,7 +69,7 @@
             </div>
 
             <div id="chart-explanation">
-                <p class="title"><strong>HOW TO READ THIS VISUAL</strong></p>
+                <p class="header"><strong>HOW TO READ THIS VISUAL</strong></p>
 
                 <div>
                     <p><strong>COLOR</strong> | The <span class="central-repo">central repository</span> that the visual is based on is shown in purple in the center. The <span class="contributor">contributors</span> to this repository are pink. Even the smaller pink circles around the outside are contributors to the central repository (just not those with the most commits). Apart from that central repository, all other <span class="repository">repositories</span> are turquoise. When there are at least two repositories from the same owner, a circle for that <span class="owner">owner</span> is shown in yellow. </p>
@@ -307,7 +91,7 @@
             </div>
 
             <div id="orca-explanation">
-                <p class="title"><strong>WHAT IS ORCA</strong></p>
+                <p class="header"><strong>WHAT IS ORCA</strong></p>
                 <p>Explain ORCA...</p>
             </div>
 
@@ -373,6 +157,7 @@
             document.fonts.ready.then(() => {
                 Promise.all(promises).then(values => {
                     let formatDigit = d3.format(",.2r")
+                    let formatPercentage = d3.format(".0%")
 
                     // Create a deep copy of the data in values
                     let data_raw = []
@@ -381,19 +166,22 @@
                     data_raw.push(JSON.parse(JSON.stringify(values[2]))) // links
                     data_raw.push(JSON.parse(JSON.stringify(values[3]))) // remaining contributors
 
+                    /////////////////////////////////////////////////
                     // Very specific to this example, but get some statistics on the data and put this in the intro text
                     let num_contributors = values[0].length + values[3].length
                     document.getElementById("repo-num-contributors").innerHTML = `~${formatDigit(num_contributors)} `
                     
                     // How many contributors are there in the inner two rings
-                    document.getElementById("top-contributor-num").innerHTML = `${formatDigit(values[0].length)} `
+                    document.querySelectorAll(".top-contributor-num").forEach(d => d.innerHTML = `${formatDigit(values[0].length)} `)
 
                     // How many repositories are in the visual
                     document.getElementById("top-repo-num").innerHTML = `, at least, ${formatDigit(values[1].length)} other`
 
+                    /////////////////////////////////////////////////
                     // It expects the four datasets of contributors (authors), repositories, links between contributors and repositories, and remaining contributors, in that order
                     ORCAVisual(values)
 
+                    /////////////////////////////////////////////////
                     // Get the start date of the central repository
                     // Find the REPOSITORY_FULL in the links dataset
                     let central_repo = values[1].find(d => d.repo === REPOSITORY_FULL)
@@ -401,7 +189,36 @@
                     // let start_date = new Date(values[1][0].created_at)
                     document.getElementById("repo-start-date").innerHTML = ` in ${formatDate(central_repo.createdAt)}`
 
-                    /////////////////////////////////////////////////////////
+                    /////////////////////////////////////////////////
+                    // Update the bar chart in the intro
+                    let bar_chart = document.getElementById("commit-bar-chart")
+                    // Get the sum of commits made by the remaining contributors
+                    let sum_remaining = d3.sum(values[3], d => d.commit_count)
+                    // Get the sum of commits made by the non-ORCA contributors
+                    let sum_non_orca = d3.sum(values[0].filter(c => c.orca_received === false), d => d.link_central.commit_count)
+                    // Get the sum of commits made by the ORCA contributors
+                    let sum_orca = d3.sum(values[0].filter(c => c.orca_received === true), d => d.link_central.commit_count)
+
+                    // Update the bar chart slice width
+                    bar_chart.style.gridTemplateColumns = `${sum_orca}fr ${sum_non_orca}fr ${sum_remaining}fr`
+
+                    // Number of commits by top contributors
+                    document.getElementById("num-commits-top").innerHTML = `${formatDigit(sum_non_orca + sum_orca)} `
+
+                    // Percentage of commits by top contributors
+                    document.getElementById("percentage-commits-top").innerHTML = `${formatPercentage((sum_non_orca + sum_orca) / (sum_remaining + sum_non_orca + sum_orca))} `
+
+                    // Number of people
+                    let num_orca = values[0].filter(c => c.orca_received === true).length
+                    let num_non_orca = values[0].filter(c => c.orca_received === false).length
+                    document.getElementById("num-orca").innerHTML = `${num_orca < 10 ? num_orca : formatDigit(num_orca)} | `
+                    document.getElementById("num-non-orca").innerHTML = `${num_non_orca < 10 ? num_non_orca : formatDigit(num_non_orca)} | `
+                    document.getElementById("num-remaining").innerHTML = `${formatDigit(values[3].length)} | `
+
+                    // Reveal the bar chart
+                    bar_chart.style.opacity = `1`
+
+                    /////////////////////////////////////////////////
                     // Let people download the raw data
                     const download_button = document.getElementById("dataviz-download-data")
                     download_button.addEventListener("click", () => {
