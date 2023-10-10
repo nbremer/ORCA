@@ -1,12 +1,12 @@
 // TODO: Panel with information about the person being - in short prose - first commit, last commit, number of repos that they have (use colors from the visual)
 
 // TODO: Add a legend
-// Top contributors by count are these people
 // These people have also contributed to X other repos
 // Tiny histogram of the number of people that have done Y commits - with those top contributors highlighted
 
 // TODO: Make tooltip scale independent?
-// TODO: Add hover for tiny circles, remaining contributors as well
+// TODO: Add hover for tiny circles (remaining contributors) as well
+// TODO: Make sure the central repo's name fits in the center and is readable
 
 // ~~ MAYBE ~~
 // TODO: Look into label placement again (SAT solver or Cynthia Brewer paper for label placement)
@@ -1957,7 +1957,7 @@ const createORCAVisual = () => {
 
         if(d.id === central_repo.id) {
             font_weight = 700
-            font_size = 16
+            font_size = 15 
             context.font = `${font_weight} ${font_size * SF}px ${FONT_FAMILY}`
         }// if
 

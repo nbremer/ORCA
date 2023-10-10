@@ -110,8 +110,27 @@
                 grid-column-end: 3;
                 grid-row-start: 1;
                 grid-row-end: 1;
+                font-size: 1.0em;
+            }
+
+
+            #orca-explanation {
+                padding: 3em 5em 2em 5em;
+
+                font-size: 1.2em;
+
+                display: grid;
+                justify-content: center;
+                align-items: top;
+
+                grid-template-columns: 1fr;
+                column-gap: 7em;
+                row-gap: 1em;
+            }
+
+            .title {
                 text-align: center;
-                font-size: 1em;
+                font-size: 1.0em;
                 padding-bottom: 0.5em;
                 margin-bottom: 0;
 
@@ -241,9 +260,11 @@
                 <div id="chart-intro-text">
                     <p>The <span class="repo-name central-repo">mozilla/pdf.js</span> repository has seen many improvements from its <span id="repo-num-contributors"></span><span class="contributor">contributors</span> since it was created<span id="repo-start-date"></span>.</p>
 
-                    <p>This visual shows all of the contributors to <span class="repo-name">mozilla/pdf.js</span> and focuses on the <span id="top-contributor-num"></span>contributors that have made the most commits. Revealing how they are involved with many other <span class="repository">repositories</span> as well. And seeing their connections to each other by their shared work for other repositories and/or working on repositories from the same <span class="owner">owner</span>.</p>
+                    <p><strong>This visual shows all of the contributors to <span class="repo-name">mozilla/pdf.js</span> and focuses on the <span id="top-contributor-num"></span>contributors that have made the most commits.</strong> Revealing how they are involved with<span id="top-repo-num"> other</span> <span class="repository">repositories</span> as well. <span style="font-size: 0.7em; opacity: 0.6; font-style: italic;">(only counting repos with at least 30 stars)</span></p>
+                    
+                    <p>In the center we focus on the connections amongst contributors. Where we can find those repositories that multiple contributors have worked on (and the repo <span class="owner">owners</span>, if there is more than one of their repos present) .</p>
 
-                    <p>Mention ORCA here, or too complex for this top text? The inner (darker purple) ring shows the contributors that have received payment(?) via <strong>ORCA</strong> through their involvement in <span class="repo-name">mozilla/pdf.js</span></p>
+                    <p>The top contributors are separated into two outer rings. In the inner ring we find those that have been supported via ORCA (the <strong>"Open Retrospective Compensation Agreement"</strong>) for their work on <span class="repo-name">mozilla/pdf.js</span>. Whereas in the outer ring we find those that have not (yet).</p>
 
                     <p><strong><span id="explanation-note">For a full explanation on how to read this visual, see the bottom of this page.</span></strong></p>
                 </div>
@@ -267,6 +288,7 @@
 
                     <p><strong>ARCS around CIRCLES</strong> | ...</p>
                     <p><strong>INNER & OUTER PURPLE RINGS</strong> | ...</p>
+                    <p><strong>Filled Repo Circles vs those with central Dot</strong> | ...</p>
                 </div>
                 <div>                    
                     <p><strong>INTERACTION</strong> | <strong>Hover over any circle</strong> to see all of its connections; From a <span class="contributor">contributor</span> to all the repositories that they've worked on or from one <span class="repository">repository</span> to all of the (top) contributors that have worked on it. <strong>Click on a circle</strong> to fix the visual with all the circle's links highlighted to better investigate its network of direct connections.</p>
@@ -274,6 +296,11 @@
                     <p><strong>NOTE 1</strong> | Only repositories that have at least 30 stars have been taken into account to visualize. Contributors could have made more commits to repositories with fewer stars. These repositories are not visualized here.</p>
                     <p><strong>NOTE 2</strong> | How we tried to group the top contributors by their shared emails and names...</p>
                 </div>
+            </div>
+
+            <div id="orca-explanation">
+                <p class="title"><strong>WHAT IS ORCA</strong></p>
+                <p>Explain ORCA...</p>
             </div>
 
             <div id="chart-extra">
@@ -349,6 +376,9 @@
                     
                     // How many contributors are there in the inner two rings
                     document.getElementById("top-contributor-num").innerHTML = `${formatDigit(values[0].length)} `
+
+                    // How many repositories are in the visual
+                    document.getElementById("top-repo-num").innerHTML = `, at least, ${formatDigit(values[1].length)} other`
 
                     // It expects the four datasets of contributors (authors), repositories, links between contributors and repositories, and remaining contributors, in that order
                     ORCAVisual(values)
