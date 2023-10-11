@@ -295,9 +295,12 @@ li#item-remaining::before {
 /*************************************/
 /*************** CHART ***************/
 /*************************************/
-#chart-container {
+
+/* This is all done within the createORCAVisual function */
+
+/* #chart-container {
     position: relative;
-    background-color: var(--color-background); /* Same as the COLOR_BACKGROUND in the visual */
+    background-color: var(--color-background);
 }
 
 #chart-container canvas {
@@ -316,4 +319,4 @@ li#item-remaining::before {
 #canvas-hover {
     position: relative;
     z-index: 1
-}
+}*/

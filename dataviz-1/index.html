@@ -7,6 +7,7 @@
 	    <meta name="description" content="">
         <link rel="shortcut icon" href="#">
 
+        <!-- Styling -->
         <link rel="stylesheet" href="css/style.css">
 		
         <!-- Fonts -->
@@ -14,11 +15,10 @@
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
 
-        <!-- JavaScript files -->
+        <!-- JavaScript libraries -->
         <script src="lib/d3.v7.js"></script>
         <script src="lib/d3-delaunay.js"></script>
         <script src="lib/d3-bboxCollide.min.js"></script>
-        <!-- <script src="lib/spectral.js"></script> -->
 
         <!-- Custom JavaScript file -->
         <script src="createORCAVisual.js"></script>
@@ -62,10 +62,8 @@
                 </div>
             </div>
 
+            <!-- The visual will be drawn here -->
             <div id="chart-container">
-                <canvas id="canvas"></canvas>
-                <canvas id="canvas-click"></canvas>
-                <canvas id="canvas-hover"></canvas>
             </div>
 
             <div id="chart-explanation" class="double-column">
@@ -74,7 +72,7 @@
                 <p id="tldr-explanation"><strong>TL;DR</strong> | Below you can read the full details on the many ways data has been woven into this visual, but in essence its <strong>shows how top <span class="contributor">contributors</span> to <span class="central-repo repo-name">mozilla/pdf.js</span> are connected to the (other) <span class="repository">repositories</span> that they have made commits to.</strong></p>
 
                 <div>
-                    <p><strong>COLOR</strong> | The <span class="central-repo">central repository</span> that the visual is based on is shown in purple in the center. The <span class="contributor">contributors</span> to this repository are pink. Even the smaller pink circles around the outside are contributors to the central repository (just not those with the most commits, or supported through ORCA). Apart from that central repository, all other <span class="repository">repositories</span> are turquoise. When there are at least two repositories from the same owner, a circle for that <span class="owner">owner</span> is shown in yellow. </p>
+                    <p><strong>COLOR</strong> | The <span class="central-repo">central repository</span> that the visual is based on is shown in purple in the center. The <span class="contributor">contributors</span> to this repository are pink. <span class="note-remaining-contributors">Even the smaller pink circles around the outside are contributors to the central repository (just not those with the most commits, or supported through ORCA). </span>Apart from that central repository, all other <span class="repository">repositories</span> are turquoise. When there are at least two repositories from the same owner, a circle for that <span class="owner">owner</span> is shown in yellow. </p>
 
                     <p><strong>CIRCLE SIZE</strong> | The size of the <span class="contributor">contributor</span> circles is based on the number of commits they made to the central <span class="repo-name">mozilla/pdf.js</span> repository. The size of the <span class="repository">repositories</span> circles is based on the number of stars it has received on GitHub. For <span class="owner">owner</span> circles it is the combined number of stars from all the <span class="repository">repositories</span> that are linked to it in this visual. There is one exception, the size of the central "main" repository <span class="repo-name"></span> is always enlarged to a fixed size and not determined by the number of stars.</p>
                     
@@ -138,7 +136,7 @@
             promises.push(d3.csv(`data/${REPOSITORY}/top_contributors.csv`))
             promises.push(d3.csv(`data/${REPOSITORY}/repositories.csv`))
             promises.push(d3.csv(`data/${REPOSITORY}/links.csv`))
-            promises.push(d3.csv(`data/${REPOSITORY}/remaining_contributors.csv`))
+            promises.push(d3.csv(`data/${REPOSITORY}/remaining_contributors.csv`)) // not required
 
             /////////////////// Fonts to activate ///////////////////
             const FONT_FAMILY = "Atkinson Hyperlegible"
@@ -149,7 +147,7 @@
 
             /////////////////// Figure out sizing ///////////////////
             // Get the div container that will hold the chart
-            let container = document.getElementById("chart-wrapper")
+            let container = document.getElementById("chart-container")
             // Get the width of the container
             let width = container.offsetWidth
             // You can set the height to anything you want, but the same as the width is the default
@@ -158,7 +156,7 @@
             ///////////////////// Start Drawing /////////////////////
             // Set-up the visual - Doesn't draw anything yet
             // NOTE: This visual still uses a random "ORCA_LEVEL" variable for now
-            let ORCAVisual = createORCAVisual()
+            let ORCAVisual = createORCAVisual(container)
                 .width(width)
                 .height(height)
                 .repository(REPOSITORY_FULL)
@@ -178,8 +176,10 @@
 
                     /////////////////////////////////////////////////
                     // Very specific to this example, but get some statistics on the data and put this in the intro text
-                    let num_contributors = values[0].length + values[3].length
-                    document.getElementById("repo-num-contributors").innerHTML = `~${formatDigit(num_contributors)} `
+                    if(values[3]) {
+                        let num_contributors = values[0].length + values[3].length
+                        document.getElementById("repo-num-contributors").innerHTML = `~${formatDigit(num_contributors)} `
+                    }
                     
                     // How many contributors are there in the inner two rings
                     document.querySelectorAll(".top-contributor-num").forEach(d => d.innerHTML = `${formatDigit(values[0].length)} `)
@@ -200,39 +200,46 @@
                     document.getElementById("repo-start-date").innerHTML = ` in ${formatDate(central_repo.createdAt)}`
 
                     /////////////////////////////////////////////////
-                    // Update the bar chart in the intro
-                    let bar_chart = document.getElementById("commit-bar-chart")
-                    // Get the sum of commits made by the remaining contributors
-                    let sum_remaining = d3.sum(values[3], d => d.commit_count)
-                    // Get the sum of commits made by the non-ORCA contributors
-                    let sum_non_orca = d3.sum(values[0].filter(c => c.orca_received === false), d => d.link_central.commit_count)
-                    // Get the sum of commits made by the ORCA contributors
-                    let sum_orca = d3.sum(values[0].filter(c => c.orca_received === true), d => d.link_central.commit_count)
+                    // Bar chart
+                    if(values[3]) { // Is the dataset with remaining contributors present?
+                        // Update the bar chart in the intro
+                        let bar_chart = document.getElementById("commit-bar-chart")
+                        // Get the sum of commits made by the remaining contributors
+                        let sum_remaining = d3.sum(values[3], d => d.commit_count)
+                        // Get the sum of commits made by the non-ORCA contributors
+                        let sum_non_orca = d3.sum(values[0].filter(c => c.orca_received === false), d => d.link_central.commit_count)
+                        // Get the sum of commits made by the ORCA contributors
+                        let sum_orca = d3.sum(values[0].filter(c => c.orca_received === true), d => d.link_central.commit_count)
 
-                    // Update the bar chart slice width
-                    bar_chart.style.gridTemplateColumns = `${sum_orca}fr ${sum_non_orca}fr ${sum_remaining}fr`
+                        // Update the bar chart slice width
+                        bar_chart.style.gridTemplateColumns = `${sum_orca}fr ${sum_non_orca}fr ${sum_remaining}fr`
 
-                    // Number of commits by top contributors
-                    document.getElementById("num-commits-top").innerHTML = `${formatDigit(sum_non_orca + sum_orca)} `
+                        // Number of commits by top contributors
+                        document.getElementById("num-commits-top").innerHTML = `${formatDigit(sum_non_orca + sum_orca)} `
 
-                    // Percentage of commits by top contributors
-                    document.getElementById("percentage-commits-top").innerHTML = `${formatPercentage((sum_non_orca + sum_orca) / (sum_remaining + sum_non_orca + sum_orca))} `
+                        // Percentage of commits by top contributors
+                        document.getElementById("percentage-commits-top").innerHTML = `${formatPercentage((sum_non_orca + sum_orca) / (sum_remaining + sum_non_orca + sum_orca))} `
 
-                    // Number of people
-                    let num_orca = values[0].filter(c => c.orca_received === true).length
-                    let num_non_orca = values[0].filter(c => c.orca_received === false).length
-                    document.getElementById("num-orca").innerHTML = `${num_orca < 10 ? num_orca : formatDigit(num_orca)} | `
-                    document.getElementById("num-non-orca").innerHTML = `${num_non_orca < 10 ? num_non_orca : formatDigit(num_non_orca)} | `
-                    document.getElementById("num-remaining").innerHTML = `${formatDigit(values[3].length)} | `
+                        // Number of people
+                        let num_orca = values[0].filter(c => c.orca_received === true).length
+                        let num_non_orca = values[0].filter(c => c.orca_received === false).length
+                        document.getElementById("num-orca").innerHTML = `${num_orca < 10 ? num_orca : formatDigit(num_orca)} | `
+                        document.getElementById("num-non-orca").innerHTML = `${num_non_orca < 10 ? num_non_orca : formatDigit(num_non_orca)} | `
+                        document.getElementById("num-remaining").innerHTML = `${formatDigit(values[3].length)} | `
 
-                    // Reveal the bar chart
-                    document.getElementById("bar-chart-wrapper").style.opacity = `1`
+                        // Reveal the bar chart
+                        document.getElementById("bar-chart-wrapper").style.opacity = `1`
+                    } else {
+                        // Hide the bar chart
+                        document.getElementById("bar-chart-wrapper").style.display = `none`
+                        // Hide the note in the explanation
+                        document.querySelectorAll(".note-remaining-contributors").forEach(d => d.style.display = `none`)
+                    }// else
 
                     /////////////////////////////////////////////////
                     // Let people download the raw data
                     const download_button = document.getElementById("dataviz-download-data")
                     download_button.addEventListener("click", () => {
-
                         // Download all four datasets
                         downloadData(data_raw[0], `${REPOSITORY}-top_contributors`)
                         downloadData(data_raw[1], `${REPOSITORY}-repositories`)

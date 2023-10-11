@@ -6,16 +6,12 @@
 
 // TODO: Create explanation github repo like UNESCO
 
-// ~~ MAYBE ~~
-// TODO: Look into label placement again (SAT solver or Cynthia Brewer paper for label placement)
-// TODO: Make big lines into tapered ones? But I think I like the non-tapered lines more than possible tapered ones?
-
 /////////////////////////////////////////////////////////////////////
 /////////////// Visualization designed & developed by ///////////////
 /////////////////////////// Nadieh Bremer ///////////////////////////
 ///////////////////////// VisualCinnamon.com ////////////////////////
 /////////////////////////////////////////////////////////////////////
-const createORCAVisual = () => {
+const createORCAVisual = (container) => {
     /////////////////////////////////////////////////////////////////
     ///////////////////// CONSTANTS & VARIABLES /////////////////////
     /////////////////////////////////////////////////////////////////
@@ -64,28 +60,7 @@ const createORCAVisual = () => {
     const MAX_CONTRIBUTOR_WIDTH = 55 // The maximum width (at SF = 1) of the contributor name before it gets wrapped
     const CONTRIBUTOR_PADDING = 20 // The padding between the contributor nodes around the circle (at SF = 1)
 
-    /////////////////////////////////////////////////////////////////
-    ///////////////////////// Create Canvas /////////////////////////
-    /////////////////////////////////////////////////////////////////
-
-    const canvas = document.getElementById("canvas")
-    const context = canvas.getContext("2d")
-
-    const canvas_click = document.getElementById("canvas-click")
-    const context_click = canvas_click.getContext("2d")
-
-    const canvas_hover = document.getElementById("canvas-hover")
-    const context_hover = canvas_hover.getContext("2d")
-
-    /////////////////////////////////////////////////////////////////
-    /////////////////////////// Set Sizes ///////////////////////////
-    /////////////////////////////////////////////////////////////////
-
-    //Sizes
-    const DEFAULT_SIZE = 1500
-    let WIDTH, HEIGHT, MARGIN_TOP
-    let width, height
-    let SF, PIXEL_RATIO
+    let REMAINING_PRESENT = false // Is the dataset of remaining contributors present?
 
     /////////////////////////////////////////////////////////////////
     ///////////////////////////// Colors ////////////////////////////
@@ -102,6 +77,65 @@ const createORCAVisual = () => {
 
     const COLOR_LINK = "#e8e8e8"
     const COLOR_TEXT = "#4d4950"
+
+    /////////////////////////////////////////////////////////////////
+    ///////////////////////// Create Canvas /////////////////////////
+    /////////////////////////////////////////////////////////////////
+
+    // Create the three canvases and add them to the container
+    const canvas = document.createElement("canvas")
+    canvas.id = "canvas"
+    const context = canvas.getContext("2d")
+    
+    const canvas_click = document.createElement("canvas")
+    canvas_click.id = "canvas-click"
+    const context_click = canvas_click.getContext("2d")
+    
+    const canvas_hover = document.createElement("canvas")
+    canvas_hover.id = "canvas-hover"
+    const context_hover = canvas_hover.getContext("2d")
+
+    container.appendChild(canvas)
+    container.appendChild(canvas_click)
+    container.appendChild(canvas_hover)
+
+    // Set some important stylings of each canvas
+    container.style.position = "relative"
+    container.style.background_color = COLOR_BACKGROUND
+
+    styleCanvas(canvas)
+    styleCanvas(canvas_hover)
+    styleCanvas(canvas_click)
+
+    styleBackgroundCanvas(canvas)
+    styleBackgroundCanvas(canvas_click)
+
+    canvas_hover.style.position = "relative"
+    canvas_hover.style.z_index = "1"
+
+    function styleCanvas(canvas) {
+        canvas.style.display = "block"
+        canvas.style.margin = "0"
+    }// function styleCanvas
+
+    function styleBackgroundCanvas(canvas) {
+        canvas.style.position = "absolute"
+        canvas.style.top = "0"
+        canvas.style.left = "0"
+        canvas.style.pointer_events = "none"
+        canvas.style.z_index = "0"
+        canvas.style.transition = "opacity 200ms ease-in"
+    }// function styleBackgroundCanvas
+
+    /////////////////////////////////////////////////////////////////
+    /////////////////////////// Set Sizes ///////////////////////////
+    /////////////////////////////////////////////////////////////////
+
+    //Sizes
+    const DEFAULT_SIZE = 1500
+    let WIDTH, HEIGHT, MARGIN_TOP
+    let width, height
+    let SF, PIXEL_RATIO
 
     /////////////////////////////////////////////////////////////////
     //////////////////////// Create Functions ///////////////////////
@@ -143,7 +177,10 @@ const createORCAVisual = () => {
         contributors = values[0]
         repos = values[1]
         links = values[2]
-        remainingContributors = values[3]
+        if(values[3]) {
+            remainingContributors = values[3]
+            REMAINING_PRESENT = true
+        }// if
         prepareData()
         // console.log("Data prepared")
         
@@ -186,7 +223,7 @@ const createORCAVisual = () => {
         ////// Run Force Simulation for Remaining Contributors //////
         /////////////////////////////////////////////////////////////
         // Run a force simulation to position the remaining contributors around the central area
-        remainingContributorSimulation()
+        if(REMAINING_PRESENT) remainingContributorSimulation()
         // console.log("Remaining contributor force simulation done")
 
         /////////////////////////////////////////////////////////////
@@ -217,12 +254,14 @@ const createORCAVisual = () => {
 
         /////////////////////////////////////////////////////////////
         // Draw the remaining contributors as small circles outside the ORCA circles
-        context.fillStyle = COLOR_CONTRIBUTOR
-        context.globalAlpha = 0.4
-        remainingContributors.forEach(d => {
-            drawCircle(context, d.x, d.y, SF, d.r)
-        })// forEach
-        context.globalAlpha = 1
+        if(REMAINING_PRESENT) {
+            context.fillStyle = COLOR_CONTRIBUTOR
+            context.globalAlpha = 0.4
+            remainingContributors.forEach(d => {
+                drawCircle(context, d.x, d.y, SF, d.r)
+            })// forEach
+            context.globalAlpha = 1
+        }// if
 
         /////////////////////////////////////////////////////////////
         // Draw two rings that show the placement of the ORCA receiving contributors versus the non-ORCA receiving contributors
@@ -288,9 +327,9 @@ const createORCAVisual = () => {
         console.log("SF:", SF)
 
         // Reset the delaunay for the mouse events
-        nodes_delaunay = nodes //[...nodes, ...remainingContributors]
+        nodes_delaunay = nodes
         delaunay = d3.Delaunay.from(nodes_delaunay.map(d => [d.x, d.y]))
-        delaunay_remaining = d3.Delaunay.from(remainingContributors.map(d => [d.x, d.y]))
+        if(REMAINING_PRESENT) delaunay_remaining = d3.Delaunay.from(remainingContributors.map(d => [d.x, d.y]))
         // // Test to see if the delaunay works
         // testDelaunay(delaunay, context_hover)
 
@@ -313,7 +352,7 @@ const createORCAVisual = () => {
             d.contributor_name = d.author_name_top
 
             // TODO: NOTE | Because this data isn't available yet, make it random
-            d.orca_received = Math.random() <= ORCA_LEVEL ? true : false
+            if(d.orca_received === undefined) d.orca_received = Math.random() <= ORCA_LEVEL ? true : false
 
             d.color = COLOR_CONTRIBUTOR
 
@@ -381,15 +420,17 @@ const createORCAVisual = () => {
         })// forEach
 
         ///////////////////// OTHER CONTRIBUTORS ////////////////////
-        remainingContributors.forEach(d => {
-            d.commit_count = +d.commit_count
-            d.commit_sec_min = parseDateUnix(d.author_sec_min)
-            d.commit_sec_max = parseDateUnix(d.author_sec_max)
+        if(REMAINING_PRESENT) {
+            remainingContributors.forEach(d => {
+                d.commit_count = +d.commit_count
+                d.commit_sec_min = parseDateUnix(d.author_sec_min)
+                d.commit_sec_max = parseDateUnix(d.author_sec_max)
 
-            d.type = "contributor"
-            d.remaining_contributor = true
-            d.color = COLOR_CONTRIBUTOR
-        })// forEach
+                d.type = "contributor"
+                d.remaining_contributor = true
+                d.color = COLOR_CONTRIBUTOR
+            })// forEach
+        }// if
 
         //////////////////////// Create Nodes ///////////////////////
         // Combine the contributors and repos into one variable to become the nodes
@@ -583,7 +624,6 @@ const createORCAVisual = () => {
         scale_contributor_radius.domain(d3.extent(links.filter(l => l.target === central_repo.id), d => d.commit_count))
         scale_link_width.domain([1,10,d3.max(links, d => d.commit_count)])
         scale_remaining_contributor_radius.domain([0, scale_contributor_radius.domain()[0]])
-        // scale_remaining_contributor_radius.domain(d3.extent(remainingContributors, d => d.commit_count))
 
         /////////////////////////////////////////////////////////////
         // Determine some visual settings for the nodes
@@ -613,7 +653,7 @@ const createORCAVisual = () => {
             } else if(d.type === "repo") {
                 d.r = scale_repo_radius(d.data.stars)
             } else { // "owner"
-                d.r = scale_repo_radius(d.data.stars) // TODO 
+                d.r = scale_repo_radius(d.data.stars)
             }// else 
 
             d.color = d.data.color
@@ -1141,6 +1181,7 @@ const createORCAVisual = () => {
         let n_ticks = 30
         for (let i = 0; i < n_ticks; ++i) {
             simulation.tick()
+            // Make sure that the nodes remain within the canvas
             simulationPlacementConstraints(remainingContributors)
         }//for i
 
@@ -1619,7 +1660,7 @@ const createORCAVisual = () => {
                 HOVERED_NODE = null
                 
                 // Reset the delaunay to all the nodes
-                nodes_delaunay = nodes //[...nodes, ...remainingContributors]
+                nodes_delaunay = nodes
                 delaunay = d3.Delaunay.from(nodes_delaunay.map(d => [d.x, d.y]))
 
                 // Fade the main canvas back in
@@ -1648,7 +1689,7 @@ const createORCAVisual = () => {
         let FOUND = dist < d.r + (CLICK_ACTIVE ? 10 : 50)
 
         // Check if the mouse is close enough to one of the remaining contributors of FOUND is false
-        if(!FOUND) {
+        if(!FOUND && REMAINING_PRESENT) {
             point = delaunay_remaining.find(mx, my)
             d = remainingContributors[point]
             dist = sqrt((d.x - mx)**2 + (d.y - my)**2)
@@ -1784,7 +1825,7 @@ const createORCAVisual = () => {
         text = ""
         if(d.type === "contributor") text = "Contributor"
         else if(d.type === "repo") text = "Repository"
-        else if (d.type === "owner") text = "Owner" // TODO: Better wording?
+        else if (d.type === "owner") text = "Owner"
         renderText(context, text, x * SF, y * SF, 2.5 * SF)
 
         context.fillStyle = COLOR_TEXT
