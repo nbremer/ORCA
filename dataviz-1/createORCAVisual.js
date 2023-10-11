@@ -1,14 +1,8 @@
 // TODO: Add to tooltip with information about the person being - in short prose - first commit, last commit, number of repos that they have (use colors from the visual)
 
 // TODO: Add a visual legend
-// These people have also contributed to X other repos
-// Tiny histogram of the number of people that have done Y commits - with those top contributors highlighted - How many commits made by people that are not in the top
-// "A lot of people that are not here" - Show the scale
-// Time line tick marks per commit
-// Bar chart: grey #commits every else, light pink (top contributors not orca), dark pink (top contributors orca)
 
 // TODO: Make tooltip scale independent?
-// TODO: Add hover for tiny circles (remaining contributors) as well
 // TODO: Make sure the central repo's name fits in the center and is readable
 
 // TODO: Create explanation github repo like UNESCO
@@ -55,6 +49,7 @@ const createORCAVisual = () => {
     // Hover options
     let delaunay
     let nodes_delaunay
+    let delaunay_remaining
     let HOVER_ACTIVE = false
     let HOVERED_NODE = null
     let CLICK_ACTIVE = false
@@ -226,7 +221,6 @@ const createORCAVisual = () => {
         context.fillStyle = COLOR_CONTRIBUTOR
         context.globalAlpha = 0.4
         remainingContributors.forEach(d => {
-            context.globalAlpha = Math.random() * 0.4 + 0.2
             drawCircle(context, d.x, d.y, SF, d.r)
         })// forEach
         context.globalAlpha = 1
@@ -250,13 +244,8 @@ const createORCAVisual = () => {
         // Draw the labels
         nodes_central.forEach(d => drawNodeLabel(context, d) )
 
-        // // TEST
-        // // Draw a stroked rectangle around the bbox of the nodes
-        // context.strokeStyle = "red"
-        // context.lineWidth = 1
-        // nodes.filter(d => d.bbox).forEach(d => {
-        //     context.strokeRect(d.x * SF + d.bbox[0][0] * SF, d.y * SF + d.bbox[0][1] * SF, (d.bbox[1][0] - d.bbox[0][0]) * SF, (d.bbox[1][1] - d.bbox[0][1]) * SF)
-        // })// forEach 
+        // Test to see how the bbox of the nodes look
+        // drawBbox(context, nodes)
 
         /////////////////////////////////////////////////////////////
         context.restore()
@@ -268,9 +257,6 @@ const createORCAVisual = () => {
     chart.resize = () => {
         // Screen pixel ratio
         PIXEL_RATIO = window.devicePixelRatio
-
-        // Screen sizes
-        // let width =  window.innerWidth - 20 // minus a little to avoid a possible horizontal scrollbar
 
         // It's the width that determines the size
         WIDTH = round(width * PIXEL_RATIO)
@@ -301,11 +287,11 @@ const createORCAVisual = () => {
         console.log("SF:", SF)
 
         // Reset the delaunay for the mouse events
-        delaunay = d3.Delaunay.from([...nodes.map(d => [d.x, d.y],...remainingContributors.map(d => [d.x, d.y]))])
-        nodes_delaunay = [...nodes, ...remainingContributors]
-        // delaunay = d3.Delaunay.from(nodes.map(d => [d.x, d.y]))
-        // nodes_delaunay = nodes
-        console.log(nodes_delaunay)
+        nodes_delaunay = nodes //[...nodes, ...remainingContributors]
+        delaunay = d3.Delaunay.from(nodes_delaunay.map(d => [d.x, d.y]))
+        delaunay_remaining = d3.Delaunay.from(remainingContributors.map(d => [d.x, d.y]))
+        // // Test to see if the delaunay works
+        // testDelaunay(delaunay, context_hover)
 
         // Draw the visual
         draw()
@@ -396,10 +382,12 @@ const createORCAVisual = () => {
         ///////////////////// OTHER CONTRIBUTORS ////////////////////
         remainingContributors.forEach(d => {
             d.commit_count = +d.commit_count
-            d.contributor_sec_min = parseDateUnix(d.author_sec_min)
-            d.contributor_sec_max = parseDateUnix(d.author_sec_max)
+            d.commit_sec_min = parseDateUnix(d.author_sec_min)
+            d.commit_sec_max = parseDateUnix(d.author_sec_max)
 
             d.type = "contributor"
+            d.remaining_contributor = true
+            d.color = COLOR_CONTRIBUTOR
         })// forEach
 
         //////////////////////// Create Nodes ///////////////////////
@@ -1218,10 +1206,12 @@ const createORCAVisual = () => {
         if(REPO_NOT_ORCA) drawCircle(context, d.x, d.y, SF, d.r * 0.3)
 
         // Also draw a stroke around the node
-        context.strokeStyle = COLOR_BACKGROUND
-        context.lineWidth = max(HOVER_ACTIVE ? 1.5 : 1, d.r * 0.07) * SF
-        drawCircle(context, d.x, d.y, SF, d.r, true, true)
-        context.stroke()
+        if(!d.remaining_contributor) {
+            context.strokeStyle = COLOR_BACKGROUND
+            context.lineWidth = max(HOVER_ACTIVE ? 1.5 : 1, d.r * 0.07) * SF
+            drawCircle(context, d.x, d.y, SF, d.r, true, true)
+            context.stroke()
+        }// if
     }// function drawNode
 
     function drawNodeArc(context, SF, d) {
@@ -1461,7 +1451,7 @@ const createORCAVisual = () => {
                 HOVERED_NODE = d
 
                 // Fade out the main canvas, using CSS
-                canvas.style.opacity = d.type === "contributor" ? '0.15' : '0.3'
+                if(!d.remaining_contributor) canvas.style.opacity = d.type === "contributor" ? '0.15' : '0.3'
 
                 // Draw the hovered node and its neighbors and links
                 drawHoverState(context_hover, d)
@@ -1596,15 +1586,8 @@ const createORCAVisual = () => {
                 // Empty the hovered canvas
                 context_hover.clearRect(0, 0, WIDTH, HEIGHT)
 
-                // TEST - Draw a (scaled wrong) version of the delaunay triangles
-                // context_hover.save()
-                // context_hover.translate(WIDTH / 2, MARGIN_TOP + WIDTH / 2)
-                // context_hover.beginPath()
-                // delaunay.render(context_hover)
-                // context_hover.strokeStyle = "silver"
-                // context_hover.lineWidth = 1 * SF
-                // context_hover.stroke()
-                // context_hover.restore()
+                // // Test if the delaunay works
+                // testDelaunay(delaunay, context_hover)
             } else {
                 CLICK_ACTIVE = false
                 CLICKED_NODE = null
@@ -1612,8 +1595,8 @@ const createORCAVisual = () => {
                 HOVERED_NODE = null
                 
                 // Reset the delaunay to all the nodes
-                delaunay = d3.Delaunay.from([...nodes.map(d => [d.x, d.y],...remainingContributors.map(d => [d.x, d.y]))])
-                nodes_delaunay = [...nodes, ...remainingContributors]
+                nodes_delaunay = nodes //[...nodes, ...remainingContributors]
+                delaunay = d3.Delaunay.from(nodes_delaunay.map(d => [d.x, d.y]))
 
                 // Fade the main canvas back in
                 canvas.style.opacity = '1'
@@ -1635,15 +1618,18 @@ const createORCAVisual = () => {
         let point = delaunay.find(mx, my)
         let d = nodes_delaunay[point]
 
-        // console.log(point, d)
-
         // Get the distance from the mouse to the node
         let dist = sqrt((d.x - mx)**2 + (d.y - my)**2)
         // If the distance is too big, don't show anything
         let FOUND = dist < d.r + (CLICK_ACTIVE ? 10 : 50)
 
-
-
+        // Check if the mouse is close enough to one of the remaining contributors of FOUND is false
+        if(!FOUND) {
+            point = delaunay_remaining.find(mx, my)
+            d = remainingContributors[point]
+            dist = sqrt((d.x - mx)**2 + (d.y - my)**2)
+            FOUND = dist < d.r + 5
+        }// if
 
         return [d, FOUND]
     }// function findNode
@@ -1656,13 +1642,13 @@ const createORCAVisual = () => {
 
         // Figure out the base x and y position of the tooltip
         const x_base = d.x
-        const y_base = d.y - (d.max_radius ? d.max_radius : d.r)
+        const y_base = d.y + (d.y < 0 ? 1 : -1) * (d.max_radius ? d.max_radius : d.r)
 
         /////////////////////////////////////////////////////////////
         // Figure out the required height of the tooltip
         let H = 93
         if(d.type === "contributor") {
-            if(d.data.orca_received) H = 134
+            if(d.data && d.data.orca_received) H = 134
             else H = 109
         } else if(d.type === "repo") {
             if(d.data.languages.length > 3) H = 222
@@ -1707,7 +1693,8 @@ const createORCAVisual = () => {
         if(d.type === "contributor") {
             // The contributor's name
             setFont(context, 15 * SF, 700, "normal")
-            tW = context.measureText(d.data.contributor_name).width * 1.25
+            text = d.data ? d.data.contributor_name : d.author_name
+            tW = context.measureText(text).width * 1.25
         } else if(d.type === "owner") {
             // The owner's name
             setFont(context, 15 * SF, 700, "normal")
@@ -1737,8 +1724,10 @@ const createORCAVisual = () => {
         if(tW + 40 * SF > W * SF) W = tW / SF + 40
 
         /////////////////////////////////////////////////////////////////
+        // If the hovered node is above half of the page, place the tooltip below the node
+        let H_OFFSET = y_base < 0 ? 20 : -H -20
         context.save()
-        context.translate(x_base * SF, (y_base - H - 20) * SF)
+        context.translate(x_base * SF, (y_base + H_OFFSET) * SF)
 
         let x = 0
         let y = 0
@@ -1781,14 +1770,17 @@ const createORCAVisual = () => {
             // The contributor's name
             font_size = 16
             setFont(context, font_size * SF, 700, "normal")
-            renderText(context, d.data.contributor_name, x * SF, y * SF, 1.25 * SF)
+            text = d.data ? d.data.contributor_name : d.author_name
+            renderText(context, text, x * SF, y * SF, 1.25 * SF)
 
             // Number of commits to the central repo
             y += 26
             font_size = 12.5
             setFont(context, font_size * SF, 400, "normal")
             context.globalAlpha = 0.9
-            renderText(context, `${formatDigit(d.data.link_central.commit_count)} commits to ${central_repo.label}`, x * SF, y * SF, 1.25 * SF)
+            let num_commits = d.data ? d.data.link_central.commit_count : d.commit_count
+            let extra_s = num_commits === 1 ? "" : "s"
+            renderText(context, `${num_commits < 10 ? num_commits : formatDigit(num_commits)} commit${extra_s} to ${central_repo.label}`, x * SF, y * SF, 1.25 * SF)
             
             // First and last commit to main repo
             font_size = 11.5
@@ -1796,15 +1788,17 @@ const createORCAVisual = () => {
             setFont(context, font_size * SF, 400, "normal")
             y += font_size * line_height + 4
             // Check if the start and end date are in the same month of the same year
-            if(d.data.link_central.commit_sec_min.getMonth() === d.data.link_central.commit_sec_max.getMonth() && d.data.link_central.commit_sec_min.getFullYear() === d.data.link_central.commit_sec_max.getFullYear()) {
-                text = `In ${formatDate(d.data.link_central.commit_sec_min)}`
+            let commit_min = d.data ? d.data.link_central.commit_sec_min : d.commit_sec_min
+            let commit_max = d.data ? d.data.link_central.commit_sec_max : d.commit_sec_max
+            if(commit_min.getMonth() === commit_max.getMonth() && commit_min.getFullYear() === commit_max.getFullYear()) {
+                text = `In ${formatDate(commit_min)}`
             } else { 
-                text = `Between ${formatDate(d.data.link_central.commit_sec_min)} & ${formatDate(d.data.link_central.commit_sec_max)}`
+                text = `Between ${formatDate(commit_min)} & ${formatDate(commit_max)}`
             }// else
             renderText(context, text, x * SF, y * SF, 1.25 * SF)
 
             // Supported through ORCA
-            if(d.data.orca_received) {
+            if(d.data && d.data.orca_received) {
                 y += 25
                 font_size = 12
                 context.globalAlpha = 0.7
@@ -2179,6 +2173,33 @@ const createORCAVisual = () => {
         context.restore()
     }//function drawTextAlongArc
 
+    /////////////////////////////////////////////////////////////////
+    ///////////////////////// Test Functions ////////////////////////
+    /////////////////////////////////////////////////////////////////
+
+    // TEST - Draw a (scaled wrong) version of the delaunay triangles
+    function testDelaunay(delaunay, context) {
+        context.save()
+        context.translate(WIDTH / 2, MARGIN_TOP + WIDTH / 2)
+        context.beginPath()
+        delaunay.render(context)
+        context.strokeStyle = "silver"
+        context.lineWidth = 1 * SF
+        context.stroke()
+        context.restore()
+    }// function testDelaunay
+
+    // TEST - Draw a stroked rectangle around the bbox of the nodes
+    function drawBbox(context, nodes) {
+        context.strokeStyle = "red"
+        context.lineWidth = 1
+        nodes
+            .filter(d => d.bbox)
+            .forEach(d => {
+                context.strokeRect(d.x * SF + d.bbox[0][0] * SF, d.y * SF + d.bbox[0][1] * SF, (d.bbox[1][0] - d.bbox[0][0]) * SF, (d.bbox[1][1] - d.bbox[0][1]) * SF)
+        })// forEach 
+    }// function drawBbox
+    
     /////////////////////////////////////////////////////////////////
     //////////////////////// Helper Functions ///////////////////////
     /////////////////////////////////////////////////////////////////
