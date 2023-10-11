@@ -101,7 +101,7 @@ const createORCAVisual = (container) => {
 
     // Set some important stylings of each canvas
     container.style.position = "relative"
-    container.style.background_color = COLOR_BACKGROUND
+    container.style["background-color"] = COLOR_BACKGROUND
 
     styleCanvas(canvas)
     styleCanvas(canvas_hover)
@@ -133,7 +133,8 @@ const createORCAVisual = (container) => {
 
     //Sizes
     const DEFAULT_SIZE = 1500
-    let WIDTH, HEIGHT, MARGIN_TOP
+    let WIDTH = DEFAULT_SIZE
+    let HEIGHT = DEFAULT_SIZE
     let width, height
     let SF, PIXEL_RATIO
 
@@ -250,7 +251,7 @@ const createORCAVisual = (container) => {
 
         // Move the visual to the center
         context.save()
-        context.translate(WIDTH / 2, MARGIN_TOP + WIDTH / 2)
+        context.translate(WIDTH / 2, HEIGHT / 2)
 
         /////////////////////////////////////////////////////////////
         // Draw the remaining contributors as small circles outside the ORCA circles
@@ -300,8 +301,7 @@ const createORCAVisual = (container) => {
 
         // It's the width that determines the size
         WIDTH = round(width * PIXEL_RATIO)
-        MARGIN_TOP = 0 // round(WIDTH * 0.2) // For the title and legend etc.
-        HEIGHT = round(height * PIXEL_RATIO) // round(width * PIXEL_RATIO) + MARGIN_TOP
+        HEIGHT = round(height * PIXEL_RATIO)
 
         sizeCanvas(canvas, context)
         sizeCanvas(canvas_click, context_click)
@@ -349,7 +349,7 @@ const createORCAVisual = (container) => {
 
         ////////////////////////// CONTRIBUTORS /////////////////////////
         contributors.forEach(d => {
-            d.contributor_name = d.author_name_top
+            d.contributor_name = d.author_name
 
             // TODO: NOTE | Because this data isn't available yet, make it random
             if(d.orca_received === undefined) d.orca_received = Math.random() <= ORCA_LEVEL ? true : false
@@ -365,11 +365,18 @@ const createORCAVisual = (container) => {
 
         //////////////////////// REPOSITORIES ///////////////////////
         repos.forEach(d => {
-            d.repo = d.base_repo_original
+            // d.repo
             d.forks = +d.repo_forks
             d.stars = +d.repo_stars
-            d.createdAt = parseDate(d.repo_createdAt)
-            d.updatedAt = parseDate(d.repo_updatedAt)
+
+            // Check if the dates are in unix time or not
+            if(isInteger(d.createdAt)) {
+                d.createdAt = parseDateUnix(d.createdAt)
+                d.updatedAt = parseDateUnix(d.repo_updatedAt)
+            } else {
+                d.createdAt = parseDate(d.repo_createdAt)
+                d.updatedAt = parseDate(d.repo_updatedAt)
+            }// else
 
             // Get the substring until the slash
             d.owner = d.repo.substring(0, d.repo.indexOf("/"))
@@ -385,7 +392,6 @@ const createORCAVisual = (container) => {
 
             d.color = COLOR_REPO
 
-            delete d.base_repo_original
             delete d.repo_forks
             delete d.repo_stars
             delete d.repo_createdAt
@@ -395,19 +401,26 @@ const createORCAVisual = (container) => {
         /////////////////////////// LINKS ///////////////////////////
         links.forEach(d => {
             // Source
-            d.contributor_name = d.author_name_top
+            d.contributor_name = d.author_name
             // Target
-            d.repo = d.base_repo_original
+            // d.repo
 
             // Metadata of the "link"
             d.commit_count = +d.commit_count
-            d.commit_sec_min = parseDateUnix(d.commit_sec_min)
-            d.commit_sec_max = parseDateUnix(d.commit_sec_max)
+
+            // Check if the dates are in unix time or not
+            if(isInteger(d.commit_sec_min)) {
+                d.commit_sec_min = parseDateUnix(d.commit_sec_min)
+                d.commit_sec_max = parseDateUnix(d.commit_sec_max)
+            } else {
+                d.commit_sec_min = parseDate(d.commit_sec_min)
+                d.commit_sec_max = parseDate(d.commit_sec_max)
+            }// else
 
             // Get the substring until the slash
-            d.owner = d.base_repo_original.substring(0, d.base_repo_original.indexOf("/"))
+            d.owner = d.repo.substring(0, d.repo.indexOf("/"))
             // Get the substring after the slash
-            d.name = d.base_repo_original.substring(d.base_repo_original.indexOf("/") + 1)
+            d.name = d.repo.substring(d.repo.indexOf("/") + 1)
 
             // d.repo = d.owner
 
@@ -415,16 +428,22 @@ const createORCAVisual = (container) => {
             d.source = d.contributor_name
             d.target = d.repo
 
-            delete d.base_repo_original
-            delete d.author_name_top
+            delete d.author_name
         })// forEach
 
         ///////////////////// OTHER CONTRIBUTORS ////////////////////
         if(REMAINING_PRESENT) {
             remainingContributors.forEach(d => {
                 d.commit_count = +d.commit_count
-                d.commit_sec_min = parseDateUnix(d.author_sec_min)
-                d.commit_sec_max = parseDateUnix(d.author_sec_max)
+
+                // Check if the dates are in unix time or not
+                if(isInteger(d.commit_sec_min)) {
+                    d.commit_sec_min = parseDateUnix(d.commit_sec_min)
+                    d.commit_sec_max = parseDateUnix(d.commit_sec_max)
+                } else {
+                    d.commit_sec_min = parseDate(d.commit_sec_min)
+                    d.commit_sec_max = parseDate(d.commit_sec_max)
+                }// else
 
                 d.type = "contributor"
                 d.remaining_contributor = true
@@ -1546,7 +1565,7 @@ const createORCAVisual = (container) => {
         // Draw the hover canvas
         context.save()
         context.clearRect(0, 0, WIDTH, HEIGHT)
-        context.translate(WIDTH / 2, MARGIN_TOP + WIDTH / 2)
+        context.translate(WIDTH / 2, HEIGHT / 2)
 
         /////////////////////////////////////////////////
         // Get all the connected links (if not done before)
@@ -1677,7 +1696,7 @@ const createORCAVisual = (container) => {
     // Turn the mouse position into a canvas x and y location and see if it's close enough to a node
     function findNode(mx, my) {
         mx = ((mx * PIXEL_RATIO) - WIDTH / 2) / SF
-        my = ((my * PIXEL_RATIO) - (MARGIN_TOP + WIDTH / 2)) / SF
+        my = ((my * PIXEL_RATIO) - HEIGHT / 2) / SF
 
         //Get the closest hovered node
         let point = delaunay.find(mx, my)
@@ -2247,7 +2266,7 @@ const createORCAVisual = (container) => {
     // TEST - Draw a (scaled wrong) version of the delaunay triangles
     function testDelaunay(delaunay, context) {
         context.save()
-        context.translate(WIDTH / 2, MARGIN_TOP + WIDTH / 2)
+        context.translate(WIDTH / 2, HEIGHT / 2)
         context.beginPath()
         delaunay.render(context)
         context.strokeStyle = "silver"
@@ -2274,6 +2293,8 @@ const createORCAVisual = (container) => {
     function mod (x, n) { return ((x % n) + n) % n }
 
     function sq(x) { return x * x }
+
+    function isInteger(value) { return /^\d+$/.test(value) }
 
     /////////////////////////////////////////////////////////////////
     /////////////////////// Accessor functions //////////////////////

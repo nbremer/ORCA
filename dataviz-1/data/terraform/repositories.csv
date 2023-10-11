@@ -1,4 +1,4 @@
-"base_repo_original","repo_stars","repo_forks","repo_createdAt","repo_updatedAt","repo_total_commits","repo_url","repo_description","repo_languages"
+"repo","repo_stars","repo_forks","repo_createdAt","repo_updatedAt","repo_total_commits","repo_url","repo_description","repo_languages"
 "hashicorp/terraform",38820,9043,"2014-03-13T22:25:48Z","2023-09-19T07:51:03Z",31608,"https://www.terraform.io/","Terraform enables you to safely and predictably create, change, and improve infrastructure. It is a source-available tool that codifies APIs into declarative configuration files that can be shared amongst team members, treated as code, edited, reviewed, and versioned.","Makefile,Go,Shell,HTML,Dockerfile,HCL,MDX"
 "hashicorp/hcl",4815,556,"2014-07-31T21:09:00Z","2023-09-09T08:52:29Z",1389,"","HCL is the HashiCorp configuration language.","Makefile,Go,HCL,Shell,Python,Batchfile,Ragel,Ruby,Perl"
 "hashicorp/terraform-config-inspect",321,67,"2018-02-21T21:35:26Z","2023-08-29T18:34:38Z",103,,"A helper library for shallow inspection of Terraform configurations","Go,HCL"

@@ -1,4 +1,4 @@
-"author_name_top","base_repo_original","commit_count","commit_sec_min","commit_sec_max"
+"author_name","repo","commit_count","commit_sec_min","commit_sec_max"
 "Alisdair McDiarmid","hashicorp/hcl",72,1585168558,1663943445
 "Alisdair McDiarmid","hashicorp/terraform",743,1540419643,1663951618
 "Alisdair McDiarmid","hashicorp/terraform-config-inspect",7,1587383143,1637009955
