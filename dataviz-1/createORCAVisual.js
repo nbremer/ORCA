@@ -3,7 +3,6 @@
 // TODO: Add a visual legend
 
 // TODO: Make tooltip scale independent?
-// TODO: Make sure the central repo's name fits in the center and is readable
 
 // TODO: Create explanation github repo like UNESCO
 
@@ -1140,10 +1139,26 @@ const createORCAVisual = () => {
 
         // Manually "tick" through the network
         let n_ticks = 30
-        for (let i = 0; i < n_ticks; ++i) simulation.tick()
+        for (let i = 0; i < n_ticks; ++i) {
+            simulation.tick()
+            simulationPlacementConstraints(remainingContributors)
+        }//for i
 
         // Remove the dummy node from the dataset again
         remainingContributors.pop()
+
+        /////////////////////////////////////////////////////////////
+        function simulationPlacementConstraints(nodes) {
+            let OUTER_RING = max(DEFAULT_SIZE/2, RADIUS_CONTRIBUTOR_NON_ORCA + ORCA_RING_WIDTH/2*2)
+            let O = 30
+            // Make sure the nodes remain within the canvas
+            nodes.forEach(d => {
+                if(d.x < -OUTER_RING + d.r) d.x = -OUTER_RING + d.r*2 + Math.random() * O
+                else if(d.x > OUTER_RING - d.r) d.x = OUTER_RING - d.r*2 - Math.random() * O
+                if(d.y < -OUTER_RING + d.r) d.y = -OUTER_RING + d.r*2 + Math.random() * O
+                else if(d.y > OUTER_RING - d.r) d.y = OUTER_RING - d.r*2 - Math.random() * O
+            })// forEach
+        }// simulationPlacementConstraints
 
     }// function remainingContributorSimulation
 
