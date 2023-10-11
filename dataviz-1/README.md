@@ -1,6 +1,6 @@
 # The Top Contributor Network
 
-This visualization shows how top contributors to a specific Github repository are connected to the (other) repositories that they have made commits to.
+This visualization shows how top contributors to a specific Github repository (the so-called _**central repository**_) are connected to the (other) repositories that they have made commits to.
 
 ![An example of the network for mozilla/pdf.js](img/top_contributor_network_pdfjs_random_orca.png)
 
@@ -21,7 +21,7 @@ This visualization shows how top contributors to a specific Github repository ar
 First initialize the chart. This will not yet draw anything
 
 ```js
-const REPOSITORY_FULL = "mozilla/pdf.js"
+const REPOSITORY_FULL = "mozilla/pdf.js" // The name of the central repository
 
 // Get the div container that will hold the chart
 const container = document.getElementById("chart-container")
@@ -31,7 +31,8 @@ let width = container.offsetWidth
 // But the same as the width is the default
 let height = width
 
-// Set-up the visual - Doesn't draw anything yet, but does create the 3 canvas elements of the visual into the container element
+// Set-up the visual - Doesn't draw anything yet
+// It does create the 3 canvas elements of the visual into the container element
 let ORCAVisual = createORCAVisual(container)
     .width(width)
     .height(height)
@@ -64,17 +65,18 @@ Promise.all(promises).then(values => {
 
 The _top_contributors.csv_ dataset contains the information about each _contributor_ that will be shown in the central part; in either of the two rings. In general this should include any contributor that has received ORCA for their involvement with the _central_ repository_, and any other contributor that you might want to add, such as those that have made many commits.
 
-This dataset only requires the following field:
+This dataset requires the following fields:
 
 * **author_name** | The name of the author / contributor.
+* **orca_received** | Has this contributor received ORCA for their involvement with the _central repository_? This should be a boolean, either `true` or `false`. (_While ORCA is still getting deployed, this field is optional and if not supplied each contributor will be randomly assigned a `true` or `false`._)
 
 <a href="#repositories" name="repositories">#</a> <b>repositories.csv</b> _[required]_
 
 The _repositories.csv_ dataset contains the information about each _repository_ that is shown in the visualization. It is a combination of the unique _base_ repositories that all of the top contributors have made commits to.
 
-**NOTE** | Be very aware that this should not include (or as few as possible) forks of repositories that a contributor is connected to. We do not want to include all the forks made of _pdf.js_ if that contributor has not made actual commits to the fork. Although not perfect, you can filter out many forks by checking the most recent commit time of a contributor to a repository against the creation time of that repository. If the most recent commit was before the repository was created, it is likely a fork.
+**NOTE** | **Be very aware that this should not include (or as few as possible) forks of repositories that a contributor is connected to**. We do not want to include all the forks made of _pdf.js_ if that contributor has not made actual commits to the fork, for example. Checking the `isFork` variable of the repository with the [GitHub GraphQL API](https://docs.github.com/en/graphql/overview/explorer) doesn't always give a good result (but it's a start). Although not perfect, you can filter out many of the possible remaining forks by checking the most recent commit time of a contributor to a repository against the creation time of that repository. If the most recent commit was before the repository was created, it is a fork and should be removed.
 
-In general, to not overload the visual, only repositories with at least 30 stars should be present in this dataset.
+In general, to not overload the visual, and only take those repositories into account that have been found "useful", I would advise to only include repositories with at least 30 stars in this dataset. However, it is eventually up to the creator to decide which repositories to include and where to set the possible cut-off.
 
 This dataset requires the following fields:
 
