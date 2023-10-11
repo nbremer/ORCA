@@ -231,9 +231,11 @@ const createORCAVisual = () => {
 
         /////////////////////////////////////////////////////////////
         // Draw all the links as lines
-        links.forEach(l => {
-            drawLink(context, SF, l) 
-        })// forEach
+        links.forEach(l => drawLink(context, SF, l) )
+
+        /////////////////////////////////////////////////////////////
+        // Draw the central repo label in the background (in case it is bigger than it's circle)
+        drawNodeLabel(context, central_repo, true)
 
         /////////////////////////////////////////////////////////////
         // Draw all the nodes as circles
@@ -986,13 +988,12 @@ const createORCAVisual = () => {
             if(d.type === "contributor") {
                 d.bbox = [[-d.max_radius, -d.max_radius],[d.max_radius, d.max_radius]]
                 return
-            } else if(d.id === REPO_CENTRAL) {
-                let r = d.r + 14
-                d.bbox = [[-r, -r],[r, r]]
-                return
-            }// else
+            }// if
 
-            if(d.type === "owner") {
+            // Set the fonts
+            if(d.id === central_repo.id) {
+                setCentralRepoFont(context, 1)
+            } else if(d.type === "owner") {
                 setOwnerFont(context, 1)
             } else if(d.type === "repo") {
                 setRepoFont(context, 1)
@@ -1003,6 +1004,14 @@ const createORCAVisual = () => {
             // In case the owner name is longer than the repo name
             if(d.type === "repo") {
                 if(context.measureText(d.data.owner).width > text_size.width) text_size = context.measureText(d.data.owner)
+            }// if
+
+            // The central repo is the only one with the label in the center instead of along the top
+            if(d.id === REPO_CENTRAL) {
+                let r = d.r + 14
+                let w = max(r * 2, text_size.width * 1.25) + 10
+                d.bbox = [[-w/2, -r], [w/2, r]]
+                return
             }// if
 
             let text_height = text_size.fontBoundingBoxAscent + text_size.fontBoundingBoxDescent
@@ -1946,15 +1955,15 @@ const createORCAVisual = () => {
     ///////////////////////// Text Functions ////////////////////////
     /////////////////////////////////////////////////////////////////
 
-    function drawNodeLabel(context, d) {
+    function drawNodeLabel(context, d, DO_CENTRAL_OUTSIDE = false) {
         // Draw the name above each node
         context.fillStyle = COLOR_TEXT
         context.lineWidth = 2 * SF
         context.textAlign = "center"
-        context.textBaseline = "middle"
-        // context.textBaseline = "bottom"
 
-        if(d.type === "contributor") {
+        if(d.id === central_repo.id) {
+            setCentralRepoFont(context, SF)
+        } else if(d.type === "contributor") {
             setContributorFont(context, SF)
         } else if(d.type === "owner") {
             setOwnerFont(context, SF)
@@ -1962,14 +1971,7 @@ const createORCAVisual = () => {
             setRepoFont(context, SF)
         }// else
 
-        if(d.id === central_repo.id) {
-            font_weight = 700
-            font_size = 15 
-            context.font = `${font_weight} ${font_size * SF}px ${FONT_FAMILY}`
-        }// if
-
         if(d.type === "contributor") {
-            // context.textAlign = "center"
             context.textBaseline = "middle"
 
             // Draw the contributor name radiating outward from the contributor's node
@@ -2009,20 +2011,25 @@ const createORCAVisual = () => {
 
             context.restore()
         } else if(d.id === central_repo.id) {
-            context.textAlign = "center"
             context.textBaseline = "middle"
-            context.fillStyle = COLOR_BACKGROUND
+            context.fillStyle = DO_CENTRAL_OUTSIDE ? COLOR_REPO_MAIN : COLOR_BACKGROUND
+            // If this is drawing the text in the inside of the central circle, clip it to that circle
+            if(!DO_CENTRAL_OUTSIDE) {
+                context.save()
+                context.beginPath()
+                context.arc(d.x * SF, d.y * SF, d.r * SF, 0, 2 * PI)
+                context.clip()
+            }// if
             renderText(context, `${d.data.owner}/`, d.x * SF, (d.y - 0.6 * 12) * SF, 1.25 * SF)
             renderText(context, d.label, d.x * SF, (d.y + 0.9 * 12) * SF, 1.25 * SF)
+            if(!DO_CENTRAL_OUTSIDE) context.restore()
         } else if(d.type === "repo") {
-            context.textAlign = "center"
             context.textBaseline = "bottom"
             context.strokeStyle = COLOR_BACKGROUND
             context.lineWidth = 4 * SF
             renderText(context, `${d.data.owner}/`, d.x * SF, (d.y - d.r - 3 - 1.1 * 12) * SF, 1.25 * SF, true)
             renderText(context, d.label, d.x * SF, (d.y - d.r - 3) * SF, 1.25 * SF, true)
         } else { // owner
-            context.textAlign = "center"
             context.textBaseline = "bottom"
             context.strokeStyle = COLOR_BACKGROUND
             context.lineWidth = 4 * SF
@@ -2042,6 +2049,10 @@ const createORCAVisual = () => {
     function setRepoFont(context, SF = 1, font_size = 12) {
         setFont(context, font_size * SF, 400, "normal")
     }//function setRepoFont
+
+    function setCentralRepoFont(context, SF = 1, font_size = 15) {
+        setFont(context, font_size * SF, 700, "normal")
+    }//function setCentralRepoFont
 
     function setOwnerFont(context, SF = 1, font_size = 12) {
         setFont(context, font_size * SF, 700, "normal")
@@ -2233,36 +2244,3 @@ const createORCAVisual = () => {
     return chart
 
 }// function createORCAVisual
-
-/////////////////////////////////////////////////////////////////////
-////////////////////////////// Save PNG /////////////////////////////
-/////////////////////////////////////////////////////////////////////
-
-//Save as PNG on "s" and other key functions
-window.onkeydown = function (e) {
-    //Save at the current size
-    if (e.which === 83) { //"s" key
-        e.preventDefault()
-        savePNG()
-    }//if "s"
-}//onkeydown
-
-async function savePNG() {
-    let time = new Date()
-    let date_time = `${time.getFullYear()}-${pad(time.getMonth() + 1)}-${pad(time.getDate())} at ${pad(time.getHours())}.${pad(time.getMinutes())}.${pad(time.getSeconds())}`
-
-    let download_link = document.createElement("a")
-    canvas.toBlob(function(blob) {
-        let url = URL.createObjectURL(blob)
-        download_link.href = url
-        download_link.download = `ORCA - ${date_time}.png`
-        download_link.click()
-        console.log("Saved image")
-    })//toBlob
-
-    //Pad with zero's on date/time
-    function pad(value) {
-        if (value < 10) return '0' + value
-        else return value
-    }//function pad
-}//savePNG
