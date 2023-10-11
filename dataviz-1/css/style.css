@@ -55,15 +55,42 @@ p {
     color: var(--color-text);
 }
 
-.header {
+.double-column {
+    padding: 3em 5em 2em 5em;
+
+    font-size: 1.2em;
+
+    display: grid;
+    justify-content: center;
+    align-items: top;
+
+    grid-template-columns: 1fr 1fr;
+    column-gap: 7em;
+    row-gap: 1em;
+}
+
+.double-column .header {
     text-align: center;
     font-size: 1.0em;
+    padding-top: 0.5em;
     padding-bottom: 0.5em;
     margin-bottom: 0;
 
     border-bottom: 3px solid var(--color-repo-main);
     border-image: var(--color-gradient);
+
+    grid-column-start: 1;
+    grid-column-end: 3;
+    grid-row-start: 1;
+    grid-row-end: 1;
 }
+
+.double-column p {
+    line-height: 160%;
+    font-size: 0.8em;
+}
+
+
 
 /*************************************/
 /*************** INTRO ***************/
@@ -119,7 +146,7 @@ p {
 
 #explanation-link {
     border-bottom: 2px solid var(--color-repo-main);
-    border-image:linear-gradient(to right, var(--color-owner), var(--color-contributor), var(--color-repo)) 1;
+    border-image: linear-gradient(to right, var(--color-owner), var(--color-contributor), var(--color-repo)) 1;
     /* border-image: var(--color-gradient); */
     font-size: 0.9em;
     font-style: italic;
@@ -131,15 +158,18 @@ p {
 /************* BAR CHART *************/
 /*************************************/
 
+#bar-chart-wrapper {
+    opacity: 0;
+    transition: opacity 0.5s ease-in;
+}
 #commit-bar-chart {
     overflow: hidden;
     width: 80%;
-    height: 1.5em;
+    height: 0.9em;
     text-align: center;
     margin: 0 auto;
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
-    opacity: 0;
 }
 
 #bar-remaining {
@@ -164,7 +194,8 @@ p {
 
 #legend-bar-chart li {
     list-style-type: none;
-    position: relative; 
+    position: relative;
+    font-style: italic;
 }
 
 #legend-bar-chart li::before {
@@ -173,6 +204,7 @@ p {
     left: -1.5em;
     top: -0em;
     font-size: 0.8em;
+    font-style: normal;
 }
 
 li#item-orca::before {
@@ -193,34 +225,23 @@ li#item-remaining::before {
 
 #chart-explanation {
     background: linear-gradient(to bottom, rgba(247, 247, 247, 1) 50%, rgba(247, 247, 247, 0) 100%);
-    min-height: 200px;
-    padding: 3em 5em 2em 5em;
-
-    font-size: 1.2em;
-
-    display: grid;
-    justify-content: center;
-    align-items: top;
-
-    grid-template-columns: 1fr 1fr;
-    column-gap: 7em;
-    row-gap: 1em;
 }
 
-#chart-explanation p {
-    line-height: 160%;
-    font-size: 0.8em;
-    /* color:#6e6a71; */
-    /* opacity: 0.6; */
-    /* font-style: italic; */
-}
-
-#chart-explanation .header {
+#tldr-explanation {
     grid-column-start: 1;
     grid-column-end: 3;
-    grid-row-start: 1;
-    grid-row-end: 1;
-    font-size: 1.0em;
+    grid-row-start: 2;
+    grid-row-end: 2;
+    max-width: 600px;
+    text-align: center;
+    margin: 0 auto;
+    font-size: 0.9em;
+
+    border: 3px solid var(--color-repo);
+    border-image: linear-gradient(to right, var(--color-owner), var(--color-contributor), var(--color-repo)) 1;
+    padding: 0.8em 1.2em;
+    margin-top: 1em;
+    margin-bottom: 1.5em;
 }
 
 /*************************************/
@@ -228,17 +249,7 @@ li#item-remaining::before {
 /*************************************/
 
 #orca-explanation {
-    padding: 3em 5em 2em 5em;
 
-    font-size: 1.2em;
-
-    display: grid;
-    justify-content: center;
-    align-items: top;
-
-    grid-template-columns: 1fr;
-    column-gap: 7em;
-    row-gap: 1em;
 }
 
 /*************************************/
