@@ -230,9 +230,8 @@ li#item-remaining::before {
 #tldr-explanation {
     grid-column-start: 1;
     grid-column-end: 3;
-    grid-row-start: 2;
-    grid-row-end: 2;
-    max-width: 600px;
+    grid-row-start: 3;
+    max-width: 700px;
     text-align: center;
     margin: 0 auto;
     font-size: 0.9em;
@@ -240,17 +239,24 @@ li#item-remaining::before {
     border: 3px solid var(--color-repo);
     border-image: linear-gradient(to right, var(--color-owner), var(--color-contributor), var(--color-repo)) 1;
     padding: 0.8em 1.2em;
-    margin-top: 1em;
+    margin-top: 0.5em;
     margin-bottom: 1.5em;
+}
+
+#legend-image {
+    grid-column-start: 1;
+    grid-column-end: 3;
+    grid-row-start: 2;
+}
+
+#legend {
+    width: 100%;
 }
 
 /*************************************/
 /**************** ORCA ***************/
 /*************************************/
 
-#orca-explanation {
-
-}
 
 /*************************************/
 /************** CREDITS **************/

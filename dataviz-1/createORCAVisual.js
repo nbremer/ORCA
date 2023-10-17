@@ -1,10 +1,7 @@
 // TODO: Add to tooltip with information about the person being - in short prose - first commit, last commit, number of repos that they have (use colors from the visual)
+// TODO MAYBE: Make tooltip scale independent?
 
-// TODO: Add a visual legend
-
-// TODO: Make tooltip scale independent?
-
-// TODO: Create explanation github repo like UNESCO
+// FINAL: Update GitHub explanation 
 
 /////////////////////////////////////////////////////////////////////
 /////////////// Visualization designed & developed by ///////////////
@@ -135,7 +132,8 @@ const createORCAVisual = (container) => {
     const DEFAULT_SIZE = 1500
     let WIDTH = DEFAULT_SIZE
     let HEIGHT = DEFAULT_SIZE
-    let width, height
+    let width = DEFAULT_SIZE
+    let height = DEFAULT_SIZE
     let SF, PIXEL_RATIO
 
     /////////////////////////////////////////////////////////////////
@@ -1201,7 +1199,7 @@ const createORCAVisual = (container) => {
         for (let i = 0; i < n_ticks; ++i) {
             simulation.tick()
             // Make sure that the nodes remain within the canvas
-            simulationPlacementConstraints(remainingContributors)
+            // simulationPlacementConstraints(remainingContributors)
         }//for i
 
         // Remove the dummy node from the dataset again
@@ -1209,14 +1207,14 @@ const createORCAVisual = (container) => {
 
         /////////////////////////////////////////////////////////////
         function simulationPlacementConstraints(nodes) {
-            let OUTER_RING = max(DEFAULT_SIZE/2, RADIUS_CONTRIBUTOR_NON_ORCA + ORCA_RING_WIDTH/2*2)
+            let OUTER_AREA = max(DEFAULT_SIZE/2, RADIUS_CONTRIBUTOR_NON_ORCA + ORCA_RING_WIDTH/2*2)
             let O = 30
             // Make sure the nodes remain within the canvas
             nodes.forEach(d => {
-                if(d.x < -OUTER_RING + d.r) d.x = -OUTER_RING + d.r*2 + Math.random() * O
-                else if(d.x > OUTER_RING - d.r) d.x = OUTER_RING - d.r*2 - Math.random() * O
-                if(d.y < -OUTER_RING + d.r) d.y = -OUTER_RING + d.r*2 + Math.random() * O
-                else if(d.y > OUTER_RING - d.r) d.y = OUTER_RING - d.r*2 - Math.random() * O
+                if(d.x < -OUTER_AREA + d.r) d.x = -OUTER_AREA + d.r*2 + Math.random() * O
+                else if(d.x > OUTER_AREA - d.r) d.x = OUTER_AREA - d.r*2 - Math.random() * O
+                if(d.y < -OUTER_AREA + d.r) d.y = -OUTER_AREA + d.r*2 + Math.random() * O
+                else if(d.y > OUTER_AREA - d.r) d.y = OUTER_AREA - d.r*2 - Math.random() * O
             })// forEach
         }// simulationPlacementConstraints
 
@@ -1809,7 +1807,7 @@ const createORCAVisual = (container) => {
 
         /////////////////////////////////////////////////////////////////
         // If the hovered node is above half of the page, place the tooltip below the node
-        let H_OFFSET = y_base < 0 ? 20 : -H -20
+        let H_OFFSET = d.y < 0 ? 20 : -H -20
         context.save()
         context.translate(x_base * SF, (y_base + H_OFFSET) * SF)
 
@@ -2072,9 +2070,7 @@ const createORCAVisual = (container) => {
                     let x_rect = x - 6 * SF
                     if(d.contributor_angle > PI/2) x_rect = x + 4 * SF - W
                     context.fillStyle = "#f1caf6"
-                    // context.fillStyle = COLOR_CONTRIBUTOR
-                    // context.fillStyle = COLOR_PURPLE
-                    // context.globalAlpha = 0.5
+                    // context.fillStyle = "#cfbeee"
                     context.fillRect(x_rect, -10 * SF + y, W, 20 * SF)
                     context.globalAlpha = 1
                     // context.fillStyle = COLOR_BACKGROUND

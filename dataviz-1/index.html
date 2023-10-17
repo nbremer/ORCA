@@ -34,7 +34,7 @@
                 <div id="chart-intro-text">
                     <p>The <span class="repo-name central-repo">mozilla/pdf.js</span> repository has seen many improvements from its <span id="repo-num-contributors"></span><span class="contributor">contributors</span> since it was created<span id="repo-start-date"></span>.</p>
 
-                    <p>The visual below shows all of the contributors to <span class="repo-name-only">pdf.js</span> and focuses on the <span class="top-contributor-num"></span>contributors that have made the most commits and/or are supported through <strong>ORCA</strong> (the <strong>"Open Retrospective Compensation Agreement"</strong>). Revealing how they are involved with<span id="top-repo-num"> other</span> <span class="repository">repositories</span> as well. <span style="font-size: 0.7em; opacity: 0.6; font-style: italic;">(only counting repos with at least 30 stars)</span></p>
+                    <p>The visual below shows all of the contributors to <span class="repo-name-only">pdf.js</span> and focuses on the <span class="top-contributor-num"></span>contributors that have made the most commits and/or are supported through <strong>ORCA</strong> (the <strong>"Open Retrospective Compensation Agreement"</strong>). Revealing how they are involved with<span id="top-repo-num"> other</span> <span class="repository">repositories</span> as well.</p>
 
                     <div id="bar-chart-wrapper">
                         <p>The <span id="num-commits-top"></span>commits by these <span class="top-contributor-num"></span> contributors, make up <span id="percentage-commits-top"></span> of the total number of commits made to <span class="repo-name-only">pdf.js</span>.</p>
@@ -45,14 +45,14 @@
                         </div>
                         <div id="legend-bar-chart">
                             <ul>
-                                <li id="item-orca"><span id="num-orca"></span>Contributors that are supported via ORCA</li>
-                                <li id="item-non-orca"><span id="num-non-orca"></span>Top contributors not supported via ORCA</li>
-                                <li id="item-remaining"><span id="num-remaining"></span>Remaining contributors</li>
+                                <li id="item-orca"><span id="num-orca"></span>contributors that are supported via ORCA<span id="num-orca-commits"></span></li>
+                                <li id="item-non-orca"><span id="num-non-orca"></span>top contributors not supported via ORCA<span id="num-non-orca-commits"></span></li>
+                                <li id="item-remaining"><span id="num-remaining"></span>remaining contributors<span id="num-remaining-commits"></span></li>
                             </ul>
                         </div>
                     </div>
 
-                    <p>The top contributors are separated into two outer rings. In the inner ring we find those that have been supported via ORCA for their work on <span class="repo-name-only">pdf.js</span>. Whereas in the outer ring we find those that have not (yet).</p>
+                    <p>These top contributors are separated into two outer rings. In the inner ring we find those that have been supported via ORCA for their work on <span class="repo-name-only">pdf.js</span>. Whereas in the outer ring we find those that have not.</p>
 
                     <p>In the <strong>center we focus on the connections <i>amongst</i> contributors</strong>. Where we can find those repositories that multiple contributors have worked on (and the <span class="owner">owners</span>, if there is more than one of their repos present).</p>
 
@@ -69,23 +69,28 @@
             <div id="chart-explanation" class="double-column">
                 <p class="header"><strong>HOW TO READ THIS VISUAL</strong></p>
 
+                <!-- Add the legend.svg in the img folder -->
+                <div id="legend-image">
+                    <img id="legend" src="img/legend.svg" alt="A short visual legend for the network">
+                </div>
+
                 <p id="tldr-explanation"><strong>TL;DR</strong> | Below you can read the full details on the many ways data has been woven into this visual, but in essence its <strong>shows how top <span class="contributor">contributors</span> to <span class="central-repo repo-name">mozilla/pdf.js</span> are connected to the (other) <span class="repository">repositories</span> that they have made commits to.</strong></p>
 
                 <div>
                     <p><strong>COLOR</strong> | The <span class="central-repo">central repository</span> that the visual is based on is shown in purple in the center. The <span class="contributor">contributors</span> to this repository are pink. <span class="note-remaining-contributors">Even the smaller pink circles around the outside are contributors to the central repository (just not those with the most commits, or supported through ORCA). </span>Apart from that central repository, all other <span class="repository">repositories</span> are turquoise. When there are at least two repositories from the same owner, a circle for that <span class="owner">owner</span> is shown in yellow. </p>
 
-                    <p><strong>CIRCLE SIZE</strong> | The size of the <span class="contributor">contributor</span> circles is based on the number of commits they made to the central <span class="repo-name">mozilla/pdf.js</span> repository. The size of the <span class="repository">repositories</span> circles is based on the number of stars it has received on GitHub. For <span class="owner">owner</span> circles it is the combined number of stars from all the <span class="repository">repositories</span> that are linked to it in this visual. There is one exception, the size of the central "main" repository <span class="repo-name"></span> is always enlarged to a fixed size and not determined by the number of stars.</p>
+                    <p><strong>CIRCLE SIZE</strong> | The size of the <span class="contributor">contributor</span> circles is based on the number of commits they made to the central <span class="repo-name">mozilla/pdf.js</span> repository. The size of the <span class="repository">repositories</span> circles is based on the number of stars it has received on GitHub. For <span class="owner">owner</span> circles it is the combined number of stars from all the repositories that are linked to it in this visual. There is one exception, the size of the <span class="central-repo">central repository</span> is always enlarged to a fixed size and not determined by the number of stars.</p>
                     
-                    <p><strong>INNER & OUTER PURPLE RINGS</strong> | The top <span class="contributor">contributors</span> are placed in a circle around the <span class="central-repo">central repository</span>. They are ordered by their first commit time to that repository, starting from "Noon" and going clockwise. Furthermore, they are divided into two rings. Contributors that are placed in the inner (slightly darker) purple ring have received ORCA for their contributions to <span id="title-repo-name" class="central-repo">mozilla/pdf.js</span>. Whereas the outer ring shows other top contributors (based on the number of commits), but that have not received ORCA.</p>
-
-                    <p><strong>FULLY OPAQUE vs TRANSPARENT <span class="repository">REPOSITORIES</span></strong> | If you look closer you might notice that some <span class="repository">repository</span> circles are partly transparent and have a smaller central opaque dot in the center. These are repositories that are not "impacted" by any <span class="contributor">contributor</span> in this visualization that has received ORCA. The fully opaque <span class="repository">repository</span> circles, on the other hand, have at least one <span class="contributor">contributor</span> that has received ORCA for their work on <span class="repo-name-only">pdf.js</span> (hover over the repository to see how many ORCA recipients are connected to it).</p>
+                    <p><strong>FULLY OPAQUE vs TRANSPARENT REPOSITORIES</strong> | If you look closer you might notice that some <span class="repository">repository</span> circles are partly transparent and have a smaller central opaque dot in the center. These are repositories that are not "impacted" by any <span class="contributor">contributor</span> in this visualization that has received ORCA. The fully opaque <span class="repository">repository</span> circles, on the other hand, have at least one <span class="contributor">contributor</span> that has received ORCA for their work on <span class="repo-name-only">pdf.js</span> (hover over the repository to see how many ORCA recipients are connected to it).</p>
+                    
+                    <p><strong>INNER & OUTER PURPLE RINGS</strong> | The top <span class="contributor">contributors</span> are placed in a circle around the <span class="central-repo">central repository</span>. They are ordered by their first commit time to it, starting from the top ("noon") and going clockwise. Furthermore, they are divided into two rings. Contributors that are placed in the inner (slightly darker) purple ring have received ORCA for their contributions to <span id="title-repo-name" class="central-repo">mozilla/pdf.js</span>. Whereas the outer ring shows other top contributors (based on the number of commits), who have not received ORCA.</p>
                 </div>
                 <div>
                     <p><strong>LINES</strong> | The lines connect <span class="contributor">contributors</span> to the <span class="repository">repositories</span> that they have made commits to (only showing repositories with at least 30 stars). When multiple <span class="repository">repositories</span> from the same <span class="owner">owner</span> are present in the visual, a circle for that owner is shown to which their repositories are connected.</p>
 
-                    <p><strong>LINE THICKNESS</strong> | The thickness of each line is determined by the number of commits made from the <span class="contributor">contributor</span> on one end to the <span class="repository">repository</span> on the other end (or the combined repositories for an <span class="owner">owner</span> circle).</p>
+                    <p><strong>LINE THICKNESS</strong> | The thickness of each line is determined by the number of commits made from the <span class="contributor">contributor</span> on one end to the <span class="repository">repository</span> on the other end (or the combined repositories for an <span class="owner">owner</span> circle). When you hover over a <span class="contributor">contributor</span> the line thickness between possible connected <span class="owner">owner</span> circles and their <span class="repository">repositories</span> updates and is rescaled to only that contributor's number of commits.</p>
 
-                    <p><strong>ARCS around CIRCLES</strong> | You can see small purple arcs around the <span class="contributor">contributors</span>. This shows for how much time during the existence of <span id="title-repo-name" class="central-repo">mozilla/pdf.js</span> that contributor has been active in its development. You can see a full circle as the total time between the creation of <span class="repo-name-only">pdf.js</span> and its most recent commit. "Noon" is the point where the arc starts (and ends again). The arc around a contributor shows during what span of that time this person made their first and most recent commit to <span class="repo-name-only">pdf.js</span>.</p>
+                    <p><strong>ARCS around CIRCLES</strong> | You can see small purple arcs around the <span class="contributor">contributors</span>. This shows for how much time during the existence of <span id="title-repo-name" class="central-repo">mozilla/pdf.js</span> that contributor has been active in its development. You can see a full circle as the total time between the creation of <span class="repo-name-only">pdf.js</span> and its most recent commit. The arc starts at the top ("noon") and time goes around clockwise. The arc around a contributor shows during what span of that time this person made their first and most recent commit to <span class="repo-name-only">pdf.js</span>.</p>
                     <p>When you hover over a <span class="contributor">contributor</span> you might see pink arcs around the <span class="repository">repositories</span> that are connected to them. The idea is the same as the purple arcs, but now you can see for how much time that contributor has been active for each of the repositories that they are connected to. Often it can be only one or two commits, which won't visibly show an arc because the time scale is too short. If you want to investigate any of the repositories that a certain contributor is connected to, click on the contributor to fix all of their connected repositories in place and hover over each to reveal even more information.</p>
 
                     <p><strong>INTERACTION</strong> | <strong>Hover over any circle</strong> to see all of its connections; From a <span class="contributor">contributor</span> to all the repositories that they've worked on or from one <span class="repository">repository</span> to all of the (top) contributors that have worked on it. <strong>Click on a circle</strong> to fix the visual with all the circle's links highlighted to better investigate its network of direct connections.</p>
@@ -99,8 +104,8 @@
 
             <div id="chart-notes" class="double-column">
                 <p class="header"><strong>DATA NOTES</strong></p>
-                <p><strong>NOTE 1</strong> | Only repositories that have at least 30 stars have been taken into account. Contributors could have made more commits to repositories with fewer stars. Those repositories are not visualized here.</p>
-                <p><strong>NOTE 2</strong> | During the data preparation and analysis phase we tried to group the top contributors to a <i>unique</i> person by grouping all commits coming from the same email address and/or coming from the exact same name.</p>
+                <p><strong>NOTE 1</strong> | Only repositories that have at least 30 stars have been taken into account. Contributors could have made commits to repositories with fewer stars (or private ones). Those repositories are not visualized here.</p>
+                <p><strong>NOTE 2</strong> | During the data preparation and analysis phase we tried to group the top contributors to a <i>unique</i> person by grouping all commits coming from the same email address and/or coming from the exact same name. The name that was used the most for all these commits is taken as the contributor's "name".</p>
             </div>
 
             <div id="chart-extra">
@@ -223,9 +228,12 @@
                         // Number of people
                         let num_orca = values[0].filter(c => c.orca_received === true).length
                         let num_non_orca = values[0].filter(c => c.orca_received === false).length
-                        document.getElementById("num-orca").innerHTML = `${num_orca < 10 ? num_orca : formatDigit(num_orca)} | `
-                        document.getElementById("num-non-orca").innerHTML = `${num_non_orca < 10 ? num_non_orca : formatDigit(num_non_orca)} | `
-                        document.getElementById("num-remaining").innerHTML = `${formatDigit(values[3].length)} | `
+                        document.getElementById("num-orca").innerHTML = `${num_orca < 10 ? num_orca : formatDigit(num_orca)} `
+                        document.getElementById("num-orca-commits").innerHTML = ` [having made ${formatDigit(sum_orca)} commits]`
+                        document.getElementById("num-non-orca").innerHTML = `${num_non_orca < 10 ? num_non_orca : formatDigit(num_non_orca)} `
+                        document.getElementById("num-non-orca-commits").innerHTML = ` [having made ${formatDigit(sum_non_orca)} commits]`
+                        document.getElementById("num-remaining").innerHTML = `${formatDigit(values[3].length)} `
+                        document.getElementById("num-remaining-commits").innerHTML = ` [having made ${formatDigit(sum_remaining)} commits]`
 
                         // Reveal the bar chart
                         document.getElementById("bar-chart-wrapper").style.opacity = `1`
