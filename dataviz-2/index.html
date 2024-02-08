@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+	<head>
+        <meta charset="utf-8">
+	    <meta name="viewport" content="width=device-width, shrink-to-fit=0, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+	    <title>ORCA - Valuable Contributions</title>
+	    <meta name="author" content="Nadieh Bremer">
+	    <meta name="description" content="">
+        <link rel="shortcut icon" href="#">
+
+        <!-- Styling -->
+        <link rel="stylesheet" href="css/style.css">
+		
+        <!-- Fonts -->
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+
+        <!-- JavaScript libraries -->
+        <script src="lib/d3.v7.js"></script>
+
+        <!-- Custom JavaScript file -->
+        <script src="createORCAVisual.js"></script>
+
+	</head>
+	<body>
+        <div id="chart-wrapper">
+            <div id="chart-introduction">
+            </div>
+
+            <!-- The visual will be drawn here -->
+            <div id="chart-container">
+            </div>
+
+            <div id="chart-extra">
+                <button id="dataviz-download-data">Download the RAW data</button>
+                <p id="dataviz-credit">Visualization Designed & Created by Nadieh Bremer | <a href="https://www.visualcinnamon.com/" target="_blank">Visual Cinnamon</a></p>
+            </div>
+        </div>
+
+        <script>
+            let params = new URLSearchParams(window.location.search)
+            const REPOSITORY = [
+                "pdfjs"
+            ].indexOf(params.get("repo")) === -1 ? "pdfjs" : params.get("repo")
+
+            let REPOSITORY_FULL = "mozilla/pdf.js" // Default
+
+            let REPOSITORY_NAME = REPOSITORY_FULL.substring(REPOSITORY_FULL.indexOf("/") + 1)
+
+            /////////////////////////////////////////////////////////
+            ///////////////////////// START /////////////////////////
+            /////////////////////////////////////////////////////////
+
+            ////////////////// Datasets to Read in //////////////////
+            let promises = []
+            promises.push(d3.csv(`data/${REPOSITORY}/commits.csv`))
+
+            /////////////////// Fonts to activate ///////////////////
+            const FONT_FAMILY = "Atkinson Hyperlegible"
+            document.fonts.load(`normal 400 10px "${FONT_FAMILY}"`)
+            document.fonts.load(`italic 400 10px "${FONT_FAMILY}"`)
+            document.fonts.load(`normal 700 10px "${FONT_FAMILY}"`)
+            document.fonts.load(`italic 700 10px "${FONT_FAMILY}"`)
+
+            /////////////////// Figure out sizing ///////////////////
+            // Get the div container that will hold the chart
+            let container = document.getElementById("chart-container")
+            // Get the width of the container
+            let width = container.offsetWidth
+            // You can set the height to anything you want, but the same as the width is the default
+            let height = width
+
+            ///////////////////// Start Drawing /////////////////////
+            // Set-up the visual - Doesn't draw anything yet
+            // NOTE: This visual still uses a random "ORCA_LEVEL" variable for now
+            let ORCAVisual = createORCAVisual(container)
+                .width(width)
+                .height(height)
+                .repository(REPOSITORY_FULL)
+
+            // Read in the data and create the visual
+            document.fonts.ready.then(() => {
+                Promise.all(promises).then(values => {
+
+                    let data_raw = []
+                    data_raw.push(JSON.parse(JSON.stringify(values[0]))) // commits
+
+                    /////////////////////////////////////////////////
+                    // It expects ...
+                    ORCAVisual(values)
+
+                    /////////////////////////////////////////////////
+                    // Let people download the raw data
+                    const download_button = document.getElementById("dataviz-download-data")
+                    download_button.addEventListener("click", () => {
+                        // Download all datasets
+                        downloadData(data_raw[0], `${REPOSITORY}-commits`)
+
+                        function downloadData(data, filename) {
+                            // Create a blob of the data
+                            let blob = new Blob([d3.csvFormat(data)], {type: "text/csv;charset=utf-8"})
+                            // Create a link to download it
+                            let link = document.createElement("a")
+                            link.href = window.URL.createObjectURL(blob)
+                            link.download = `${filename}.csv`
+                            // Click the link
+                            link.click()
+                        }// function downloadData
+                    })//on click
+                })//promises
+            })//fonts.ready
+
+            /////////////////////////////////////////////////////////
+            ////////////////// Handle page resizing /////////////////
+            /////////////////////////////////////////////////////////
+
+            let current_width = window.innerWidth
+            let resizeTimer = null
+            window.addEventListener("resize", function () {
+                // Reset timer - Only resize if something truly appears to happen
+                // So added a little timeout
+                clearTimeout(resizeTimer)
+
+                resizeTimer = setTimeout(() => {
+                    // Only resize if the width is changed
+                    if (window.innerWidth !== current_width) {
+                        current_width = window.innerWidth
+
+                        // Get the new sizes
+                        let width = container.offsetWidth
+                        let height = width
+
+                        //Update the visual
+                        ORCAVisual
+                            .width(width)
+                            .height(height)
+                            .resize()
+                    }// if
+                }, 300)
+            })//on resize
+
+            /////////////////////////////////////////////////////////
+            //////////////////////// Save PNG ///////////////////////
+            /////////////////////////////////////////////////////////
+
+            //Save as PNG on "s" and other key functions
+            window.onkeydown = function (e) {
+                //Save at the current size
+                if (e.which === 83) { //"s" key
+                    e.preventDefault()
+                    savePNG()
+                }//if "s"
+            }//onkeydown
+
+            async function savePNG() {
+                let time = new Date()
+                let date_time = `${time.getFullYear()}-${pad(time.getMonth() + 1)}-${pad(time.getDate())} at ${pad(time.getHours())}.${pad(time.getMinutes())}.${pad(time.getSeconds())}`
+
+                let download_link = document.createElement("a")
+                // Get the element with id canvas
+                document.getElementById("canvas").toBlob(function(blob) {
+                    let url = URL.createObjectURL(blob)
+                    download_link.href = url
+                    download_link.download = `ORCA - ${date_time}.png`
+                    download_link.click()
+                    console.log("Saved image")
+                })//toBlob
+
+                //Pad with zero's on date/time
+                function pad(value) {
+                    if (value < 10) return '0' + value
+                    else return value
+                }//function pad
+            }//savePNG
+
+        </script>
+	</body>
+</html>

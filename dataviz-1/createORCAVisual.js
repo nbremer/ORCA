@@ -2029,6 +2029,7 @@ const createORCAVisual = (container) => {
     /////////////////////////////////////////////////////////////////
 
     function drawNodeLabel(context, d, DO_CENTRAL_OUTSIDE = false) {
+        
         // Draw the name above each node
         context.fillStyle = COLOR_TEXT
         context.lineWidth = 2 * SF

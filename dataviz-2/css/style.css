@@ -1,0 +1,138 @@
+/*************************************/
+/************* VARIABLES *************/
+/*************************************/
+
+html {
+    --color-repo-main: #a682e8;
+    --color-repo: #64d6d3;
+    --color-owner: #f2a900;
+    --color-contributor: #ea9df5;
+    --color-text: #4d4950;
+    --color-background: #f7f7f7;
+    --color-gradient: linear-gradient(to right, var(--color-contributor), var(--color-repo-main), var(--color-repo)) 1;
+}
+
+body {
+    margin: 0;
+    font-family: 'Atkinson Hyperlegible', sans-serif;
+}
+
+.central-repo {
+    /* color: var(--color-repo-main); */
+    background: var(--color-repo-main);
+    padding: 0.1em 0.3em;
+    font-weight: 700;
+    color: white
+}
+
+.contributor {
+    /* color: var(--color-contributor); */
+    background: var(--color-contributor);
+    padding: 0.1em 0.3em;
+    font-weight: 700;
+}
+
+.repository {
+    background: var(--color-repo);
+    padding: 0.1em 0.3em;
+    /* border-bottom: 0.3em solid var(--color-repo); */
+    font-weight: 700;
+}
+
+.repo-name-only {
+    font-style: italic;
+}
+
+.owner {
+    /* color: var(--color-owner); */
+    background: var(--color-owner);
+    padding: 0.1em 0.3em;
+    font-weight: 700;
+}
+
+p {
+    line-height: 140%;
+    color: var(--color-text);
+}
+
+/*************************************/
+/*************** INTRO ***************/
+/*************************************/
+
+#chart-wrapper {
+    min-width: 900px; /* Min size that the visual can become */
+    max-width: 1400px; /* Max size that the visual can become */
+
+    border-top: 10px solid var(--color-repo-main);
+    border-image: var(--color-gradient);
+    margin: 0 auto;
+}
+
+/*************************************/
+/************** CREDITS **************/
+/*************************************/
+
+#chart-extra {
+    position: relative;
+    text-align: center;
+}
+
+#dataviz-download-data {
+    text-align: center;
+    background: var(--color-repo-main);
+    color: white;
+    border: none;
+    padding: 0.5em 1em;
+    font-size: 1.0em;
+    font-weight: 700;
+    cursor: pointer;
+    margin: 1em auto;
+}
+
+#dataviz-credit {
+    font-style: italic;
+    text-align: center;
+    margin-top: 2em;
+    margin-bottom: 2em;
+    opacity: 0.8;
+    font-size: 0.9em;
+}
+
+#dataviz-credit a {
+    border-bottom: 3px solid var(--color-repo-main);
+    border-image:linear-gradient(to right, var(--color-contributor), var(--color-repo)) 1;
+    /* padding: 0.1em 0.3em; */
+    font-weight: 700;
+    cursor: pointer;
+    color: var(--color-text);
+    text-decoration: none;
+}
+
+/*************************************/
+/*************** CHART ***************/
+/*************************************/
+
+/* This is all done within the createORCAVisual function */
+
+#chart-container {
+    position: relative;
+    background-color: var(--color-background);
+}
+
+#chart-container canvas {
+    display: block;
+    margin: 0;
+}
+
+/* #canvas, #canvas-click {
+    position: absolute;
+    top: 0;
+    pointer-events: none;
+    z-index: 0;
+    transition: opacity 200ms ease-in;
+}
+
+#canvas-hover {
+    position: relative;
+    z-index: 1
+}*/
