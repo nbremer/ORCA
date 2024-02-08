@@ -67,15 +67,12 @@
             let container = document.getElementById("chart-container")
             // Get the width of the container
             let width = container.offsetWidth
-            // You can set the height to anything you want, but the same as the width is the default
-            let height = width
 
             ///////////////////// Start Drawing /////////////////////
             // Set-up the visual - Doesn't draw anything yet
             // NOTE: This visual still uses a random "ORCA_LEVEL" variable for now
             let ORCAVisual = createORCAVisual(container)
                 .width(width)
-                // .height(height)
                 .repository(REPOSITORY_FULL)
 
             // Read in the data and create the visual
@@ -128,12 +125,10 @@
 
                         // Get the new sizes
                         let width = container.offsetWidth
-                        // let height = width
 
                         //Update the visual
                         ORCAVisual
                             .width(width)
-                            // .height(height)
                             .resize()
                     }// if
                 }, 300)

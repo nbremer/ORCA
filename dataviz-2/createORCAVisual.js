@@ -1,5 +1,6 @@
 // FINAL: Update GitHub explanation 
 // TODO: webworker for the simulations
+// TODO: Flip order of month circles in every odd row
 
 /////////////////////////////////////////////////////////////////////
 /////////////// Visualization designed & developed by ///////////////
@@ -30,6 +31,7 @@ const createORCAVisual = (container) => {
 
     // Grid
     let COLS_TOTAL
+    let col_heights = []
 
     // Hover options
     let delaunay
@@ -121,12 +123,13 @@ const createORCAVisual = (container) => {
         ////////////////////// Data Preparation /////////////////////
         /////////////////////////////////////////////////////////////
         commits = values[0]
+
         // Initial simple data preparation
         prepareData()
         // Find the positions of the commits within each month's circle
         determineCommitPositions()
 
-        console.log(commits[0])
+        // console.log(commits[0])
         
         /////////////////////////////////////////////////////////////
         ///////////// Set the Sizes and Draw the Visual /////////////
@@ -140,8 +143,6 @@ const createORCAVisual = (container) => {
     /////////////////////////////////////////////////////////////////
 
     function draw() {
-        // Find the positions of each month's circle
-        determineMonthPositions()
 
         /////////////////////////////////////////////////////////////
         // Fill the background with a color
@@ -152,6 +153,49 @@ const createORCAVisual = (container) => {
         context.translate(MARGIN.width, MARGIN.height)
 
         // Draw a line behind the circles to show how time connects them all
+        // context.strokeStyle = "#c2c2c2"
+        context.strokeStyle = COLOR_REPO
+        context.lineWidth = MARGIN.width * 0.35
+        context.globalAlpha = 0.2
+        let O = 0
+        let radius = MARGIN.height * 0.75
+        context.beginPath()
+        context.moveTo(0-O, col_heights[0])
+        for(let i = 0; i <= col_heights.length-1; i++) {
+            let y = col_heights[i]
+            let h_diff = (col_heights[i+1] - y)
+
+            // Draw a line from the left to the right
+            // Add an arc at the end of each line to connect to the next row
+            if(i % 2 === 0) { // Arc on the right side
+                context.lineTo(W+O, y)
+                // Don't do this for the last line
+                if(i < col_heights.length-1) {
+                    context.arc(W+O, y + radius, radius, -PI/2, 0)
+                    context.lineTo(W+O + radius, y + h_diff - radius)
+                    context.arc(W+O, y + h_diff - radius, radius, 0, PI/2)
+                }// if
+            } else { // Arc on the left side
+                context.lineTo(0-O, y)
+                // Don't do this for the last line
+                if(i < col_heights.length-1) {
+                    context.arc(0-O, y + radius, radius, 3*PI/2, PI, true)
+                    context.lineTo(0-O - radius, y + h_diff - radius)
+                    context.arc(0-O, y + h_diff - radius, radius, PI, PI/2, true)
+                }// if
+            }
+            // if(i % 2 === 0) { // Arc on the right side
+            //     context.moveTo(0-20, y)
+            //     context.lineTo(W+20, y)
+            //     context.arc(W+20, y + radius, radius, -PI/2, PI/2)
+            // } else { // Arc on the left side
+            //     context.moveTo(W+20, y)
+            //     context.lineTo(0-20, y)
+            //     context.arc(0-20, y + radius, radius, 3*PI/2, PI/2, true)
+            // }
+        }//for i
+        context.stroke()
+        context.globalAlpha = 1
 
         // Draw the months and the commits within
         commits_by_month.forEach((d, i) => {
@@ -182,11 +226,16 @@ const createORCAVisual = (container) => {
         PIXEL_RATIO = window.devicePixelRatio
 
         WIDTH = round(width * PIXEL_RATIO)
-        HEIGHT = round(height * PIXEL_RATIO)
-        MARGIN.width = WIDTH * 0.05
+        MARGIN.width = WIDTH * 0.08
         MARGIN.height = WIDTH * 0.05
         W = WIDTH - 2 * MARGIN.width
-        // H = HEIGHT - 2 * MARGIN.height
+
+        // Find the positions of each month's circle now that we have the width
+        // This will also set the height of the canvas
+        determineMonthPositions()
+
+        HEIGHT = round(height * PIXEL_RATIO)
+        H = HEIGHT - 2 * MARGIN.height
 
         sizeCanvas(canvas, context)
 
@@ -371,6 +420,8 @@ const createORCAVisual = (container) => {
         }//for i
 
         /////////////////////////////////////////////////////////////
+        col_heights = []
+
         // Find the height offset of the first row
         let circles_top = commits_by_month.filter(d => d.row === 0)
         let largest_circle = d3.max(circles_top, d => d.r)
@@ -378,18 +429,28 @@ const createORCAVisual = (container) => {
         circles_top.forEach(d => {
             d.y = height_offset
         })//forEach
+        // Save the height offset
+        col_heights.push(height_offset)
         
         // Set the correct height by looking at the largest circle of the current row and the one above
+        let largest_radius_current
         for(let i = 1; i <= row; i++) {
             let circles_above = commits_by_month.filter(d => d.row === i-1)
             let circles_current = commits_by_month.filter(d => d.row === i)
             let largest_radius_above = d3.max(circles_above, d => d.r)
-            let largest_radius_current = d3.max(circles_current, d => d.r)
+            largest_radius_current = d3.max(circles_current, d => d.r)
             height_offset += largest_radius_above + padding + largest_radius_current
             circles_current.forEach(d => {
                 d.y = height_offset
             })//forEach
+
+            // Save the height offset
+            col_heights.push(height_offset)
         }//for i
+
+        // Reset the height of the canvas to fit all the circles
+        let height_required = height_offset + largest_radius_current + 2*MARGIN.height
+        height = height_required / PIXEL_RATIO
 
     }// function determineMonthPositions
 
@@ -405,7 +466,6 @@ const createORCAVisual = (container) => {
         if(begin && !stroke) context.fill()
         else if(begin && stroke) context.stroke()
     }//function drawCircle
-
 
     /////////////////////////////////////////////////////////////////
     //////////////////////// Hover Functions ////////////////////////
@@ -548,11 +608,11 @@ const createORCAVisual = (container) => {
         return chart
     }// chart.width
 
-    chart.height = function (value) {
-        if (!arguments.length) return height
-        height = value
-        return chart
-    } // chart.height
+    // chart.height = function (value) {
+    //     if (!arguments.length) return height
+    //     height = value
+    //     return chart
+    // } // chart.height
 
     chart.repository = function (value) {
         if (!arguments.length) return REPO_CENTRAL
