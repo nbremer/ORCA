@@ -1,6 +1,10 @@
 // FINAL: Update GitHub explanation 
 // TODO: webworker for the simulations
-// TODO: Flip order of month circles in every odd row
+// TODO: Hexagons for 0 files changed commits?
+// TODO: Annotations for releases
+// TODO: Annotations for noteworthy contributions
+// TODO: Add hovers
+// TODO: Add arced labels for months with # commits
 
 /////////////////////////////////////////////////////////////////////
 /////////////// Visualization designed & developed by ///////////////
@@ -31,7 +35,7 @@ const createORCAVisual = (container) => {
 
     // Grid
     let COLS_TOTAL
-    let col_heights = []
+    let row_heights = []
 
     // Hover options
     let delaunay
@@ -155,22 +159,22 @@ const createORCAVisual = (container) => {
         // Draw a line behind the circles to show how time connects them all
         // context.strokeStyle = "#c2c2c2"
         context.strokeStyle = COLOR_REPO
-        context.lineWidth = MARGIN.width * 0.35
         context.globalAlpha = 0.2
+        context.lineWidth = MARGIN.width * 0.25
         let O = 0
         let radius = MARGIN.height * 0.75
         context.beginPath()
-        context.moveTo(0-O, col_heights[0])
-        for(let i = 0; i <= col_heights.length-1; i++) {
-            let y = col_heights[i]
-            let h_diff = (col_heights[i+1] - y)
+        context.moveTo(0-O, row_heights[0])
+        for(let i = 0; i <= row_heights.length-1; i++) {
+            let y = row_heights[i]
+            let h_diff = (row_heights[i+1] - y)
 
             // Draw a line from the left to the right
             // Add an arc at the end of each line to connect to the next row
             if(i % 2 === 0) { // Arc on the right side
                 context.lineTo(W+O, y)
                 // Don't do this for the last line
-                if(i < col_heights.length-1) {
+                if(i < row_heights.length-1) {
                     context.arc(W+O, y + radius, radius, -PI/2, 0)
                     context.lineTo(W+O + radius, y + h_diff - radius)
                     context.arc(W+O, y + h_diff - radius, radius, 0, PI/2)
@@ -178,7 +182,7 @@ const createORCAVisual = (container) => {
             } else { // Arc on the left side
                 context.lineTo(0-O, y)
                 // Don't do this for the last line
-                if(i < col_heights.length-1) {
+                if(i < row_heights.length-1) {
                     context.arc(0-O, y + radius, radius, 3*PI/2, PI, true)
                     context.lineTo(0-O - radius, y + h_diff - radius)
                     context.arc(0-O, y + h_diff - radius, radius, PI, PI/2, true)
@@ -202,7 +206,8 @@ const createORCAVisual = (container) => {
             // Draw the month circle
             context.fillStyle = COLOR_BACKGROUND
             context.shadowBlur = 10
-            context.shadowColor = "#d4d2ce"
+            context.shadowColor = "#9fdbd9"
+            // context.shadowColor = "#d4d2ce"
             drawCircle(context, d.x, d.y, d.r, true, false)
             context.shadowBlur = 0
 
@@ -362,7 +367,6 @@ const createORCAVisual = (container) => {
             //Save the parent radius
             d.r = parent_circle.r
         })//forEach
-        console.log(commits_by_month)
 
     }// function determineCommitPositions
 
@@ -376,37 +380,34 @@ const createORCAVisual = (container) => {
         
         let index = 0
         let row = 0
-        let col = 0
+
+        let sign = 1
 
         /////////////////////////////////////////////////////////////
         // Do a first loop to determine which row and column each month circle is in
         commits_by_month.forEach(d => {
             // If the new circle doesn't fit in the current row, go to the next row
-            if(along_X + 2 * d.r > W) nextColumn()
+            if((sign === 1 && along_X + 2 * d.r > W) || (sign === -1 && along_X - 2 * d.r < 0)) nextColumn()
 
-            d.x = along_X + d.r
+            d.x = along_X + sign * d.r
             d.y = along_Y
 
             d.row = row
-            d.col = col
-            col++
 
-            along_X += 2*d.r + padding
+            along_X = along_X + sign * (2*d.r + padding)
 
             // If the next position is too far to the right, go to the next row
-            if(along_X > W) nextColumn()
+            if((sign === 1 && along_X > W) || (sign === -1 && along_X < 0)) nextColumn()
 
             index++
         })//forEach
 
         function nextColumn() {
             row++
-            col = 0
-            along_X = 0
+            sign *= -1
+            along_X = sign === 1 ? 0 : W
             along_Y += 200 + padding
         }// function nextColumn
-
-        COLS_TOTAL = col
 
         /////////////////////////////////////////////////////////////
         // Center the circles within each row
@@ -415,12 +416,12 @@ const createORCAVisual = (container) => {
             let row_width = d3.sum(circles, d => 2*d.r + padding) - padding
             let row_offset = (W - row_width) / 2
             circles.forEach(d => {
-                d.x += row_offset
+                d.x = d.x + row_offset * (i % 2 === 0 ? 1 : -1)
             })//forEach
         }//for i
 
         /////////////////////////////////////////////////////////////
-        col_heights = []
+        row_heights = []
 
         // Find the height offset of the first row
         let circles_top = commits_by_month.filter(d => d.row === 0)
@@ -430,7 +431,7 @@ const createORCAVisual = (container) => {
             d.y = height_offset
         })//forEach
         // Save the height offset
-        col_heights.push(height_offset)
+        row_heights.push(height_offset)
         
         // Set the correct height by looking at the largest circle of the current row and the one above
         let largest_radius_current
@@ -445,7 +446,7 @@ const createORCAVisual = (container) => {
             })//forEach
 
             // Save the height offset
-            col_heights.push(height_offset)
+            row_heights.push(height_offset)
         }//for i
 
         // Reset the height of the canvas to fit all the circles
