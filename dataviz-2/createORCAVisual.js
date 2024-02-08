@@ -1,4 +1,5 @@
 // FINAL: Update GitHub explanation 
+// TODO: webworker for the simulations
 
 /////////////////////////////////////////////////////////////////////
 /////////////// Visualization designed & developed by ///////////////
@@ -26,6 +27,9 @@ const createORCAVisual = (container) => {
     // Datasets
     let commits
     let commits_by_month
+
+    // Grid
+    let COLS_TOTAL
 
     // Hover options
     let delaunay
@@ -79,12 +83,12 @@ const createORCAVisual = (container) => {
     /////////////////////////////////////////////////////////////////
 
     //Sizes
-    const DEFAULT_SIZE = 1500
-    let WIDTH = DEFAULT_SIZE
-    let HEIGHT = DEFAULT_SIZE
-    let width = DEFAULT_SIZE
-    let height = DEFAULT_SIZE
-    let SF, PIXEL_RATIO
+    let width = 1500
+    let height = 2500
+    let WIDTH
+    let HEIGHT
+    let MARGIN = {width: 0, height: 0}, W, H
+    let PIXEL_RATIO
 
     /////////////////////////////////////////////////////////////////
     //////////////////////// Create Functions ///////////////////////
@@ -99,7 +103,7 @@ const createORCAVisual = (container) => {
 
     const scale_radius = d3.scalePow()
         .exponent(0.5)
-        .range([1.5, 8, 10])
+        .range([2, 12, 16])
         // .range([1, 10, 15])
         .clamp(true)
 
@@ -121,8 +125,6 @@ const createORCAVisual = (container) => {
         prepareData()
         // Find the positions of the commits within each month's circle
         determineCommitPositions()
-        // Find the positions of each month's circle
-        determineMonthPositions()
 
         console.log(commits[0])
         
@@ -138,33 +140,38 @@ const createORCAVisual = (container) => {
     /////////////////////////////////////////////////////////////////
 
     function draw() {
+        // Find the positions of each month's circle
+        determineMonthPositions()
+
         /////////////////////////////////////////////////////////////
         // Fill the background with a color
         context.fillStyle = COLOR_BACKGROUND
         context.fillRect(0, 0, WIDTH, HEIGHT)
 
-        // console.log(SF)
+        context.save()
+        context.translate(MARGIN.width, MARGIN.height)
 
-        context.strokeStyle = COLOR_OWNER
-        context.lineWidth = 1.5 * SF
+        // Draw a line behind the circles to show how time connects them all
+
+        // Draw the months and the commits within
         commits_by_month.forEach((d, i) => {
             // Draw the month circle
-            // console.log(d)
-            
             context.fillStyle = COLOR_BACKGROUND
-            context.shadowBlur = 10 * SF
+            context.shadowBlur = 10
             context.shadowColor = "#d4d2ce"
-            drawCircle(context, d.x, d.y, d.r, SF, true, false)
+            drawCircle(context, d.x, d.y, d.r, true, false)
             context.shadowBlur = 0
 
-            d.forEach(n => {
+            // Draw the commit circles
+            d.values.forEach(n => {
                 // Draw the commits
                 context.fillStyle = scale_color(n.files_changed)
-                // context.fillStyle = n.lines_changed < 212 ? COLOR_REPO : COLOR_CONTRIBUTOR
-                drawCircle(context, n.x + d.x, n.y + d.y, n.radius, SF, true, false)
+                drawCircle(context, n.x + d.x, n.y + d.y, n.radius, true, false)
             })// forEach
 
         })//forEach
+
+        context.restore()
     }// function draw
 
     /////////////////////////////////////////////////////////////////
@@ -174,9 +181,12 @@ const createORCAVisual = (container) => {
         // Screen pixel ratio
         PIXEL_RATIO = window.devicePixelRatio
 
-        // It's the width that determines the size
         WIDTH = round(width * PIXEL_RATIO)
         HEIGHT = round(height * PIXEL_RATIO)
+        MARGIN.width = WIDTH * 0.05
+        MARGIN.height = WIDTH * 0.05
+        W = WIDTH - 2 * MARGIN.width
+        // H = HEIGHT - 2 * MARGIN.height
 
         sizeCanvas(canvas, context)
 
@@ -185,15 +195,12 @@ const createORCAVisual = (container) => {
             canvas.width = WIDTH
             canvas.height = HEIGHT
             canvas.style.width = `${width}px`
-            canvas.style.height = `${HEIGHT / PIXEL_RATIO}px`
+            canvas.style.height = `${height}px`
 
             // Some canvas settings
             context.lineJoin = "round" 
             context.lineCap = "round"
         }// function sizeCanvas
-
-        // Set the scale factor
-        SF = WIDTH / DEFAULT_SIZE
 
         // Draw the visual
         draw()
@@ -219,14 +226,14 @@ const createORCAVisual = (container) => {
             d.commit_year = d.commit_time.getFullYear()
         })// forEach
 
-        // Find the 90% quantile of the number of lines changed
+        // Find quantile numbers of the number of lines changed
         let QUANTILE90 = d3.quantile(commits.filter(d => d.lines_changed > 0), 0.90, d => d.lines_changed)
         let QUANTILE99 = d3.quantile(commits.filter(d => d.lines_changed > 0), 0.99, d => d.lines_changed)
         // Set the radius scale
         scale_radius.domain([0, QUANTILE90, QUANTILE99])
         // console.log(scale_radius.domain())
         
-        
+        // Find quantile numbers of the number of files changed
         QUANTILE90 = d3.quantile(commits.filter(d => d.files_changed > 0), 0.90, d => d.files_changed)
         scale_color.domain([0, QUANTILE90])
         // console.log(scale_color.domain())
@@ -238,19 +245,20 @@ const createORCAVisual = (container) => {
 
         /////////////////////////////////////////////////////////////
         // Group the commits by month
-        commits_by_month = d3.group(commits, d => formatMonth(d.commit_time))
+        commits_by_month = d3.groups(commits, d => formatMonth(d.commit_time))
 
         // Loop over all the months and save some statistics
         commits_by_month.forEach((d, i) => {
             d.index = i
             d.n_commits = d.length
+            d.values = d[1]
 
             let total_files = 0
             let total_insertions = 0
             let total_deletions = 0
             let total_changes = 0
             let authors = new Set()
-            d.forEach(n => {
+            d.values.forEach(n => {
                 total_files += n.files_changed
                 total_insertions += n.line_insertions
                 total_deletions += n.line_deletions
@@ -266,6 +274,10 @@ const createORCAVisual = (container) => {
         })// forEach
     }// function prepareData
 
+    /////////////////////////////////////////////////////////////////
+    //////////////////////// Data Placements ////////////////////////
+    /////////////////////////////////////////////////////////////////
+
     ////// Determine the positions of the commits within a month ////
     function determineCommitPositions() {
         //Place the children circles within each month
@@ -274,12 +286,12 @@ const createORCAVisual = (container) => {
             let padding = 1.25
 
             // Do a circle pack with a simulation after it
-            d.forEach(n => { n.r = n.radius + padding + Math.random()/2 })
-            d3.packSiblings(d)
+            d.values.forEach(n => { n.r = n.radius + padding + Math.random()/2 })
+            d3.packSiblings(d.values)
 
             // TODO webworker
             // //Do a static simulation to create slightly better looking groups
-            // const simulation = d3.forceSimulation(d)
+            // const simulation = d3.forceSimulation(d.values)
             //     .force("center", d3.forceCenter())
             //     .force("x", d3.forceX(0).strength(0.5))
             //     .force("y", d3.forceY(0).strength(0.5))
@@ -289,11 +301,11 @@ const createORCAVisual = (container) => {
 
             //////////////// Enclosing Parent Circle ////////////////
             // With the locations of the children known, calculate the smallest enclosing circle
-            d.forEach(n => { n.r = n.radius + 12})
-            let parent_circle = d3.packEnclose(d)
+            d.values.forEach(n => { n.r = n.radius + 12})
+            let parent_circle = d3.packEnclose(d.values)
 
             //Offset the children slightly so the parent circle is on the 0,0 center
-            d.forEach(n => { 
+            d.values.forEach(n => { 
                 n.r = n.radius
                 // n.x = n.x + parent_circle.x
                 // n.y = n.y + parent_circle.y
@@ -308,22 +320,88 @@ const createORCAVisual = (container) => {
     ///////////// Determine the positions of each month /////////////
     function determineMonthPositions() {
         // Loop over all the months and place them in a grid of N columns
-        let N = 5
-        let H = 200
-        let padding = 20
+        let padding = 40
+        
+        let along_X = 0
+        let along_Y = 0
+        
         let index = 0
+        let row = 0
+        let col = 0
+
+        /////////////////////////////////////////////////////////////
+        // Do a first loop to determine which row and column each month circle is in
         commits_by_month.forEach(d => {
-            d.x = (index % N) * (WIDTH / N) + padding
-            d.y = Math.floor(index / N) * H
+            // If the new circle doesn't fit in the current row, go to the next row
+            if(along_X + 2 * d.r > W) nextColumn()
+
+            d.x = along_X + d.r
+            d.y = along_Y
+
+            d.row = row
+            d.col = col
+            col++
+
+            along_X += 2*d.r + padding
+
+            // If the next position is too far to the right, go to the next row
+            if(along_X > W) nextColumn()
+
             index++
         })//forEach
+
+        function nextColumn() {
+            row++
+            col = 0
+            along_X = 0
+            along_Y += 200 + padding
+        }// function nextColumn
+
+        COLS_TOTAL = col
+
+        /////////////////////////////////////////////////////////////
+        // Center the circles within each row
+        for(let i = 0; i <= row; i++) {
+            let circles = commits_by_month.filter(d => d.row === i)
+            let row_width = d3.sum(circles, d => 2*d.r + padding) - padding
+            let row_offset = (W - row_width) / 2
+            circles.forEach(d => {
+                d.x += row_offset
+            })//forEach
+        }//for i
+
+        /////////////////////////////////////////////////////////////
+        // Find the height offset of the first row
+        let circles_top = commits_by_month.filter(d => d.row === 0)
+        let largest_circle = d3.max(circles_top, d => d.r)
+        let height_offset = largest_circle
+        circles_top.forEach(d => {
+            d.y = height_offset
+        })//forEach
+        
+        // Set the correct height by looking at the largest circle of the current row and the one above
+        for(let i = 1; i <= row; i++) {
+            let circles_above = commits_by_month.filter(d => d.row === i-1)
+            let circles_current = commits_by_month.filter(d => d.row === i)
+            let largest_radius_above = d3.max(circles_above, d => d.r)
+            let largest_radius_current = d3.max(circles_current, d => d.r)
+            height_offset += largest_radius_above + padding + largest_radius_current
+            circles_current.forEach(d => {
+                d.y = height_offset
+            })//forEach
+        }//for i
+
     }// function determineMonthPositions
 
+    /////////////////////////////////////////////////////////////////
+    /////////////////// General Drawing Functions ///////////////////
+    /////////////////////////////////////////////////////////////////
+
     ///////////////////////// Draw a circle /////////////////////////
-    function drawCircle(context, x, y, r, SF, begin = true, stroke = false) {
+    function drawCircle(context, x, y, r, begin = true, stroke = false) {
         if(begin === true) context.beginPath()
-        context.moveTo((x+r) * SF, y * SF)
-        context.arc(x * SF, y * SF, r * SF, 0, TAU)
+        context.moveTo((x+r), y)
+        context.arc(x, y, r, 0, TAU)
         if(begin && !stroke) context.fill()
         else if(begin && stroke) context.stroke()
     }//function drawCircle
@@ -363,8 +441,8 @@ const createORCAVisual = (container) => {
 
     // Turn the mouse position into a canvas x and y location and see if it's close enough to a node
     function findNode(mx, my) {
-        mx = ((mx * PIXEL_RATIO) - WIDTH / 2) / SF
-        my = ((my * PIXEL_RATIO) - HEIGHT / 2) / SF
+        mx = ((mx * PIXEL_RATIO) - WIDTH / 2)
+        my = ((my * PIXEL_RATIO) - HEIGHT / 2)
 
         //Get the closest hovered node
         let point = delaunay.find(mx, my)
@@ -400,8 +478,8 @@ const createORCAVisual = (container) => {
         context.font = `${font_weight} ${font_style} ${font_size}px ${FONT_FAMILY}`
     }//function setFont
 
-    function setContributorFont(context, SF = 1, font_size = 13) {
-        setFont(context, font_size * SF, 700, "italic")
+    function setContributorFont(context, font_size = 13) {
+        setFont(context, font_size, 700, "italic")
     }//function setContributorFont
 
     ////////////// Add tracking (space) between letters /////////////

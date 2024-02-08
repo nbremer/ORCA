@@ -75,7 +75,7 @@
             // NOTE: This visual still uses a random "ORCA_LEVEL" variable for now
             let ORCAVisual = createORCAVisual(container)
                 .width(width)
-                .height(height)
+                // .height(height)
                 .repository(REPOSITORY_FULL)
 
             // Read in the data and create the visual
@@ -128,12 +128,12 @@
 
                         // Get the new sizes
                         let width = container.offsetWidth
-                        let height = width
+                        // let height = width
 
                         //Update the visual
                         ORCAVisual
                             .width(width)
-                            .height(height)
+                            // .height(height)
                             .resize()
                     }// if
                 }, 300)
