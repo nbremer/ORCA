@@ -1,5 +1,5 @@
 // FINAL: Update GitHub explanation 
-// TODO: webworker for the simulations
+// TODO: Make the drawing to circle by circle
 // TODO: Add hovers (div?)
 // TODO: Annotations for releases?
 // TODO: Annotations / marking for noteworthy contributions
@@ -34,9 +34,6 @@ const createORCAVisual = (container) => {
 
     // Grid
     let row_heights = []
-
-    // Web worker
-    let worker = new Worker('lib/web-worker-scripts/worker-force.js')
 
     // Hover options
     let delaunay
@@ -131,18 +128,12 @@ const createORCAVisual = (container) => {
     let formatYear = d3.timeFormat("%Y")
     // let formatDateExact = d3.timeFormat("%b %d, %Y")
     // let formatDigit = d3.format(",.2s")
-    let formatDigit = d3.format(",.2r")
+    // let formatDigit = d3.format(",.2r")
 
     const scale_radius = d3.scalePow()
         .exponent(0.5)
         .range([2.5, 12, 16])
-        // .range([1, 10, 15])
         .clamp(true)
-
-    // const scale_color = d3.scalePow()
-    //     .exponent(0.5)
-    //     .range([COLOR_CONTRIBUTOR, COLOR_REPO])
-    //     .clamp(true)
 
     /////////////////////////////////////////////////////////////////
     //////////////////////// Draw the Visual ////////////////////////
@@ -159,8 +150,6 @@ const createORCAVisual = (container) => {
         // Find the positions of the commits within each month's circle
         determineCommitPositions()
 
-        // console.log(commits[0])
-        
         /////////////////////////////////////////////////////////////
         ////////////////////// Setup the Hover //////////////////////
         /////////////////////////////////////////////////////////////
@@ -365,18 +354,15 @@ const createORCAVisual = (container) => {
 
     ////// Determine the positions of the commits within a month ////
     function determineCommitPositions() {
-        let padding = 1.5
+        const padding = 1.5
 
-        //Place the children circles within each month
-
+        /////////////////////////////////////////////////////////////
         // Do an initial circle pack
         commits_by_month.forEach(d => {
             d.values.forEach(n => { n.r = n.radius + padding })
             d3.packSiblings(d.values)
-        }) //forEach
 
-        // Do a static simulation to create slightly better looking groups
-        commits_by_month.forEach(d => {
+            /////////////////////////////////////////////////////////
             //Do a static simulation to create slightly better looking groups
             if(d.n_commits < 250) {
                 const simulation = d3.forceSimulation(d.values)
@@ -411,48 +397,8 @@ const createORCAVisual = (container) => {
             //     simulation.force("collide").strength(Math.min(1, 0.3 + Math.pow(i / 120, 2) * 0.7))
             // }//for i
 
-        })//forEach
-
-        smallestEnclosingParentCircle()
-
-
-
-        // //Offload the whole simulation in a web worker
-        // let commits_worker = []
-        // commits_by_month.forEach((d, j) => {
-        //     // Create a smaller version of the data to send to the worker, which only contains an array of all the x and y positions of d.values
-        //     commits_worker.push({
-        //         index: j,
-        //         circles: d.values.map(n => ({ x: n.x, y: n.y }))
-        //     })
-        // })// forEach
-        // commits_worker = JSON.parse(JSON.stringify(commits_worker))
-        // console.log(commits_worker)
-
-        // worker.postMessage({
-        //     months: commits_worker,
-        //     padding: padding
-        // })//postMessage
-        
-        // //Once done, save the new positions and draw the inner nodes
-        // worker.onmessage = function (event) {
-        //     let worker_months = event.data.months
-        //     console.log(worker_months)
-        //     // //Save new positions
-        //     // d.values.forEach((d, i) => {
-        //     //     d.x = new_circles[i].x
-        //     //     d.y = new_circles[i].y
-        //     // })
-
-        //     // smallestEnclosingParentCircle(d)
-        // }//worker onmessage
-
-    }// function determineCommitPositions
-
-    //////////////////////// Enclosing Circle ///////////////////////
-    // Find the smallest enclosing circle around all the commit circles
-    function smallestEnclosingParentCircle() {
-        commits_by_month.forEach(d => {
+            /////////////////////////////////////////////////////////
+            // Find the smallest enclosing circle around all the commit circles
             // With the locations of the children known, calculate the smallest enclosing circle
             d.values.forEach(n => { n.r = n.radius + 12})
             let parent_circle = d3.packEnclose(d.values)
@@ -464,7 +410,8 @@ const createORCAVisual = (container) => {
             //Save the parent radius
             d.r = parent_circle.r
         })// forEach
-    }// function smallestEnclosingParentCircle
+
+    }// function determineCommitPositions
 
     ///////////// Determine the positions of each month /////////////
     function determineMonthPositions() {
