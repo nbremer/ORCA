@@ -1,10 +1,9 @@
 // FINAL: Update GitHub explanation 
 // TODO: webworker for the simulations
-// TODO: Hexagons for 0 files changed commits?
-// TODO: Annotations for releases
-// TODO: Annotations for noteworthy contributions
-// TODO: Add hovers
-// TODO: Add arced labels for months with # commits
+// TODO: Add hovers (div?)
+// TODO: Annotations for releases?
+// TODO: Annotations / marking for noteworthy contributions
+// TODO: Need a bbox simulation to not get overlapping annotations?
 
 /////////////////////////////////////////////////////////////////////
 /////////////// Visualization designed & developed by ///////////////
@@ -55,9 +54,13 @@ const createORCAVisual = (container) => {
     const COLOR_PURPLE = "#783ce6"
 
     const COLOR_REPO_MAIN = "#a682e8"
-    const COLOR_REPO = "#64d6d3" // "#b2faf8"
+    const COLOR_REPO = "#64d6d3" 
     const COLOR_OWNER = "#f2a900"
     const COLOR_CONTRIBUTOR = "#ea9df5"
+
+    const COLOR_INSERTIONS = "#78ded0"
+    const COLOR_DELETIONS = "#f6a2f4"
+    const COLOR_OVERLAP = "#4070c4" 
 
     const COLOR_LINK = "#e8e8e8"
     const COLOR_TEXT = "#4d4950"
@@ -71,18 +74,38 @@ const createORCAVisual = (container) => {
     canvas.id = "canvas"
     const context = canvas.getContext("2d")
 
+    const canvas_hover = document.createElement("canvas")
+    canvas_hover.id = "canvas-hover"
+    const context_hover = canvas_hover.getContext("2d")
+
     container.appendChild(canvas)
+    container.appendChild(canvas_hover)
+    
+    // Set some important stylings of each canvas
+    container.style.position = "relative"
+    container.style["background-color"] = COLOR_BACKGROUND
 
-    // // Set some important stylings of each canvas
-    // container.style.position = "relative"
-    // container.style["background-color"] = COLOR_BACKGROUND
+    styleCanvas(canvas)
+    styleCanvas(canvas_hover)
 
-    // styleCanvas(canvas)
+    styleBackgroundCanvas(canvas)
 
-    // function styleCanvas(canvas) {
-    //     canvas.style.display = "block"
-    //     canvas.style.margin = "0"
-    // }// function styleCanvas
+    canvas_hover.style.position = "relative"
+    canvas_hover.style.z_index = "1"
+
+    function styleCanvas(canvas) {
+        canvas.style.display = "block"
+        canvas.style.margin = "0"
+    }// function styleCanvas
+
+    function styleBackgroundCanvas(canvas) {
+        canvas.style.position = "absolute"
+        canvas.style.top = "0"
+        canvas.style.left = "0"
+        canvas.style.pointer_events = "none"
+        canvas.style.z_index = "0"
+        canvas.style.transition = "opacity 100ms ease-in"
+    }// function styleBackgroundCanvas
 
     /////////////////////////////////////////////////////////////////
     /////////////////////////// Set Sizes ///////////////////////////
@@ -101,15 +124,17 @@ const createORCAVisual = (container) => {
     /////////////////////////////////////////////////////////////////
 
     let parseDate = d3.timeParse("%Y-%m-%d %H:%M:%S %Z")
-    let formatMonth = d3.timeFormat("%Y-%m")
     let formatDate = d3.timeFormat("%b %Y")
-    let formatDateExact = d3.timeFormat("%b %d, %Y")
-    let formatDigit = d3.format(",.2s")
-    // let formatDigit = d3.format(",.2r")
+    let formatGroupMonth = d3.timeFormat("%Y-%m")
+    let formatMonth = d3.timeFormat("%b")
+    let formatYear = d3.timeFormat("%Y")
+    // let formatDateExact = d3.timeFormat("%b %d, %Y")
+    // let formatDigit = d3.format(",.2s")
+    let formatDigit = d3.format(",.2r")
 
     const scale_radius = d3.scalePow()
         .exponent(0.5)
-        .range([2, 12, 16])
+        .range([2.5, 12, 16])
         // .range([1, 10, 15])
         .clamp(true)
 
@@ -135,6 +160,11 @@ const createORCAVisual = (container) => {
 
         // console.log(commits[0])
         
+        /////////////////////////////////////////////////////////////
+        ////////////////////// Setup the Hover //////////////////////
+        /////////////////////////////////////////////////////////////
+        setupHover()
+
         /////////////////////////////////////////////////////////////
         ///////////// Set the Sizes and Draw the Visual /////////////
         /////////////////////////////////////////////////////////////
@@ -210,12 +240,51 @@ const createORCAVisual = (container) => {
             // context.shadowColor = "#d4d2ce"
             drawCircle(context, d.x, d.y, d.r, true, false)
             context.shadowBlur = 0
+            
+            // Add the date label
+            monthDateLabel(context, d, i)
 
             // Draw the commit circles
+            context.strokeStyle = COLOR_BACKGROUND
+            context.lineWidth = 2
             d.values.forEach(n => {
                 // Draw the commits
-                context.fillStyle = scale_color(n.files_changed)
-                drawCircle(context, n.x + d.x, n.y + d.y, n.radius, true, false)
+                // context.fillStyle = scale_color(n.files_changed)
+                if(n.files_changed === 0) {
+                    context.fillStyle = COLOR_OWNER
+                    drawCircle(context, n.x + d.x, n.y + d.y, n.radius, true, false)
+                } else {
+                    // Draw two half circles, one with a radius equal to the radius_insertions and another to the radius_deletions
+                    
+                    // // Overlapping circles with multiply color blending
+                    // context.globalCompositeOperation = "multiply"
+                    // context.fillStyle = COLOR_CONTRIBUTOR
+                    // drawCircle(context, n.x + d.x, n.y + d.y, n.radius_deletions, true, false)
+                    // context.fillStyle = COLOR_REPO
+                    // drawCircle(context, n.x + d.x, n.y + d.y, n.radius_insertions, true, false)
+                    // context.globalCompositeOperation = "source-over"
+
+                    drawCommitCircle(context, n)
+
+
+
+                    // // Half circles
+                    // context.globalCompositeOperation = "multiply"
+                    // context.fillStyle = COLOR_REPO
+                    // context.beginPath()
+                    // context.moveTo(d.x + n.x, d.y + n.y + n.radius_insertions)
+                    // context.arc(d.x + n.x, d.y + n.y, n.radius_insertions, PI/2, 3*PI/2)
+                    // context.fill()
+                    
+                    // context.fillStyle = COLOR_CONTRIBUTOR
+                    // context.beginPath()
+                    // context.moveTo(d.x + n.x, d.y + n.y - n.radius_deletions)
+                    // context.arc(d.x + n.x, d.y + n.y, n.radius_deletions, -PI/2, PI/2)
+                    // context.closePath()
+                    // context.fill()
+                    // context.globalCompositeOperation = "source-over"
+                }// else
+
             })// forEach
 
         })//forEach
@@ -243,6 +312,7 @@ const createORCAVisual = (container) => {
         H = HEIGHT - 2 * MARGIN.height
 
         sizeCanvas(canvas, context)
+        sizeCanvas(canvas_hover, context_hover)
 
         // Size the canvas
         function sizeCanvas(canvas, context) {
@@ -255,6 +325,9 @@ const createORCAVisual = (container) => {
             context.lineJoin = "round" 
             context.lineCap = "round"
         }// function sizeCanvas
+
+        // Reset the delaunay for the mouse events
+        delaunay = d3.Delaunay.from(commits.map(d => [d.x_base, d.y_base]))
 
         // Draw the visual
         draw()
@@ -279,6 +352,7 @@ const createORCAVisual = (container) => {
             d.commit_month = d.commit_time.getMonth()
             d.commit_year = d.commit_time.getFullYear()
         })// forEach
+        // console.log(commits[0])
 
         // Find quantile numbers of the number of lines changed
         let QUANTILE90 = d3.quantile(commits.filter(d => d.lines_changed > 0), 0.90, d => d.lines_changed)
@@ -294,18 +368,24 @@ const createORCAVisual = (container) => {
 
         // Calculate the Visual variables
         commits.forEach(d => {
-            d.radius = scale_radius(d.lines_changed)
+            d.radius_insertions = scale_radius(d.line_insertions)
+            d.radius_deletions = scale_radius(d.line_deletions)
+            d.radius = max(d.radius_insertions, d.radius_deletions)
+            // d.radius = scale_radius(d.lines_changed)
         })// forEach
 
         /////////////////////////////////////////////////////////////
         // Group the commits by month
-        commits_by_month = d3.groups(commits, d => formatMonth(d.commit_time))
+        commits_by_month = d3.groups(commits, d => formatGroupMonth(d.commit_time))
 
         // Loop over all the months and save some statistics
         commits_by_month.forEach((d, i) => {
             d.index = i
-            d.n_commits = d.length
+            
             d.values = d[1]
+            d.month = d.values[0].commit_month
+            d.year = d.values[0].commit_year
+            d.n_commits = d.values.length
 
             let total_files = 0
             let total_insertions = 0
@@ -325,6 +405,13 @@ const createORCAVisual = (container) => {
             d.total_deletions = total_deletions
             d.total_changes = total_changes
             d.total_authors = authors.size
+        })// forEach
+
+        // Link the commits to their month
+        commits_by_month.forEach(d => {
+            d.values.forEach(n => {
+                n.month_data = d
+            })// forEach
         })// forEach
     }// function prepareData
 
@@ -373,41 +460,49 @@ const createORCAVisual = (container) => {
     ///////////// Determine the positions of each month /////////////
     function determineMonthPositions() {
         // Loop over all the months and place them in a grid of N columns
-        let padding = 40
+        const padding = 40
+        const padding_row = 80
         
         let along_X = 0
         let along_Y = 0
         
         let index = 0
         let row = 0
+        let row_index = 0
 
         let sign = 1
 
         /////////////////////////////////////////////////////////////
         // Do a first loop to determine which row and column each month circle is in
-        commits_by_month.forEach(d => {
-            // If the new circle doesn't fit in the current row, go to the next row
-            if((sign === 1 && along_X + 2 * d.r > W) || (sign === -1 && along_X - 2 * d.r < 0)) nextColumn()
+        commits_by_month.forEach((d,i) => {
+            // If the new circle doesn't fit in the current row, go to the next row (except if this is the first circle on the row)
+            if(row_index !== 0 && ((sign === 1 && along_X + 2 * d.r > W) || (sign === -1 && along_X - 2 * d.r < 0))) nextColumn()
 
             d.x = along_X + sign * d.r
             d.y = along_Y
 
             d.row = row
+            row_index++
 
             along_X = along_X + sign * (2*d.r + padding)
 
             // If the next position is too far to the right, go to the next row
-            if((sign === 1 && along_X > W) || (sign === -1 && along_X < 0)) nextColumn()
+            // Except is this is the final element
+            if(i != commits_by_month.length-1 && ((sign === 1 && along_X > W) || (sign === -1 && along_X < 0))) nextColumn()
 
             index++
         })//forEach
 
         function nextColumn() {
             row++
+            row_index = 0
             sign *= -1
             along_X = sign === 1 ? 0 : W
             along_Y += 200 + padding
         }// function nextColumn
+
+        // Just to be sure, but what is the final row's id
+        row = commits_by_month[commits_by_month.length -1].row
 
         /////////////////////////////////////////////////////////////
         // Center the circles within each row
@@ -440,7 +535,7 @@ const createORCAVisual = (container) => {
             let circles_current = commits_by_month.filter(d => d.row === i)
             let largest_radius_above = d3.max(circles_above, d => d.r)
             largest_radius_current = d3.max(circles_current, d => d.r)
-            height_offset += largest_radius_above + padding + largest_radius_current
+            height_offset += largest_radius_above + padding_row + largest_radius_current
             circles_current.forEach(d => {
                 d.y = height_offset
             })//forEach
@@ -453,12 +548,39 @@ const createORCAVisual = (container) => {
         let height_required = height_offset + largest_radius_current + 2*MARGIN.height
         height = height_required / PIXEL_RATIO
 
+        setCommitBasePositions()
+
     }// function determineMonthPositions
+
+    // Set the pixel positions of the commits on the page
+    function setCommitBasePositions() {
+        commits_by_month.forEach((d,i) => {
+            d.values.forEach(n => {
+                n.x_base = d.x + n.x
+                n.y_base = d.y + n.y
+            })// forEach
+        })// forEach
+    }// function setCommitBasePositions
 
     /////////////////////////////////////////////////////////////////
     /////////////////// General Drawing Functions ///////////////////
     /////////////////////////////////////////////////////////////////
 
+    function drawCommitCircle(context, n) {
+        // Full circles with the overlapping part in another color
+        if(n.radius_insertions > n.radius_deletions) {
+            context.fillStyle = COLOR_INSERTIONS
+            drawCircle(context, n.x_base, n.y_base, n.radius_insertions, true, false)
+            context.fillStyle = COLOR_OVERLAP
+            drawCircle(context, n.x_base, n.y_base, n.radius_deletions, true, false)
+        } else {
+            context.fillStyle = COLOR_DELETIONS
+            drawCircle(context, n.x_base, n.y_base, n.radius_deletions, true, false)
+            context.fillStyle = COLOR_OVERLAP
+            drawCircle(context, n.x_base, n.y_base, n.radius_insertions, true, false)
+        }// else
+    }// function drawCommitCircle
+    
     ///////////////////////// Draw a circle /////////////////////////
     function drawCircle(context, x, y, r, begin = true, stroke = false) {
         if(begin === true) context.beginPath()
@@ -482,14 +604,61 @@ const createORCAVisual = (container) => {
             if(FOUND) {
                 HOVER_ACTIVE = true
                 HOVERED_NODE = d
+
+                // // Fade out the main canvas, using CSS
+                // canvas.style.opacity = '0.3'
+
+                drawHoverState(context_hover, d)
+
             } else {
                 HOVER_ACTIVE = false
                 HOVERED_NODE = null
+
+                context_hover.clearRect(0, 0, WIDTH, HEIGHT)
+                // // Fade the main canvas back in
+                // canvas.style.opacity = '1'
             }// else
 
         })// on mousemove
 
     }// function setupHover
+
+    // Draw the hovered node and its links and neighbors and a tooltip
+    function drawHoverState(context, d) {
+        context.clearRect(0, 0, WIDTH, HEIGHT)
+        context.save()
+        context.translate(MARGIN.width, MARGIN.height)
+            context.fillStyle = COLOR_BACKGROUND
+            context.globalAlpha = 0.7
+            drawCircle(context, d.month_data.x, d.month_data.y, d.month_data.r, true, false)
+            context.globalAlpha = 1
+            
+            // Show the number of commits
+            monthDateLabel(context_hover, d.month_data, d.month_data.index, true)
+
+            drawCommitCircle(context, d)
+            // Show a ring around the hovered node
+            drawHoverRing(context, d)
+        context.restore()
+    }// function drawHoverState
+
+    //////////////////////// Draw Hover Ring ////////////////////////
+    // Draw a stroked ring around the hovered node
+    function drawHoverRing(context, d) {
+        let r = d.r + 10
+        context.beginPath()
+        context.moveTo((d.x_base + r), d.y_base)
+        context.arc(d.x_base, d.y_base, r, 0, TAU)
+
+        let COL
+        if(d.files_changed === 0) COL = COLOR_OWNER
+        else if (d.line_insertions > d.line_deletions) COL = COLOR_INSERTIONS
+        else COL = COLOR_DELETIONS
+        context.strokeStyle = COL
+        context.lineWidth = 8
+
+        context.stroke()
+    }// function drawHoverRing
 
     /////////////////////////////////////////////////////////////////
     //////////////////////// Click Functions ////////////////////////
@@ -502,25 +671,18 @@ const createORCAVisual = (container) => {
 
     // Turn the mouse position into a canvas x and y location and see if it's close enough to a node
     function findNode(mx, my) {
-        mx = ((mx * PIXEL_RATIO) - WIDTH / 2)
-        my = ((my * PIXEL_RATIO) - HEIGHT / 2)
+        mx = ((mx * PIXEL_RATIO) - MARGIN.width)
+        my = ((my * PIXEL_RATIO) - MARGIN.height)
 
         //Get the closest hovered node
         let point = delaunay.find(mx, my)
-        let d = nodes_delaunay[point]
+        let d = commits[point]
+        console.log(d.files_changed, d.line_insertions, d.line_deletions, d.lines_changed, d.commit_year, d.commit_month)
 
         // Get the distance from the mouse to the node
-        let dist = sqrt((d.x - mx)**2 + (d.y - my)**2)
+        let dist = sqrt((d.x_base - mx)**2 + (d.y_base - my)**2)
         // If the distance is too big, don't show anything
-        let FOUND = dist < d.r + (CLICK_ACTIVE ? 10 : 50)
-
-        // Check if the mouse is close enough to one of the remaining contributors of FOUND is false
-        if(!FOUND && REMAINING_PRESENT) {
-            point = delaunay_remaining.find(mx, my)
-            d = remainingContributors[point]
-            dist = sqrt((d.x - mx)**2 + (d.y - my)**2)
-            FOUND = dist < d.r + 5
-        }// if
+        let FOUND = dist < d.r + 40 //(CLICK_ACTIVE ? 10 : 50)
 
         return [d, FOUND]
     }// function findNode
@@ -529,6 +691,48 @@ const createORCAVisual = (container) => {
     ///////////////////////// Text Functions ////////////////////////
     /////////////////////////////////////////////////////////////////
 
+    // Add the year or month label to the month circles
+    function monthDateLabel(context, d, i, show_commits = false) {
+        context.fillStyle = COLOR_TEXT
+        context.textAlign = "center"
+
+        // Label for the year or month
+        let text
+        let y = d.y + d.r
+        if((i === 0 || i === commits_by_month.length-1) && d.month !== 0) {
+            y += 18
+            context.textBaseline = "top"
+            setFont(context, 23, 700, "normal")
+            text = `${formatDate(d.values[0].commit_time)}`
+            if(!show_commits) context.fillText(text, d.x, y)
+            y += 26
+        } else if(d.month === 0) {
+            y += 18
+            context.textBaseline = "top"
+            setFont(context, 30, 700, "normal")
+            text = d.year
+            if(!show_commits) context.fillText(text, d.x, y)
+            y += 32
+        } else {
+            y += 16
+            // context.globalAlpha = 0.8
+            context.textBaseline = "top"
+            setFont(context, 23, 400, "normal")
+            text = `${formatMonth(d.values[0].commit_time)}`
+            if(!show_commits) context.fillText(text, d.x, y)
+            y += 26
+        }// else
+
+
+        // Label for the number of commits
+        if(show_commits) {
+            context.globalAlpha = 0.7
+            setFont(context, 22, 400, "italic")
+            context.fillText(`${d.n_commits} commits`, d.x, y)
+        }// if
+
+        context.globalAlpha = 1
+    }// function monthDateLabel
 
     /////////////////////////////////////////////////////////////////
     ///////////////////////// Font Functions ////////////////////////
@@ -580,6 +784,35 @@ const createORCAVisual = (container) => {
         return [start_position, end_position]
     }//function renderText
     
+    ////////////////////////// Draw curved text /////////////////////////
+    function drawTextAlongArc(context, str, angle, radius, side, kerning = 0) {
+        let startAngle = side === "up" ? angle : angle - PI
+        if (side === "up") str = str.split("").reverse().join("") // Reverse letters
+
+        //Rotate 50% of total angle for center alignment
+        for (let j = 0; j < str.length; j++) {
+            let charWid = (context.measureText(str[j]).width)
+            startAngle += ((charWid + (j === str.length - 1 ? 0 : kerning)) / radius) / 2
+        }//for j
+
+        context.save()
+        context.rotate(startAngle)
+
+        for (let n = 0; n < str.length; n++) {
+            let charWid = (context.measureText(str[n]).width / 2) // half letter
+            let y = (side === "up" ? -1 : 1) * radius
+            //Rotate half letter
+            context.rotate(-(charWid + kerning) / radius)
+
+            // context.fillText(str[n], 0, y)
+            renderText(context, str[n], 0, y, 0)
+            //Rotate another half letter
+            context.rotate(-(charWid + kerning) / radius)
+        }//for n
+
+        context.restore()
+    }//function drawTextAlongArc
+
     /////////////////////////////////////////////////////////////////
     //////////////////////// Helper Functions ///////////////////////
     /////////////////////////////////////////////////////////////////
