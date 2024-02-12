@@ -125,6 +125,7 @@ const createORCAVisual = (container) => {
 
     let parseDate = d3.timeParse("%Y-%m-%d %H:%M:%S %Z")
     let formatDate = d3.timeFormat("%b %Y")
+    let formatDateNum = d3.timeFormat("%m-%Y")
     let formatGroupMonth = d3.timeFormat("%Y-%m")
     let formatMonth = d3.timeFormat("%b")
     let formatYear = d3.timeFormat("%Y")
@@ -138,10 +139,10 @@ const createORCAVisual = (container) => {
         // .range([1, 10, 15])
         .clamp(true)
 
-    const scale_color = d3.scalePow()
-        .exponent(0.5)
-        .range([COLOR_CONTRIBUTOR, COLOR_REPO])
-        .clamp(true)
+    // const scale_color = d3.scalePow()
+    //     .exponent(0.5)
+    //     .range([COLOR_CONTRIBUTOR, COLOR_REPO])
+    //     .clamp(true)
 
     /////////////////////////////////////////////////////////////////
     //////////////////////// Draw the Visual ////////////////////////
@@ -186,70 +187,56 @@ const createORCAVisual = (container) => {
         context.save()
         context.translate(MARGIN.width, MARGIN.height)
 
+        /////////////////////////////////////////////////////////////
         // Draw a line behind the circles to show how time connects them all
+        createTimeLinePath()
         // context.strokeStyle = "#c2c2c2"
         context.strokeStyle = COLOR_REPO
-        context.globalAlpha = 0.2
-        context.lineWidth = MARGIN.width * 0.25
-        let O = 0
-        let radius = MARGIN.height * 0.75
-        context.beginPath()
-        context.moveTo(0-O, row_heights[0])
-        for(let i = 0; i <= row_heights.length-1; i++) {
-            let y = row_heights[i]
-            let h_diff = (row_heights[i+1] - y)
+        // context.globalAlpha = 0.1
+        // context.lineWidth = 32 //MARGIN.width * 0.15
+        // context.stroke()
 
-            // Draw a line from the left to the right
-            // Add an arc at the end of each line to connect to the next row
-            if(i % 2 === 0) { // Arc on the right side
-                context.lineTo(W+O, y)
-                // Don't do this for the last line
-                if(i < row_heights.length-1) {
-                    context.arc(W+O, y + radius, radius, -PI/2, 0)
-                    context.lineTo(W+O + radius, y + h_diff - radius)
-                    context.arc(W+O, y + h_diff - radius, radius, 0, PI/2)
-                }// if
-            } else { // Arc on the left side
-                context.lineTo(0-O, y)
-                // Don't do this for the last line
-                if(i < row_heights.length-1) {
-                    context.arc(0-O, y + radius, radius, 3*PI/2, PI, true)
-                    context.lineTo(0-O - radius, y + h_diff - radius)
-                    context.arc(0-O, y + h_diff - radius, radius, PI, PI/2, true)
-                }// if
-            }
-            // if(i % 2 === 0) { // Arc on the right side
-            //     context.moveTo(0-20, y)
-            //     context.lineTo(W+20, y)
-            //     context.arc(W+20, y + radius, radius, -PI/2, PI/2)
-            // } else { // Arc on the left side
-            //     context.moveTo(W+20, y)
-            //     context.lineTo(0-20, y)
-            //     context.arc(0-20, y + radius, radius, 3*PI/2, PI/2, true)
-            // }
-        }//for i
+        context.globalAlpha = 0.2
+        context.lineWidth = 20 //MARGIN.width * 0.15
         context.stroke()
+
         context.globalAlpha = 1
+        context.lineWidth = 5
+        context.stroke()
+
+        context.globalAlpha = 1
+        /////////////////////////////////////////////////////////////
+
 
         // Draw the months and the commits within
         commits_by_month.forEach((d, i) => {
+            /////////////////////////////////////////////////////////
             // Draw the month circle
             context.fillStyle = COLOR_BACKGROUND
-            context.shadowBlur = 10
+            context.shadowBlur = 12
             context.shadowColor = "#9fdbd9"
             // context.shadowColor = "#d4d2ce"
-            drawCircle(context, d.x, d.y, d.r, true, false)
+            drawCircle(context, d.x, d.y, d.r + 6, true, false)
             context.shadowBlur = 0
+
+            // Also stroke the circle
+            context.strokeStyle = COLOR_REPO
+            context.globalAlpha = 0.5
+            context.lineWidth = 3
+            drawCircle(context, d.x, d.y, d.r, true, true)
+            // context.stroke()
+            context.globalAlpha = 1
             
+            /////////////////////////////////////////////////////////
             // Add the date label
             monthDateLabel(context, d, i)
 
+            /////////////////////////////////////////////////////////
             // Draw the commit circles
             context.strokeStyle = COLOR_BACKGROUND
             context.lineWidth = 2
             d.values.forEach(n => {
                 // Draw the commits
-                // context.fillStyle = scale_color(n.files_changed)
                 if(n.files_changed === 0) {
                     context.fillStyle = COLOR_OWNER
                     drawCircle(context, n.x + d.x, n.y + d.y, n.radius, true, false)
@@ -265,8 +252,6 @@ const createORCAVisual = (container) => {
                     // context.globalCompositeOperation = "source-over"
 
                     drawCommitCircle(context, n)
-
-
 
                     // // Half circles
                     // context.globalCompositeOperation = "multiply"
@@ -361,10 +346,9 @@ const createORCAVisual = (container) => {
         scale_radius.domain([0, QUANTILE90, QUANTILE99])
         // console.log(scale_radius.domain())
         
-        // Find quantile numbers of the number of files changed
-        QUANTILE90 = d3.quantile(commits.filter(d => d.files_changed > 0), 0.90, d => d.files_changed)
-        scale_color.domain([0, QUANTILE90])
-        // console.log(scale_color.domain())
+        // // Find quantile numbers of the number of files changed
+        // QUANTILE90 = d3.quantile(commits.filter(d => d.files_changed > 0), 0.90, d => d.files_changed)
+        // scale_color.domain([0, QUANTILE90])
 
         // Calculate the Visual variables
         commits.forEach(d => {
@@ -460,7 +444,7 @@ const createORCAVisual = (container) => {
     ///////////// Determine the positions of each month /////////////
     function determineMonthPositions() {
         // Loop over all the months and place them in a grid of N columns
-        const padding = 40
+        const padding = 50
         const padding_row = 80
         
         let along_X = 0
@@ -561,6 +545,51 @@ const createORCAVisual = (container) => {
             })// forEach
         })// forEach
     }// function setCommitBasePositions
+
+    /////////////////////////////////////////////////////////////////
+    //////////////////////////// Timeline ///////////////////////////
+    /////////////////////////////////////////////////////////////////
+    // Draw a line behind the circles to show how time connects them all
+    function createTimeLinePath() {
+        let O = 0
+        let radius = MARGIN.height * 0.75
+        context.beginPath()
+        context.moveTo(0-O, row_heights[0])
+        for(let i = 0; i <= row_heights.length-1; i++) {
+            let y = row_heights[i]
+            let h_diff = (row_heights[i+1] - y)
+
+            // Draw a line from the left to the right
+            // Add an arc at the end of each line to connect to the next row
+            if(i % 2 === 0) { // Arc on the right side
+                context.lineTo(W+O, y)
+                // Don't do this for the last line
+                if(i < row_heights.length-1) {
+                    context.arc(W+O, y + radius, radius, -PI/2, 0)
+                    context.lineTo(W+O + radius, y + h_diff - radius)
+                    context.arc(W+O, y + h_diff - radius, radius, 0, PI/2)
+                }// if
+            } else { // Arc on the left side
+                context.lineTo(0-O, y)
+                // Don't do this for the last line
+                if(i < row_heights.length-1) {
+                    context.arc(0-O, y + radius, radius, 3*PI/2, PI, true)
+                    context.lineTo(0-O - radius, y + h_diff - radius)
+                    context.arc(0-O, y + h_diff - radius, radius, PI, PI/2, true)
+                }// if
+            }
+            // if(i % 2 === 0) { // Arc on the right side
+            //     context.moveTo(0-20, y)
+            //     context.lineTo(W+20, y)
+            //     context.arc(W+20, y + radius, radius, -PI/2, PI/2)
+            // } else { // Arc on the left side
+            //     context.moveTo(W+20, y)
+            //     context.lineTo(0-20, y)
+            //     context.arc(0-20, y + radius, radius, 3*PI/2, PI/2, true)
+            // }
+        }//for i
+
+    }// function createTimeLinePath
 
     /////////////////////////////////////////////////////////////////
     /////////////////// General Drawing Functions ///////////////////
@@ -698,30 +727,48 @@ const createORCAVisual = (container) => {
 
         // Label for the year or month
         let text
-        let y = d.y + d.r
+        let y = d.y + d.r + 6
         if((i === 0 || i === commits_by_month.length-1) && d.month !== 0) {
             y += 18
+            drawTickMark(6)
             context.textBaseline = "top"
             setFont(context, 23, 700, "normal")
             text = `${formatDate(d.values[0].commit_time)}`
             if(!show_commits) context.fillText(text, d.x, y)
             y += 26
+
         } else if(d.month === 0) {
             y += 18
+            drawTickMark(6)
             context.textBaseline = "top"
             setFont(context, 30, 700, "normal")
             text = d.year
             if(!show_commits) context.fillText(text, d.x, y)
             y += 32
+
         } else {
             y += 16
+            drawTickMark()
             // context.globalAlpha = 0.8
             context.textBaseline = "top"
             setFont(context, 23, 400, "normal")
+            // text = `${formatDateNum(d.values[0].commit_time)}`
             text = `${formatMonth(d.values[0].commit_time)}`
             if(!show_commits) context.fillText(text, d.x, y)
             y += 26
         }// else
+
+        function drawTickMark(offset = 4) {
+            // Add a little line from the top to the circle
+            context.beginPath()
+            context.moveTo(d.x, d.y + d.r)
+            context.lineTo(d.x, y - offset)
+            context.globalAlpha = 0.7
+            context.strokeStyle = COLOR_REPO
+            context.lineWidth = 3
+            context.stroke()
+            context.globalAlpha = 1
+        }// function drawTickMark
 
 
         // Label for the number of commits
@@ -742,10 +789,6 @@ const createORCAVisual = (container) => {
     function setFont(context, font_size, font_weight, font_style = "normal") {
         context.font = `${font_weight} ${font_style} ${font_size}px ${FONT_FAMILY}`
     }//function setFont
-
-    function setContributorFont(context, font_size = 13) {
-        setFont(context, font_size, 700, "italic")
-    }//function setContributorFont
 
     ////////////// Add tracking (space) between letters /////////////
     function renderText(context, text, x, y, letterSpacing = 0, stroke = false) {
@@ -784,35 +827,6 @@ const createORCAVisual = (container) => {
         return [start_position, end_position]
     }//function renderText
     
-    ////////////////////////// Draw curved text /////////////////////////
-    function drawTextAlongArc(context, str, angle, radius, side, kerning = 0) {
-        let startAngle = side === "up" ? angle : angle - PI
-        if (side === "up") str = str.split("").reverse().join("") // Reverse letters
-
-        //Rotate 50% of total angle for center alignment
-        for (let j = 0; j < str.length; j++) {
-            let charWid = (context.measureText(str[j]).width)
-            startAngle += ((charWid + (j === str.length - 1 ? 0 : kerning)) / radius) / 2
-        }//for j
-
-        context.save()
-        context.rotate(startAngle)
-
-        for (let n = 0; n < str.length; n++) {
-            let charWid = (context.measureText(str[n]).width / 2) // half letter
-            let y = (side === "up" ? -1 : 1) * radius
-            //Rotate half letter
-            context.rotate(-(charWid + kerning) / radius)
-
-            // context.fillText(str[n], 0, y)
-            renderText(context, str[n], 0, y, 0)
-            //Rotate another half letter
-            context.rotate(-(charWid + kerning) / radius)
-        }//for n
-
-        context.restore()
-    }//function drawTextAlongArc
-
     /////////////////////////////////////////////////////////////////
     //////////////////////// Helper Functions ///////////////////////
     /////////////////////////////////////////////////////////////////
@@ -820,17 +834,6 @@ const createORCAVisual = (container) => {
     function mod (x, n) { return ((x % n) + n) % n }
 
     function sq(x) { return x * x }
-
-    //Phyllotaxis settings
-    //https://observablehq.com/@fil/phyllotaxis-explained
-    //https://observablehq.com/@mbostock/circle-packing-methods
-    const theta = TAU / ((1 + sqrt(5)) / 2) //pi2 / (1 + (1 + Math.sqrt(5)) / 2) // Math.PI * (3 - Math.sqrt(5))
-
-    function phyllotaxis(index, angle, padding) {
-        const r = (radius + padding) * 1.2 * sqrt(index + 0.5)
-        const a = index * angle
-        return [r * cos(a), r * sin(a)]
-    }//function phyllotaxis
 
     /////////////////////////////////////////////////////////////////
     /////////////////////// Accessor functions //////////////////////
@@ -841,12 +844,6 @@ const createORCAVisual = (container) => {
         width = value
         return chart
     }// chart.width
-
-    // chart.height = function (value) {
-    //     if (!arguments.length) return height
-    //     height = value
-    //     return chart
-    // } // chart.height
 
     chart.repository = function (value) {
         if (!arguments.length) return REPO_CENTRAL
