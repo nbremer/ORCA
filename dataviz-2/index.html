@@ -70,69 +70,78 @@
 
             ///////////////////// Start Drawing /////////////////////
             // Set-up the visual - Doesn't draw anything yet
-            // NOTE: This visual still uses a random "ORCA_LEVEL" variable for now
-            let ORCAVisual = createORCAVisual(container)
-                .width(width)
-                .repository(REPOSITORY_FULL)
+            // createORCAVisual(container).then(ORCAVisual => {
+            //     ORCAVisual
+            //         .width(width)
+            //         .repository(REPOSITORY_FULL)
+            // })
 
             // Read in the data and create the visual
-            document.fonts.ready.then(() => {
-                Promise.all(promises).then(values => {
+            createORCAVisual(container).then(ORCAVisual => {
+                // Set-up the visual - Doesn't draw anything yet
+                ORCAVisual
+                    .width(width)
+                    // .repository(REPOSITORY_FULL)
 
-                    let data_raw = []
-                    data_raw.push(JSON.parse(JSON.stringify(values[0]))) // commits
+                document.fonts.ready.then(() => {
+                    Promise.all(promises).then(values => {
 
-                    /////////////////////////////////////////////////
-                    // It expects ...
-                    ORCAVisual(values)
+                        let data_raw = []
+                        data_raw.push(JSON.parse(JSON.stringify(values[0]))) // commits
 
-                    /////////////////////////////////////////////////
-                    // Let people download the raw data
-                    const download_button = document.getElementById("dataviz-download-data")
-                    download_button.addEventListener("click", () => {
-                        // Download all datasets
-                        downloadData(data_raw[0], `${REPOSITORY}-commits`)
+                        /////////////////////////////////////////////
+                        // It expects ...
+                        ORCAVisual(values)
 
-                        function downloadData(data, filename) {
-                            // Create a blob of the data
-                            let blob = new Blob([d3.csvFormat(data)], {type: "text/csv;charset=utf-8"})
-                            // Create a link to download it
-                            let link = document.createElement("a")
-                            link.href = window.URL.createObjectURL(blob)
-                            link.download = `${filename}.csv`
-                            // Click the link
-                            link.click()
-                        }// function downloadData
-                    })//on click
-                })//promises
-            })//fonts.ready
+                        /////////////////////////////////////////////
+                        // Let people download the raw data
+                        const download_button = document.getElementById("dataviz-download-data")
+                        download_button.addEventListener("click", () => {
+                            // Download all datasets
+                            downloadData(data_raw[0], `${REPOSITORY}-commits`)
 
-            /////////////////////////////////////////////////////////
-            ////////////////// Handle page resizing /////////////////
-            /////////////////////////////////////////////////////////
+                            function downloadData(data, filename) {
+                                // Create a blob of the data
+                                let blob = new Blob([d3.csvFormat(data)], {type: "text/csv;charset=utf-8"})
+                                // Create a link to download it
+                                let link = document.createElement("a")
+                                link.href = window.URL.createObjectURL(blob)
+                                link.download = `${filename}.csv`
+                                // Click the link
+                                link.click()
+                            }// function downloadData
+                        })//on click
+                    })//promises
+                })//fonts.ready
 
-            let current_width = window.innerWidth
-            let resizeTimer = null
-            window.addEventListener("resize", function () {
-                // Reset timer - Only resize if something truly appears to happen
-                // So added a little timeout
-                clearTimeout(resizeTimer)
+                /////////////////////////////////////////////////////
+                //////////////// Handle page resizing ///////////////
+                /////////////////////////////////////////////////////
 
-                resizeTimer = setTimeout(() => {
-                    // Only resize if the width is changed
-                    if (window.innerWidth !== current_width) {
-                        current_width = window.innerWidth
+                let current_width = window.innerWidth
+                let resizeTimer = null
+                window.addEventListener("resize", function () {
+                    // Reset timer - Only resize if something truly appears to happen
+                    // So added a little timeout
+                    clearTimeout(resizeTimer)
 
-                        // Get the new sizes
-                        let width = container.offsetWidth
+                    resizeTimer = setTimeout(() => {
+                        // Only resize if the width is changed
+                        if (window.innerWidth !== current_width) {
+                            current_width = window.innerWidth
 
-                        //Update the visual
-                        ORCAVisual
-                            .width(width)
-                            .resize()
-                    }// if
-                }, 300)
-            })//on resize
+                            // Get the new sizes
+                            let width = container.offsetWidth
+
+                            //Update the visual
+                            ORCAVisual
+                                .width(width)
+                                .resize()
+                        }// if
+                    }, 300)
+                })//on resize
+
+            })//createORCAVisual
 
             /////////////////////////////////////////////////////////
             //////////////////////// Save PNG ///////////////////////
