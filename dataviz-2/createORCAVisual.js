@@ -377,14 +377,14 @@ async function createORCAVisual(container) {
             // When the last month has run
             if(i === commits_by_month.length-1) {
                 // Run the increaseOpacity function a few more times until all the circles are fully visible, by checking that all have an opacity of 1
-                let all_finished = commits_by_month.every(d => d.finished_appearing)
                 let j = i+1
+                let all_finished = commits_by_month.every(d => d.finished_appearing)
                 while(!all_finished) {
                     increaseOpacity(j)
                     all_finished = commits_by_month.every(d => d.finished_appearing)
                     j++
                     draw()
-                    await delay(100)
+                    await delay(10)
                 }// while
 
                 FIRST_DRAW = false
@@ -459,12 +459,12 @@ async function createORCAVisual(container) {
     // Find the smallest enclosing circle around all the commit circles
     function findEnclosingCircle(d) {
         const scale_padding = d3.scaleLinear()
-            .domain([0, 300])
-            .range([0, 10])
+            .domain([0, 399, 400])
+            .range([2, 5, 12])
             .clamp(true)
         
         // With the locations of the children known, calculate the smallest enclosing circle
-        d.values.forEach(n => { n.r = n.radius + 0})
+        d.values.forEach(n => { n.r = n.radius })
         let parent_circle = d3.packEnclose(d.values)
 
         d.values.forEach(n => { 
@@ -685,59 +685,53 @@ async function createORCAVisual(container) {
         commits_by_month.forEach((d, i) => {
             /////////////////////////////////////////////////////////
             // Draw the month circle
-            if(INITIAL_CIRCLE_DRAW === true || FIRST_DRAW === false) drawMonthCircle(context, d, i)
-            
-            /////////////////////////////////////////////////////////
-            // Add the date label
-            if(INITIAL_CIRCLE_DRAW === true || FIRST_DRAW === false) monthDateLabel(context, d, i)
+            if(INITIAL_CIRCLE_DRAW === true || FIRST_DRAW === false) {
+                drawMonthCircle(context, d, i)
+                // Add the date label
+                monthDateLabel(context, d, i)
+            }// if
 
             /////////////////////////////////////////////////////////
-            // Has the force simulation already been done?
+            // Draw the commit circles within each month
             if(FIRST_DRAW) {
+                // Has the force simulation already been done?
                 if(d.commit_circle_simulation) {
+                    // If the "animation" of appearing isn't done yet, draw the commits on the hover canvas
                     if(!d.finished_appearing) {
                         drawInnerCommitCircles(context_hover, d)
                     } else if(d.drawn_on_main) {
+                        // If it's done appearing and has an opacity of 1, draw it on the main canvas once
                         drawInnerCommitCircles(context, d)
                         d.drawn_on_main = true
-                    }
+                    }// else if
                 }// if
             } else {
                 drawInnerCommitCircles(context, d)
             }// else
         })//forEach
-
-        function drawInnerCommitCircles(context, d) {
-            context.globalAlpha = d.opacity < 1 ? d.opacity : 1
-            // Draw the commit circles within each month
-            context.strokeStyle = COLOR_BACKGROUND
-            context.lineWidth = 2
-            d.values.forEach(n => {
-                // Draw the commits
-                if(n.files_changed === 0) {
-                    context.fillStyle = COLOR_OWNER
-                    drawCircle(context, n.x + d.x, n.y + d.y, n.radius, true, false)
-                } else {
-                    // Draw two circles, with the overlapping part in another color
-                    drawCommitCircle(context, n)
-                }// else
-            })// forEach
-            context.globalAlpha = 1
-        }// function drawInnerCommitCircles
     }// function drawAllCommitMonths
 
+    /////////////////////////////////////////////////////////////////
     // Draw a circle to contain all the commit circles
     function drawMonthCircle(context, d, i) {
         // Draw the month circle
         context.fillStyle = COLOR_BACKGROUND
-        context.shadowBlur = 12
-        context.shadowColor = "#9fdbd9"
-        // context.shadowColor = "#d4d2ce"
-        drawCircle(context, d.x, d.y, d.r + 6, true, false)
-        context.shadowBlur = 0
-
-        // Also stroke the circle
         context.strokeStyle = COLOR_REPO
+
+        drawCircle(context, d.x, d.y, d.r + 7, true, false)
+        // Also stroke the somewhat larger circle
+        context.lineWidth = 3
+        context.globalAlpha = 0.5
+        context.stroke()
+        context.globalAlpha = 1
+
+        // // Create a shadow/glow around the month circle
+        // context.shadowBlur = 12
+        // context.shadowColor = "#9fdbd9"
+        // drawCircle(context, d.x, d.y, d.r + 6, true, false)
+        // context.shadowBlur = 0
+
+        // Stroke the main circle
         context.globalAlpha = 0.5
         context.lineWidth = 3
         drawCircle(context, d.x, d.y, d.r, true, true)
@@ -745,6 +739,28 @@ async function createORCAVisual(container) {
         context.globalAlpha = 1
     }// function drawMonthCircle
 
+    /////////////////////////////////////////////////////////////////
+    // Draw all the commit circles within a month
+    function drawInnerCommitCircles(context, d) {
+        context.globalAlpha = d.opacity < 1 ? d.opacity : 1
+        // Draw the commit circles within each month
+        context.strokeStyle = COLOR_BACKGROUND
+        context.lineWidth = 2
+        d.values.forEach(n => {
+            // Draw the commits
+            if(n.files_changed === 0) {
+                context.fillStyle = COLOR_OWNER
+                drawCircle(context, n.x + d.x, n.y + d.y, n.radius, true, false)
+            } else {
+                // Draw two circles, with the overlapping part in another color
+                drawCommitCircle(context, n)
+            }// else
+        })// forEach
+        context.globalAlpha = 1
+    }// function drawInnerCommitCircles
+
+    /////////////////////////////////////////////////////////////////
+    // Draw a single commit circle
     function drawCommitCircle(context, n) {
         // Full circles with the overlapping part in another color
         if(n.radius_insertions > n.radius_deletions) {
@@ -759,25 +775,6 @@ async function createORCAVisual(container) {
             drawCircle(context, n.x_base, n.y_base, n.radius_insertions, true, false)
         }// else
     }// function drawCommitCircle
-    
-    // Not used
-    function drawHalfCircles(d, n) {
-        // Half circles
-        context.globalCompositeOperation = "multiply"
-        context.fillStyle = COLOR_REPO
-        context.beginPath()
-        context.moveTo(d.x + n.x, d.y + n.y + n.radius_insertions)
-        context.arc(d.x + n.x, d.y + n.y, n.radius_insertions, PI/2, 3*PI/2)
-        context.fill()
-        
-        context.fillStyle = COLOR_CONTRIBUTOR
-        context.beginPath()
-        context.moveTo(d.x + n.x, d.y + n.y - n.radius_deletions)
-        context.arc(d.x + n.x, d.y + n.y, n.radius_deletions, -PI/2, PI/2)
-        context.closePath()
-        context.fill()
-        context.globalCompositeOperation = "source-over"
-    }// function drawHalfCircles
 
     ///////////////////////// Draw a circle /////////////////////////
     function drawCircle(context, x, y, r, begin = true, stroke = false) {
