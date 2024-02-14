@@ -1,9 +1,9 @@
 // FINAL: Update GitHub explanation
 
-// TODO: Annotations for releases?
+// TODO: Add hovers (div?)
+// TODO: Add version release to hover
 // TODO: Annotations / marking for noteworthy contributions
 // TODO: Need a bbox simulation to not get overlapping annotations?
-// TODO: Add hovers (div?)
 // TODO: Zoomable circles?
 
 /////////////////////////////////////////////////////////////////////
@@ -129,12 +129,13 @@ async function createORCAVisual(container) {
     /////////////////////////////////////////////////////////////////
 
     let parseDate = d3.timeParse("%Y-%m-%d %H:%M:%S %Z")
-    let formatDate = d3.timeFormat("%b %Y")
-    let formatDateNum = d3.timeFormat("%m-%Y")
+    let formatDateUTC = d3.utcFormat("%Y-%m")
     let formatGroupMonth = d3.timeFormat("%Y-%m")
-    let formatMonth = d3.timeFormat("%b")
-    let formatYear = d3.timeFormat("%Y")
-    // let formatDateExact = d3.timeFormat("%b %d, %Y")
+    let formatDate = d3.utcFormat("%b %Y")
+    let formatMonth = d3.utcFormat("%b")
+    let formatYear = d3.utcFormat("%Y")
+    // let formatDateExact = d3.utcFormat("%b %d, %Y")
+
     // let formatDigit = d3.format(",.2s")
     // let formatDigit = d3.format(",.2r")
 
@@ -267,8 +268,8 @@ async function createORCAVisual(container) {
             // Time
             d.author_time = parseDate(d.author_time)
             d.commit_time = parseDate(d.commit_time)
-            d.commit_month = d.commit_time.getMonth()
-            d.commit_year = d.commit_time.getFullYear()
+            d.commit_month = d.commit_time.getUTCMonth()
+            d.commit_year = d.commit_time.getUTCFullYear()
         })// forEach
         // console.log(commits[0])
 
@@ -287,8 +288,8 @@ async function createORCAVisual(container) {
             // d.radius = scale_radius(d.lines_changed)
             d.radius_draw = d.radius
 
-            // If this commit had a "decorations" that started with "tag: v", it's a release
-            d.is_release = d.decorations.startsWith("tag: v")
+            // If this commit had a "decorations" that contains a "v" and is followed by a digit, it's a release
+            d.is_release = /v\d/.test(d.decorations)
             // Make the radius bigger to add a stroke around it
             if(d.is_release) {
                 if(d.files_changed === 0) d.radius += 20
@@ -300,7 +301,8 @@ async function createORCAVisual(container) {
 
         /////////////////////////////////////////////////////////////
         // Group the commits by month
-        commits_by_month = d3.groups(commits, d => formatGroupMonth(d.commit_time))
+        commits_by_month = d3.groups(commits, d => formatDateUTC(d.commit_time))
+        // commits_by_month = d3.groups(commits, d => formatGroupMonth(d.commit_time))
 
         // Loop over all the months and save some statistics
         commits_by_month.forEach((d, i) => {
@@ -394,7 +396,7 @@ async function createORCAVisual(container) {
     function findEnclosingCircle(d) {
         const scale_padding = d3.scaleLinear()
             .domain([0, 399, 400])
-            .range([2, 5, 12])
+            .range([3, 2, 12])
             .clamp(true)
         
         // With the locations of the children known, calculate the smallest enclosing circle
