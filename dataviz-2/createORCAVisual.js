@@ -83,7 +83,12 @@ async function createORCAVisual(container) {
     canvas_hover.id = "canvas-hover"
     const context_hover = canvas_hover.getContext("2d")
 
+    const canvas_animation = document.createElement("canvas")
+    canvas_animation.id = "canvas-animation"
+    const context_animation = canvas_animation.getContext("2d")
+
     container.appendChild(canvas)
+    container.appendChild(canvas_animation)
     container.appendChild(canvas_hover)
     
     // Set some important stylings of each canvas
@@ -91,9 +96,11 @@ async function createORCAVisual(container) {
     container.style["background-color"] = COLOR_BACKGROUND
 
     styleCanvas(canvas)
+    styleCanvas(canvas_animation)
     styleCanvas(canvas_hover)
 
     styleBackgroundCanvas(canvas)
+    styleBackgroundCanvas(canvas_animation)
 
     canvas_hover.style.position = "relative"
     canvas_hover.style.z_index = "1"
@@ -144,6 +151,9 @@ async function createORCAVisual(container) {
         .range([2.5, 12, 16])
         .clamp(true)
 
+    const ease = d3.easeQuadInOut
+    // const opacityInterpolator = d3.interpolate(0, 1)
+
     /////////////////////////////////////////////////////////////////
     //////////////////////// Draw the Visual ////////////////////////
     /////////////////////////////////////////////////////////////////
@@ -157,30 +167,24 @@ async function createORCAVisual(container) {
         // Initial simple data preparation
         prepareData()
 
+        /////////////////////////////////////////////////////////////
         // Do an initial pass of finding the positions of the commits within each month's circle using circle packing
         // This will give an enclosing circle radius for each month
         // And makes it possible to figure out the timeline positions and total height
         commits_by_month.forEach(d => {
             determineCommitPositions(d, true)
         })//forEach
+
+        ////////////// Set Sizes and Draw a first Pass //////////////
         chart.resize()
         // Make sure that the initial draw is done
         await delay(0)
-        INITIAL_CIRCLE_DRAW = false
+
+        ////////////////////// Setup the Hover //////////////////////
+        setupHover()
 
         // Find the positions of the commits within each month's circle using a force simulation that creates more visually pleasing circular results
         initialDrawMonthCirclesPerMonth()
-
-        /////////////////////////////////////////////////////////////
-        ////////////////////// Setup the Hover //////////////////////
-        /////////////////////////////////////////////////////////////
-        // setupHover()
-
-        /////////////////////////////////////////////////////////////
-        ///////////// Set the Sizes and Draw the Visual /////////////
-        /////////////////////////////////////////////////////////////
-        // chart.resize()
-        // console.log("Done drawing")
 
     }// function chart
 
@@ -193,12 +197,7 @@ async function createORCAVisual(container) {
         // Draw the background, but only the very first time when the timeline positions have just been determined, or after the "animation" of all the months is done
         if(INITIAL_CIRCLE_DRAW === true || FIRST_DRAW === false) drawBackground(context)
 
-        context.save()
-        context.translate(MARGIN.width, MARGIN.height)
-
-        context_hover.clearRect(0, 0, WIDTH, HEIGHT)
-        context_hover.save()
-        context_hover.translate(MARGIN.width, MARGIN.height)
+        if(FIRST_DRAW) context_animation.clearRect(0, 0, WIDTH, HEIGHT)
 
         // Draw the timeline behind the circles
         if(INITIAL_CIRCLE_DRAW === true || FIRST_DRAW === false) drawTimeLine(context)
@@ -206,8 +205,6 @@ async function createORCAVisual(container) {
         // Draw all the month circles and the commits within
         drawAllCommitMonths(context)
 
-        context.restore()
-        context_hover.restore()
     }// function draw
 
     /////////////////////////////////////////////////////////////////
@@ -231,26 +228,36 @@ async function createORCAVisual(container) {
         H = HEIGHT - 2 * MARGIN.height
 
         sizeCanvas(canvas, context)
+        sizeCanvas(canvas_animation, context_animation)
         sizeCanvas(canvas_hover, context_hover)
-
-        // Size the canvas
-        function sizeCanvas(canvas, context) {
-            canvas.width = WIDTH
-            canvas.height = HEIGHT
-            canvas.style.width = `${width}px`
-            canvas.style.height = `${height}px`
-
-            // Some canvas settings
-            context.lineJoin = "round" 
-            context.lineCap = "round"
-        }// function sizeCanvas
 
         // Reset the delaunay for the mouse events
         if(!FIRST_DRAW) delaunay = d3.Delaunay.from(commits.map(d => [d.x_base, d.y_base]))
 
+        // In case a resize happens while the loading is still happening
+        if(FIRST_DRAW) INITIAL_CIRCLE_DRAW = true
+
         // Draw the visual
         draw()
+
+        INITIAL_CIRCLE_DRAW = false
     }//function resize
+
+    // Size the canvas
+    function sizeCanvas(canvas, context) {
+        canvas.width = WIDTH
+        canvas.height = HEIGHT
+        canvas.style.width = `${width}px`
+        canvas.style.height = `${height}px`
+
+        // Some canvas settings
+        context.lineJoin = "round" 
+        context.lineCap = "round"
+
+        // Apply the margins
+        context.save()
+        context.translate(MARGIN.width, MARGIN.height)
+    }// function sizeCanvas
 
     /////////////////////////////////////////////////////////////////
     /////////////////// Data Preparation Functions //////////////////
@@ -310,9 +317,10 @@ async function createORCAVisual(container) {
 
             // Needed for the initial drawing
             d.opacity = 0
+            d.opacity_step = 0
             d.drawn_on_main = false
             d.finished_appearing = false
-            d.commit_positions_determined = false
+            // d.commit_positions_determined = false
             d.commit_circle_simulation = false
             
             d.values = d[1]
@@ -362,7 +370,7 @@ async function createORCAVisual(container) {
         }
         if(DO_INITIAL) findEnclosingCircle(d)
         
-        d.commit_positions_determined = true
+        // d.commit_positions_determined = true
     }// function determineCommitPositions
 
     /////////////////////////////////////////////////////////////////
@@ -382,12 +390,13 @@ async function createORCAVisual(container) {
 
         if(d.n_commits < 400) {
             const simulation = d3.forceSimulation(d.values)
-                .alphaDecay(1 - Math.pow(0.001, 1 / 200))
+                .velocityDecay(0.2)
+                .alphaDecay(1 - Math.pow(0.001, 1 / 100))
                 .force("x", d3.forceX(0).strength(scale_force(d.n_commits)))
                 .force("y", d3.forceY(0).strength(scale_force(d.n_commits)))
                 .force("collide", d3.forceCollide(n => n.radius + PADDING).strength(1))
                 .stop()
-            for (let i = 0; i < 200; ++i) simulation.tick()
+            for (let i = 0; i < 100; ++i) simulation.tick()
         }// if
     }// function simulationCommitCircles
 
@@ -431,6 +440,9 @@ async function createORCAVisual(container) {
             // Draw the visual
             draw()
 
+            // Update the delaunay for the mouse events (during the loading animation)
+            delaunay = d3.Delaunay.from(commits_by_month.filter(d => d.commit_circle_simulation).map(d => d.values).flat().map(d => [d.x_base, d.y_base]))
+
             // When the last month has run
             if(i === commits_by_month.length-1) {
                 // Run the increaseOpacity function a few more times until all the circles are fully visible, by checking that all have an opacity of 1
@@ -447,7 +459,11 @@ async function createORCAVisual(container) {
         let index = min(commits_by_month.length-1, i)
         for(let j = 0; j <= index; j++) {
             let d = commits_by_month[j]
-            if(d.opacity < 1) d.opacity = min(1, d.opacity + 0.1)
+            if(d.opacity < 1) {
+                d.opacity_step += 0.05
+                let t = ease(Math.min(1, d.opacity_step))
+                d.opacity = min(1, d.opacity + t)
+            }
             else d.finished_appearing = true
         }// for j
     }// function increaseOpacity
@@ -493,7 +509,7 @@ async function createORCAVisual(container) {
         /////////////////////////////////////////////////////////////
         // Do a first loop to determine which row and column each month circle is in
         commits_by_month
-            .filter(d => d.commit_positions_determined === true)
+            // .filter(d => d.commit_positions_determined === true)
             .forEach((d,i) => {
                 // If the new circle doesn't fit in the current row, go to the next row (except if this is the first circle on the row)
                 if(row_index !== 0 && ((sign === 1 && along_X + 2 * d.r > W) || (sign === -1 && along_X - 2 * d.r < 0))) nextColumn()
@@ -522,8 +538,9 @@ async function createORCAVisual(container) {
         }// function nextColumn
 
         // Just to be sure, but what is the final row's id
-        let n_circles_determined = commits_by_month.filter(d => d.commit_positions_determined === true).length
-        if(n_circles_determined > 0) row = commits_by_month[n_circles_determined - 1].row
+        // let n_circles_determined = commits_by_month.filter(d => d.commit_positions_determined === true).length
+        // if(n_circles_determined > 0) row = commits_by_month[n_circles_determined - 1].row
+        commits_by_month[commits_by_month.length - 1].row
 
         ///////////////////////////////////////////////////////////
         // Center the circles within each row
@@ -690,9 +707,10 @@ async function createORCAVisual(container) {
                 if(d.commit_circle_simulation) {
                     // If the "animation" of appearing isn't done yet, draw the commits on the hover canvas
                     if(!d.finished_appearing) {
-                        drawInnerCommitCircles(context_hover, d)
-                    } else if(d.finished_appearing && !d.drawn_on_main) {
+                        drawInnerCommitCircles(context_animation, d)
+                    } else if((d.finished_appearing && !d.drawn_on_main) || (INITIAL_CIRCLE_DRAW && d.drawn_on_main)) {
                         // If it's done appearing and has an opacity of 1, draw it on the main canvas once
+                        // Or if a resize happened during the loading animation, draw all the finished circles again
                         drawInnerCommitCircles(context, d)
                         d.drawn_on_main = true
                     }// else if
@@ -808,9 +826,6 @@ async function createORCAVisual(container) {
                 HOVER_ACTIVE = true
                 HOVERED_NODE = d
 
-                // // Fade out the main canvas, using CSS
-                // canvas.style.opacity = '0.3'
-
                 drawHoverState(context_hover, d)
 
             } else {
@@ -818,8 +833,6 @@ async function createORCAVisual(container) {
                 HOVERED_NODE = null
 
                 context_hover.clearRect(0, 0, WIDTH, HEIGHT)
-                // // Fade the main canvas back in
-                // canvas.style.opacity = '1'
             }// else
 
         })// on mousemove
@@ -829,8 +842,8 @@ async function createORCAVisual(container) {
     // Draw the hovered node and its links and neighbors and a tooltip
     function drawHoverState(context, d) {
         context.clearRect(0, 0, WIDTH, HEIGHT)
-        context.save()
-        context.translate(MARGIN.width, MARGIN.height)
+        // context.save()
+        // context.translate(MARGIN.width, MARGIN.height)
             context.fillStyle = COLOR_BACKGROUND
             context.globalAlpha = 0.7
             drawCircle(context, d.month_data.x, d.month_data.y, d.month_data.r, true, false)
@@ -844,7 +857,7 @@ async function createORCAVisual(container) {
 
             // Show a ring around the hovered node
             drawHoverRing(context, d)
-        context.restore()
+        // context.restore()
     }// function drawHoverState
 
     //////////////////////// Draw Hover Ring ////////////////////////
@@ -890,7 +903,7 @@ async function createORCAVisual(container) {
         let FOUND = dist < d.r + 40 //(CLICK_ACTIVE ? 10 : 50)
 
         if(FOUND) {
-            console.log(d)
+            // console.log(d)
             // console.log(d.files_changed, d.line_insertions, d.line_deletions, d.lines_changed, d.commit_year, d.commit_month)
         }// if
 
