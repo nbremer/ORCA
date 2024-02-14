@@ -45,7 +45,6 @@ async function createORCAVisual(container) {
     // Drawing
     let INITIAL_CIRCLE_DRAW = true
     let FIRST_DRAW = true
-    let COUNTER_MONTH = 0
 
     // Visual variables
     const PADDING = 1.5
@@ -160,6 +159,7 @@ async function createORCAVisual(container) {
             determineCommitPositions(d, true)
         })//forEach
         chart.resize()
+        await delay(0) 
         INITIAL_CIRCLE_DRAW = false
 
         // Find the positions of the commits within each month's circle
@@ -185,15 +185,22 @@ async function createORCAVisual(container) {
 
     // This draws the entire visual, with all of the month circles
     function draw() {
-        drawBackground(context)
+        // Draw the background, but only the very first time when the timeline positions have just been determined, or after the "animation" of all the months is done
+        if(INITIAL_CIRCLE_DRAW === true || FIRST_DRAW === false) drawBackground(context)
 
         context.save()
         context.translate(MARGIN.width, MARGIN.height)
+        context_hover.save()
+        context_hover.translate(MARGIN.width, MARGIN.height)
 
-        drawTimeLine(context)
+        // Draw the timeline behind the circles
+        if(INITIAL_CIRCLE_DRAW === true || FIRST_DRAW === false) drawTimeLine(context)
+
+        // Draw all the month circles and the commits within
         drawAllCommitMonths(context)
 
         context.restore()
+        context_hover.restore()
     }// function draw
 
     /////////////////////////////////////////////////////////////////
@@ -211,6 +218,7 @@ async function createORCAVisual(container) {
         // Find the positions of each month's circle now that we have the width
         // This will also set the height of the canvas
         determineMonthPositionsAlongTimeline()
+        setCommitBasePositions()
 
         HEIGHT = round(height * PIXEL_RATIO)
         H = HEIGHT - 2 * MARGIN.height
@@ -284,6 +292,11 @@ async function createORCAVisual(container) {
         // Loop over all the months and save some statistics
         commits_by_month.forEach((d, i) => {
             d.index = i
+
+            // Needed for the initial drawing
+            d.opacity = 0
+            d.drawn_on_main = false
+            d.finished_appearing = false
             d.commit_positions_determined = false
             d.commit_circle_simulation = false
             
@@ -324,47 +337,81 @@ async function createORCAVisual(container) {
     //////////////////////// Data Placements ////////////////////////
     /////////////////////////////////////////////////////////////////
 
-    // Update the visual in groups of 6 months
-    function initialDrawMonthCirclesPerGroup() {
-        const groups = 6
-        for(let i = 0; i < commits_by_month.length; i += groups) {
-            setTimeout(() => {
-                // Run 5 elements of the commits_by_month array
-                for(let j = i; j < i + groups; j++) {
-                    if(j < commits_by_month.length) determineCommitPositions(commits_by_month[j])
-                }// for j
+    // // Update the visual in groups of 6 months
+    // function initialDrawMonthCirclesPerGroup() {
+    //     const groups = 6
+    //     for(let i = 0; i < commits_by_month.length; i += groups) {
+    //         setTimeout(() => {
+    //             // Run 5 elements of the commits_by_month array
+    //             for(let j = i; j < i + groups; j++) {
+    //                 if(j < commits_by_month.length) determineCommitPositions(commits_by_month[j])
+    //             }// for j
 
-                // When the last month has run
-                if(COUNTER_MONTH === commits_by_month.length-1) {
-                    FIRST_DRAW = false
-                    setupHover()
-                    console.log("Done drawing")
-                }// if
+    //             // When the last month has run
+    //             if(i === commits_by_month.length-1) {
+    //                 FIRST_DRAW = false
+    //                 setupHover()
+    //                 console.log("Done drawing")
+    //             }// if
 
-                chart.resize()
-            }, 0)
-        }// for i
-    }// function initialDrawMonthCirclesPerGroup
+    //             chart.resize()
+    //         }, 0)
+    //     }// for i
+    // }// function initialDrawMonthCirclesPerGroup
 
+    // Update the visual for each month
     async function initialDrawMonthCirclesPerMonth() {
-        // Update the visual for each month
         for(let i = 0; i < commits_by_month.length; i++) {
             let d = commits_by_month[i]
+            // Determine the positions of the commit circles within each month's circle, now also using the force simulation
             determineCommitPositions(d)
+            // Save the absolute pixel positions of the commits on the page
+            commitBasePosition(d)
+
+            // Slowly increase the opacity of the month circles
+            increaseOpacity(i)
+
+            // Draw the visual
+            draw()
 
             // When the last month has run
-            if(COUNTER_MONTH === commits_by_month.length-1) {
+            if(i === commits_by_month.length-1) {
+                // Run the increaseOpacity function a few more times until all the circles are fully visible, by checking that all have an opacity of 1
+                let all_finished = commits_by_month.every(d => d.finished_appearing)
+                let j = i+1
+                while(!all_finished) {
+                    increaseOpacity(j)
+                    all_finished = commits_by_month.every(d => d.finished_appearing)
+                    j++
+                    draw()
+                    await delay(100)
+                }// while
+
                 FIRST_DRAW = false
+                // Do a final resize
+                chart.resize()
+
                 // Setup the hover
                 setupHover()
                 console.log("Done drawing")
             }// if
 
-            chart.resize()
-            await delay(0) // Adjust delay as needed
+            await delay(10)
         }// for i
+
     }// function initialDrawMonthCirclesPerMonth
 
+    // Slowly increase the opacity of the month circles with each new month that has been drawn
+    function increaseOpacity(i) {
+        let index = min(commits_by_month.length-1, i)
+        for(let j = 0; j <= index; j++) {
+            let d = commits_by_month[j]
+            if(d.opacity < 1) d.opacity = min(1, d.opacity + 0.1)
+            else d.finished_appearing = true
+        }// for j
+    }// function increaseOpacity
+
+    // Add a delay so each month's circle is drawn separately
     function delay(time) {
         return new Promise(resolve => setTimeout(resolve, time))
     }// function delay
@@ -379,7 +426,6 @@ async function createORCAVisual(container) {
         }
         if(DO_INITIAL) findEnclosingCircle(d)
         
-        if(!DO_INITIAL) COUNTER_MONTH++
         d.commit_positions_determined = true
     }// function determineCommitPositions
 
@@ -527,19 +573,21 @@ async function createORCAVisual(container) {
         let height_required = height_offset + largest_radius_current + 2*MARGIN.height
         height = height_required / PIXEL_RATIO
 
-        setCommitBasePositions()
-
     }// function determineMonthPositionsAlongTimeline
 
     // Set the pixel positions of the commits on the page
     function setCommitBasePositions() {
         commits_by_month.forEach((d,i) => {
-            d.values.forEach(n => {
-                n.x_base = d.x + n.x
-                n.y_base = d.y + n.y
-            })// forEach
+            commitBasePosition(d)
         })// forEach
     }// function setCommitBasePositions
+
+    function commitBasePosition(d) {
+        d.values.forEach(n => {
+            n.x_base = d.x + n.x
+            n.y_base = d.y + n.y
+        })// forEach
+    }// function commitBasePosition
 
     /////////////////////////////////////////////////////////////////
     /////////////////// General Drawing Functions ///////////////////
@@ -637,32 +685,45 @@ async function createORCAVisual(container) {
         commits_by_month.forEach((d, i) => {
             /////////////////////////////////////////////////////////
             // Draw the month circle
-            drawMonthCircle(context, d, i)
+            if(INITIAL_CIRCLE_DRAW === true || FIRST_DRAW === false) drawMonthCircle(context, d, i)
             
             /////////////////////////////////////////////////////////
             // Add the date label
-            monthDateLabel(context, d, i)
+            if(INITIAL_CIRCLE_DRAW === true || FIRST_DRAW === false) monthDateLabel(context, d, i)
 
             /////////////////////////////////////////////////////////
             // Has the force simulation already been done?
-            if(d.commit_circle_simulation) {
-                // Draw the commit circles within each month
-                context.strokeStyle = COLOR_BACKGROUND
-                context.lineWidth = 2
-                d.values.forEach(n => {
-                    // Draw the commits
-                    if(n.files_changed === 0) {
-                        context.fillStyle = COLOR_OWNER
-                        drawCircle(context, n.x + d.x, n.y + d.y, n.radius, true, false)
-                    } else {
-                        // Draw two circles, with the overlapping part in another color
-                        drawCommitCircle(context, n)
-                    }// else
-
-                })// forEach
-            }// if
-
+            if(FIRST_DRAW) {
+                if(d.commit_circle_simulation) {
+                    if(!d.finished_appearing) {
+                        drawInnerCommitCircles(context_hover, d)
+                    } else if(d.drawn_on_main) {
+                        drawInnerCommitCircles(context, d)
+                        d.drawn_on_main = true
+                    }
+                }// if
+            } else {
+                drawInnerCommitCircles(context, d)
+            }// else
         })//forEach
+
+        function drawInnerCommitCircles(context, d) {
+            context.globalAlpha = d.opacity < 1 ? d.opacity : 1
+            // Draw the commit circles within each month
+            context.strokeStyle = COLOR_BACKGROUND
+            context.lineWidth = 2
+            d.values.forEach(n => {
+                // Draw the commits
+                if(n.files_changed === 0) {
+                    context.fillStyle = COLOR_OWNER
+                    drawCircle(context, n.x + d.x, n.y + d.y, n.radius, true, false)
+                } else {
+                    // Draw two circles, with the overlapping part in another color
+                    drawCommitCircle(context, n)
+                }// else
+            })// forEach
+            context.globalAlpha = 1
+        }// function drawInnerCommitCircles
     }// function drawAllCommitMonths
 
     // Draw a circle to contain all the commit circles
