@@ -1,8 +1,9 @@
-// FINAL: Update GitHub explanation 
-// TODO: Add hovers (div?)
+// FINAL: Update GitHub explanation
+
 // TODO: Annotations for releases?
 // TODO: Annotations / marking for noteworthy contributions
 // TODO: Need a bbox simulation to not get overlapping annotations?
+// TODO: Add hovers (div?)
 // TODO: Zoomable circles?
 
 /////////////////////////////////////////////////////////////////////
@@ -256,7 +257,7 @@ async function createORCAVisual(container) {
 
     ///////////// Initial easy clean-up and calculations ////////////
     function prepareData() {
-
+        // Convert the strings to numbers and dates
         commits.forEach(d => {
             d.files_changed = +d.files_changed
             d.line_insertions = +d.line_insertions
@@ -277,10 +278,6 @@ async function createORCAVisual(container) {
         // Set the radius scale
         scale_radius.domain([0, QUANTILE90, QUANTILE99])
         // console.log(scale_radius.domain())
-        
-        // // Find quantile numbers of the number of files changed
-        // QUANTILE90 = d3.quantile(commits.filter(d => d.files_changed > 0), 0.90, d => d.files_changed)
-        // scale_color.domain([0, QUANTILE90])
 
         // Calculate the Visual variables
         commits.forEach(d => {
@@ -288,6 +285,17 @@ async function createORCAVisual(container) {
             d.radius_deletions = scale_radius(d.line_deletions)
             d.radius = max(d.radius_insertions, d.radius_deletions)
             // d.radius = scale_radius(d.lines_changed)
+            d.radius_draw = d.radius
+
+            // If this commit had a "decorations" that started with "tag: v", it's a release
+            d.is_release = d.decorations.startsWith("tag: v")
+            // Make the radius bigger to add a stroke around it
+            if(d.is_release) {
+                if(d.files_changed === 0) d.radius += 20
+                else d.radius += 16
+                d.radius_draw = scale_radius(0) + (d.is_release ? 3 : 0)
+            }// if
+
         })// forEach
 
         /////////////////////////////////////////////////////////////
@@ -339,131 +347,8 @@ async function createORCAVisual(container) {
     }// function prepareData
 
     /////////////////////////////////////////////////////////////////
-    //////////////////////// Data Placements ////////////////////////
+    /////////////////// General Circle Placements ///////////////////
     /////////////////////////////////////////////////////////////////
-
-    // // Update the visual in groups of 6 months
-    // function initialDrawMonthCirclesPerGroup() {
-    //     const groups = 6
-    //     for(let i = 0; i < commits_by_month.length; i += groups) {
-    //         setTimeout(() => {
-    //             // Run 5 elements of the commits_by_month array
-    //             for(let j = i; j < i + groups; j++) {
-    //                 if(j < commits_by_month.length) determineCommitPositions(commits_by_month[j])
-    //             }// for j
-
-    //             // When the last month has run
-    //             if(i === commits_by_month.length-1) {
-    //                 FIRST_DRAW = false
-    //                 setupHover()
-    //                 console.log("Done drawing")
-    //             }// if
-
-    //             chart.resize()
-    //         }, 0)
-    //     }// for i
-    // }// function initialDrawMonthCirclesPerGroup
-
-
-    // Update the visual for each month
-    // async function initialDrawMonthCirclesPerMonth() {
-    //     for(let i = 0; i < commits_by_month.length; i++) {
-    //         let d = commits_by_month[i]
-    //         // Determine the positions of the commit circles within each month's circle, now also using the force simulation
-    //         determineCommitPositions(d)
-    //         // Save the absolute pixel positions of the commits on the page
-    //         commitBasePosition(d)
-
-    //         // Slowly increase the opacity of the month circles
-    //         increaseOpacity(i)
-
-    //         // Draw the visual
-    //         draw()
-
-    //         // When the last month has run
-    //         if(i === commits_by_month.length-1) {
-    //             // Run the increaseOpacity function a few more times until all the circles are fully visible, by checking that all have an opacity of 1
-    //             let j = i+1
-    //             let all_finished = commits_by_month.every(d => d.finished_appearing)
-    //             while(!all_finished) {
-    //                 increaseOpacity(j)
-    //                 all_finished = commits_by_month.every(d => d.finished_appearing)
-    //                 j++
-    //                 draw()
-    //                 await delay(10)
-    //             }// while
-
-    //             FIRST_DRAW = false
-    //             // Do a final resize
-    //             chart.resize()
-
-    //             // Setup the hover
-    //             setupHover()
-    //             console.log("Done drawing")
-    //         }// if
-
-    //         await delay(10)
-    //     }// for i
-
-    // }// function initialDrawMonthCirclesPerMonth
-
-    function initialDrawMonthCirclesPerMonth(i = 0) {
-        if (i < commits_by_month.length) {
-            let d = commits_by_month[i]
-            // Determine the positions of the commit circles within each month's circle, now also using the force simulation
-            determineCommitPositions(d)
-            // Save the absolute pixel positions of the commits on the page
-            commitBasePosition(d)
-
-            // Slowly increase the opacity of the month circles
-            increaseOpacity(i)
-
-            // Draw the visual
-            draw()
-
-            // When the last month has run
-            if(i === commits_by_month.length-1) {
-                // Run the increaseOpacity function a few more times until all the circles are fully visible, by checking that all have an opacity of 1
-                increaseFinalOpacities(i+1)
-            }// if
-
-            requestAnimationFrame(() => initialDrawMonthCirclesPerMonth(i + 1))
-        }// if
-
-    }// function initialDrawMonthCirclesPerMonth
-
-    // Slowly increase the opacity of the month circles with each new month that has been drawn
-    function increaseOpacity(i) {
-        let index = min(commits_by_month.length-1, i)
-        for(let j = 0; j <= index; j++) {
-            let d = commits_by_month[j]
-            if(d.opacity < 1) d.opacity = min(1, d.opacity + 0.1)
-            else d.finished_appearing = true
-        }// for j
-    }// function increaseOpacity
-
-    // A requestAnimationFrame function to increase the opacity a few more times for all the circles to get to an opacity of 1
-    function increaseFinalOpacities(j) {
-        increaseOpacity(j)
-        let all_finished = commits_by_month.every(d => d.finished_appearing)
-        draw()
-
-        if(!all_finished) requestAnimationFrame(() => increaseFinalOpacities(j + 1)) 
-        else {
-            FIRST_DRAW = false
-            // Do a final resize
-            chart.resize()
-
-            // Setup the hover
-            setupHover()
-            console.log("Done drawing")
-        }// else
-    }// function increaseFinalOpacities
-
-    // Add a delay so each month's circle is drawn separately
-    function delay(time) {
-        return new Promise(resolve => setTimeout(resolve, time))
-    }// function delay
 
     /////////////////////////////////////////////////////////////////
     // Run all of the functions that together determine the positions of the commits within each month's circle
@@ -523,6 +408,66 @@ async function createORCAVisual(container) {
         //Save the parent radius
         d.r = parent_circle.r + 12 + scale_padding(parent_circle.r)
     }// function findEnclosingCircle
+
+    /////////////////////////////////////////////////////////////////
+    /////////////////// Fading in after simulation //////////////////
+    /////////////////////////////////////////////////////////////////
+
+    // Do a more refined force simulation for the commit circles within each month
+    // Then draw the commit circles per month, slowly increasing the opacity
+    function initialDrawMonthCirclesPerMonth(i = 0) {
+        if (i < commits_by_month.length) {
+            let d = commits_by_month[i]
+            // Determine the positions of the commit circles within each month's circle, now also using the force simulation
+            determineCommitPositions(d)
+            // Save the absolute pixel positions of the commits on the page
+            commitBasePosition(d)
+
+            // Slowly increase the opacity of the month circles
+            increaseOpacity(i)
+
+            // Draw the visual
+            draw()
+
+            // When the last month has run
+            if(i === commits_by_month.length-1) {
+                // Run the increaseOpacity function a few more times until all the circles are fully visible, by checking that all have an opacity of 1
+                increaseFinalOpacities(i+1)
+            }// if
+
+            requestAnimationFrame(() => initialDrawMonthCirclesPerMonth(i + 1))
+        }// if
+
+    }// function initialDrawMonthCirclesPerMonth
+
+    // Slowly increase the opacity of the month circles with each new month that has been drawn
+    function increaseOpacity(i) {
+        let index = min(commits_by_month.length-1, i)
+        for(let j = 0; j <= index; j++) {
+            let d = commits_by_month[j]
+            if(d.opacity < 1) d.opacity = min(1, d.opacity + 0.1)
+            else d.finished_appearing = true
+        }// for j
+    }// function increaseOpacity
+
+    // A requestAnimationFrame function to increase the opacity a few more times for all the circles to get to an opacity of 1
+    function increaseFinalOpacities(j) {
+        increaseOpacity(j)
+        let all_finished = commits_by_month.every(d => d.finished_appearing)
+        draw()
+
+        if(!all_finished) requestAnimationFrame(() => increaseFinalOpacities(j + 1)) 
+        else {
+            // Finish the initial draw
+            FIRST_DRAW = false
+            // Do a final resize
+            chart.resize()
+
+            // Setup the hover
+            setupHover()
+            console.log("Done drawing")
+        }// else
+    }// function increaseFinalOpacities
 
     /////////////////////////////////////////////////////////////////
     ///////////// Determine the positions of each month /////////////
@@ -652,6 +597,7 @@ async function createORCAVisual(container) {
     /////////////////////////////////////////////////////////////////
     //////////////////////////// Timeline ///////////////////////////
     /////////////////////////////////////////////////////////////////
+    // Draw the timeline of a straight line per row with arcs at the end connecting to the row below it
     function drawTimeLine(context) {
         // Draw a line behind the circles to show how time connects them all
         createTimeLinePath()
@@ -714,12 +660,7 @@ async function createORCAVisual(container) {
                         context.arc(0-O, y + h_diff - R, R, PI, PI/2, true)
                     }// else
                 }// if
-            }
-            // if(i % 2 === 0) { // Arc on the right side
-            //     context.arc(W+20, y + R, R, -PI/2, PI/2)
-            // } else { // Arc on the left side
-            //     context.arc(0-20, y + R, R, 3*PI/2, PI/2, true)
-            // }
+            }// else
         }//for i
 
     }// function createTimeLinePath
@@ -796,21 +737,37 @@ async function createORCAVisual(container) {
         context.strokeStyle = COLOR_BACKGROUND
         context.lineWidth = 2
         d.values.forEach(n => {
-            // Draw the commits
-            if(n.files_changed === 0) {
-                context.fillStyle = COLOR_OWNER
-                drawCircle(context, n.x + d.x, n.y + d.y, n.radius, true, false)
-            } else {
-                // Draw two circles, with the overlapping part in another color
-                drawCommitCircle(context, n)
-            }// else
+            drawCommitCircle(context, n)
         })// forEach
         context.globalAlpha = 1
     }// function drawInnerCommitCircles
 
+    // Draw the commits
+    function drawCommitCircle(context, d) {
+            if(d.files_changed === 0) {
+                context.fillStyle = COLOR_OWNER
+                drawCircle(context, d.x_base, d.y_base, d.radius_draw, true, false)
+            } else {
+                // Draw two circles, with the overlapping part in another color
+                drawInsertDeleteCommitCircle(context, d)
+            }// else
+
+            if(d.is_release) {
+                // context.strokeStyle = COLOR_REPO_MAIN
+                if(d.files_changed === 0) context.strokeStyle = COLOR_OWNER
+                else if(d.line_insertions > d.line_deletions) context.strokeStyle = COLOR_INSERTIONS
+                else if(d.line_insertions < d.line_deletions) context.strokeStyle = COLOR_DELETIONS
+                else context.strokeStyle = COLOR_OVERLAP
+
+                let lw = 4
+                context.lineWidth = lw
+                drawCircle(context, d.x_base, d.y_base, d.radius - lw/2 - 4, true, true)
+            }// if
+    }// function drawCommitCircle
+
     /////////////////////////////////////////////////////////////////
     // Draw a single commit circle
-    function drawCommitCircle(context, n) {
+    function drawInsertDeleteCommitCircle(context, n) {
         // Full circles with the overlapping part in another color
         if(n.radius_insertions > n.radius_deletions) {
             context.fillStyle = COLOR_INSERTIONS
@@ -823,7 +780,7 @@ async function createORCAVisual(container) {
             context.fillStyle = COLOR_OVERLAP
             drawCircle(context, n.x_base, n.y_base, n.radius_insertions, true, false)
         }// else
-    }// function drawCommitCircle
+    }// function drawInsertDeleteCommitCircle
 
     ///////////////////////// Draw a circle /////////////////////////
     function drawCircle(context, x, y, r, begin = true, stroke = false) {
@@ -880,13 +837,8 @@ async function createORCAVisual(container) {
             // Show the number of commits
             monthDateLabel(context_hover, d.month_data, d.month_data.index, true)
 
-            // drawCommitCircle(context, d)
-            if(d.files_changed === 0) {
-                context.fillStyle = COLOR_OWNER
-                drawCircle(context, d.x_base, d.y_base, d.radius, true, false)
-            } else {
-                drawCommitCircle(context, d)
-            }// else
+            // Draw the hovered commit circle
+            drawCommitCircle(context, d)
 
             // Show a ring around the hovered node
             drawHoverRing(context, d)
@@ -929,12 +881,16 @@ async function createORCAVisual(container) {
         //Get the closest hovered node
         let point = delaunay.find(mx, my)
         let d = commits[point]
-        console.log(d.files_changed, d.line_insertions, d.line_deletions, d.lines_changed, d.commit_year, d.commit_month)
 
         // Get the distance from the mouse to the node
         let dist = sqrt((d.x_base - mx)**2 + (d.y_base - my)**2)
         // If the distance is too big, don't show anything
         let FOUND = dist < d.r + 40 //(CLICK_ACTIVE ? 10 : 50)
+
+        if(FOUND) {
+            console.log(d)
+            // console.log(d.files_changed, d.line_insertions, d.line_deletions, d.lines_changed, d.commit_year, d.commit_month)
+        }// if
 
         return [d, FOUND]
     }// function findNode
@@ -1053,6 +1009,11 @@ async function createORCAVisual(container) {
     /////////////////////////////////////////////////////////////////
     //////////////////////// Helper Functions ///////////////////////
     /////////////////////////////////////////////////////////////////
+
+    // Add a delay so "stuff" is drawn to the canvas
+    function delay(time) {
+        return new Promise(resolve => setTimeout(resolve, time))
+    }// function delay
 
     function mod (x, n) { return ((x % n) + n) % n }
 
