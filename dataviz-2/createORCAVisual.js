@@ -1,5 +1,4 @@
 // FINAL: Update GitHub explanation 
-// TODO: Make the drawing to circle by circle
 // TODO: Add hovers (div?)
 // TODO: Annotations for releases?
 // TODO: Annotations / marking for noteworthy contributions
@@ -46,9 +45,6 @@ const createORCAVisual = (container) => {
     // Drawing
     let FIRST_DRAW = true
     let COUNTER_MONTH = 0
-
-    // Web worker
-    let worker = new Worker('lib/web-worker-scripts/worker-force.js')
 
     // Visual variables
     const PADDING = 1.5
@@ -159,34 +155,9 @@ const createORCAVisual = (container) => {
         // Initial simple data preparation
         prepareData()
 
-
-        // animate()
-
         // Find the positions of the commits within each month's circle
-        commits_by_month.forEach(d => {
-            setTimeout(() => {
-                determineCommitPositions(d)
-                if(COUNTER_MONTH === commits_by_month.length-1) {
-                    FIRST_DRAW = false
-                    setupHover()
-                    console.log("Done drawing")
-                }
-                chart.resize()
-            }, 0)
-        })// forEach
-
-        // function animate() {
-        //     if(COUNTER_MONTH < commits_by_month.length) {
-        //         // console.log(COUNTER_MONTH)
-        //         chart.resize()
-        //         requestAnimationFrame(animate)
-        //     } else {
-        //         console.log("Done drawing all months")
-        //         FIRST_DRAW = false
-        //         console.log(commits_by_month)
-        //     }// else
-        // }// animate
-
+        // initialDrawMonthCirclesPerGroup()
+        initialDrawMonthCirclesPerMonth()
 
         /////////////////////////////////////////////////////////////
         ////////////////////// Setup the Hover //////////////////////
@@ -232,7 +203,7 @@ const createORCAVisual = (container) => {
 
         // Find the positions of each month's circle now that we have the width
         // This will also set the height of the canvas
-        determineMonthPositions()
+        determineMonthPositionsAlongTimeline()
 
         HEIGHT = round(height * PIXEL_RATIO)
         H = HEIGHT - 2 * MARGIN.height
@@ -345,40 +316,52 @@ const createORCAVisual = (container) => {
     //////////////////////// Data Placements ////////////////////////
     /////////////////////////////////////////////////////////////////
 
+    // Update the visual in groups of 6 months
+    function initialDrawMonthCirclesPerGroup() {
+        const groups = 6
+        for(let i = 0; i < commits_by_month.length; i += groups) {
+            setTimeout(() => {
+                // Run 5 elements of the commits_by_month array
+                for(let j = i; j < i + groups; j++) {
+                    if(j < commits_by_month.length) determineCommitPositions(commits_by_month[j])
+                }// for j
+
+                // When the last month has run
+                if(COUNTER_MONTH === commits_by_month.length-1) {
+                    FIRST_DRAW = false
+                    setupHover()
+                    console.log("Done drawing")
+                }// if
+
+                chart.resize()
+            }, 0)
+        }// for i
+    }// function initialDrawMonthCirclesPerGroup
+
+    function initialDrawMonthCirclesPerMonth() {
+        // Update the visual for each month
+        commits_by_month.forEach(d => {
+            // Use a timeout so that the browser can update the page and draw the months that have been done
+            setTimeout(() => {
+                determineCommitPositions(d)
+
+                // When the last month has run
+                if(COUNTER_MONTH === commits_by_month.length-1) {
+                    FIRST_DRAW = false
+                    // Setup the hover
+                    setupHover()
+                    console.log("Done drawing")
+                }// if
+
+                chart.resize()
+            }, 0)
+        })// forEach
+    }// function initialDrawMonthCirclesPerMonth
+
+    /////////////////////////////////////////////////////////////////
+    // Run all of the functions that together determine the positions of the commits within each month's circle
     function determineCommitPositions(d) {
         initialCommitCirclePack(d)
-
-        // if(d.n_commits < 400) {
-        //     // Create a smaller version of the data to send to the worker, which only contains an array of all the x and y positions of d.values
-        //     let commits_worker = d.values.map(n => ({ x: n.x, y: n.y }))
-
-        //     worker.postMessage({
-        //         id: d.index,
-        //         circles: commits_worker,
-        //         padding: PADDING
-        //     })//postMessage
-
-        //     //Once done, save the new positions and draw the inner nodes
-        //     worker.onmessage = function (event) {
-        //         let circles = event.data.circles
-        //         let index = event.data.id
-        //         console.log(index, circles)
-        //         //Save new positions
-        //         commits_by_month[index].values.forEach((d, i) => {
-        //             d.x = circles[i].x
-        //             d.y = circles[i].y
-        //         })
-
-        //         COUNTER_MONTH++
-        //         findEnclosingCircle(d)
-        //         d.commit_positions_determined = true
-        //     }//worker onmessage
-        // } else {
-        //     COUNTER_MONTH++
-        //     findEnclosingCircle(d)
-        //     d.commit_positions_determined = true
-        // }// else
-
         simulationCommitCircles(d)
         findEnclosingCircle(d)
         
@@ -396,40 +379,20 @@ const createORCAVisual = (container) => {
     /////////////////////////////////////////////////////////////////
     //Do a static simulation to create slightly better looking groups
     function simulationCommitCircles(d) {
+        const scale_force = d3.scaleLinear()
+            .domain([0, 400])
+            .range([0.06, 0.01])
+            .clamp(true)
 
         if(d.n_commits < 400) {
             const simulation = d3.forceSimulation(d.values)
-                // .force("center", d3.forceCenter())
-                // .velocityDecay(0.06)
                 .alphaDecay(1 - Math.pow(0.001, 1 / 200))
-                .force("x", d3.forceX(0).strength(0.02))
-                .force("y", d3.forceY(0).strength(0.02))
+                .force("x", d3.forceX(0).strength(scale_force(d.n_commits)))
+                .force("y", d3.forceY(0).strength(scale_force(d.n_commits)))
                 .force("collide", d3.forceCollide(n => n.radius + PADDING).strength(1))
                 .stop()
             for (let i = 0; i < 200; ++i) simulation.tick()
         }// if
-
-        // let simulation = d3.forceSimulation()
-        //     // .velocityDecay(0.06)
-        //     // .alphaDecay(1 - Math.pow(0.001, 1 / 400))
-        //     // .force("center", d3.forceCenter())
-        //     .force("x", d3.forceX(0).strength(0.1))
-        //     .force("y", d3.forceY(0).strength(0.1))
-        //     .force("collide", d3.forceCollide(n => n.radius + PADDING).strength(0.3))
-        //     .stop()
-
-        // //Perform the simulation
-        // simulation
-        //     .nodes(d.values)
-        //     .stop()
-
-        // //Manually "tick" through the network
-        // for (let i = 0; i < 300; ++i) {
-        //     simulation.tick()
-        //     //Ramp up collision strength to provide smooth transition
-        //     simulation.force("collide").strength(Math.min(1, 0.3 + Math.pow(i / 120, 2) * 0.7))
-        // }//for i
-
     }// function simulationCommitCircles
 
     /////////////////////////////////////////////////////////////////
@@ -453,7 +416,7 @@ const createORCAVisual = (container) => {
     }// function findEnclosingCircle
 
     ///////////// Determine the positions of each month /////////////
-    function determineMonthPositions() {
+    function determineMonthPositionsAlongTimeline() {
         // Loop over all the months and place them in a grid of N columns
         const padding = 50
         const padding_row = 80
@@ -550,7 +513,7 @@ const createORCAVisual = (container) => {
 
         setCommitBasePositions()
 
-    }// function determineMonthPositions
+    }// function determineMonthPositionsAlongTimeline
 
     // Set the pixel positions of the commits on the page
     function setCommitBasePositions() {
