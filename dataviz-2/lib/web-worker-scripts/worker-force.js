@@ -8,7 +8,7 @@ importScripts("d3-dispatch.min.js","d3-collection.min.js","d3-quadtree.min.js","
 
 onmessage = function (event) {
     let id = event.data.id
-    let months = event.data.months
+    let circles = event.data.circles
     let padding = event.data.padding
     
     //Initialize the force simulation
@@ -23,40 +23,36 @@ onmessage = function (event) {
     //     .force("x", d3.forceX().x(0).strength(0.002))
     //     .force("y", d3.forceY().y(0).strength(0.002))
 
-    months.forEach(d => {
-        if(d.circles.length < 350) {
-            //Initialize the force simulation
-            let simulation = d3.forceSimulation()
-                // .force("center", d3.forceCenter())
-                            //     const simulation = d3.forceSimulation(d.values)
-                //         // .force("center", d3.forceCenter())
-                //         // .velocityDecay(0.06)
-                //         .alphaDecay(1 - Math.pow(0.001, 1 / 200))
-                //         .force("x", d3.forceX(0).strength(0.02))
-                //         .force("y", d3.forceY(0).strength(0.02))
-                //         .force("collide", d3.forceCollide(n => n.radius + PADDING).strength(1))
-                //         .stop()
-                //     for (let i = 0; i < 200; ++i) simulation.tick()
-                // .alphaDecay(1 - Math.pow(0.001, 1 / 200))
-                .force("x", d3.forceX(0).strength(0.02))
-                .force("y", d3.forceY(0).strength(0.02))
-                .force("collide", d3.forceCollide(n => n.radius + padding).strength(0.3))
-                .stop()
+        //Initialize the force simulation
+        let simulation = d3.forceSimulation()
+            // .force("center", d3.forceCenter())
+                        //     const simulation = d3.forceSimulation(d.values)
+            //         // .force("center", d3.forceCenter())
+            //         // .velocityDecay(0.06)
+            //         .alphaDecay(1 - Math.pow(0.001, 1 / 200))
+            //         .force("x", d3.forceX(0).strength(0.02))
+            //         .force("y", d3.forceY(0).strength(0.02))
+            //         .force("collide", d3.forceCollide(n => n.radius + PADDING).strength(1))
+            //         .stop()
+            //     for (let i = 0; i < 200; ++i) simulation.tick()
+            // .alphaDecay(1 - Math.pow(0.001, 1 / 200))
+            .force("x", d3.forceX(0).strength(0.02))
+            .force("y", d3.forceY(0).strength(0.02))
+            .force("collide", d3.forceCollide(n => n.radius + padding).strength(0.3))
+            .stop()
 
-            //Perform the simulation
-            simulation
-                .nodes(d.circles)
-                .stop()
+        //Perform the simulation
+        simulation
+            .nodes(circles)
+            .stop()
 
-            //Manually "tick" through the network
-            for (let i = 0; i < 300; ++i) {
-                simulation.tick()
-                //Ramp up collision strength to provide smooth transition
-                simulation.force("collide").strength(Math.min(0.9, 0.3 + Math.pow(i / 90, 2) * 0.7))
-            }//for i
-            
-        }// if
-    })//forEach
+        //Manually "tick" through the network
+        for (let i = 0; i < 300; ++i) {
+            simulation.tick()
+            //Ramp up collision strength to provide smooth transition
+            simulation.force("collide").strength(Math.min(0.9, 0.3 + Math.pow(i / 90, 2) * 0.7))
+        }//for i
+        
 
-    postMessage({ id: id, months: months })
+    postMessage({ id: id, circles: circles })
 }

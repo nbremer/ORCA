@@ -45,6 +45,10 @@ const createORCAVisual = (container) => {
 
     // Drawing
     let FIRST_DRAW = true
+    let COUNTER_MONTH = 0
+
+    // Web worker
+    let worker = new Worker('lib/web-worker-scripts/worker-force.js')
 
     // Visual variables
     const PADDING = 1.5
@@ -154,18 +158,46 @@ const createORCAVisual = (container) => {
 
         // Initial simple data preparation
         prepareData()
+
+
+        // animate()
+
         // Find the positions of the commits within each month's circle
-        determineCommitPositions()
+        commits_by_month.forEach(d => {
+            setTimeout(() => {
+                determineCommitPositions(d)
+                if(COUNTER_MONTH === commits_by_month.length-1) {
+                    FIRST_DRAW = false
+                    setupHover()
+                    console.log("Done drawing")
+                }
+                chart.resize()
+            }, 0)
+        })// forEach
+
+        // function animate() {
+        //     if(COUNTER_MONTH < commits_by_month.length) {
+        //         // console.log(COUNTER_MONTH)
+        //         chart.resize()
+        //         requestAnimationFrame(animate)
+        //     } else {
+        //         console.log("Done drawing all months")
+        //         FIRST_DRAW = false
+        //         console.log(commits_by_month)
+        //     }// else
+        // }// animate
+
 
         /////////////////////////////////////////////////////////////
         ////////////////////// Setup the Hover //////////////////////
         /////////////////////////////////////////////////////////////
-        setupHover()
+        // setupHover()
 
         /////////////////////////////////////////////////////////////
         ///////////// Set the Sizes and Draw the Visual /////////////
         /////////////////////////////////////////////////////////////
-        chart.resize()
+        // chart.resize()
+        // console.log("Done drawing")
 
     }// function chart
 
@@ -173,6 +205,7 @@ const createORCAVisual = (container) => {
     //////////////////////// Draw the visual ////////////////////////
     /////////////////////////////////////////////////////////////////
 
+    // This draws the entire visual, with all of the month circles
     function draw() {
         drawBackground(context)
 
@@ -220,7 +253,7 @@ const createORCAVisual = (container) => {
         }// function sizeCanvas
 
         // Reset the delaunay for the mouse events
-        delaunay = d3.Delaunay.from(commits.map(d => [d.x_base, d.y_base]))
+        if(!FIRST_DRAW) delaunay = d3.Delaunay.from(commits.map(d => [d.x_base, d.y_base]))
 
         // Draw the visual
         draw()
@@ -273,6 +306,7 @@ const createORCAVisual = (container) => {
         // Loop over all the months and save some statistics
         commits_by_month.forEach((d, i) => {
             d.index = i
+            d.commit_positions_determined = false
             
             d.values = d[1]
             d.month = d.values[0].commit_month
@@ -311,13 +345,47 @@ const createORCAVisual = (container) => {
     //////////////////////// Data Placements ////////////////////////
     /////////////////////////////////////////////////////////////////
 
-    function determineCommitPositions() {
-        commits_by_month.forEach(d => {
-            initialCommitCirclePack(d)
-            // simulationCommitCircles(d)
-            findEnclosingCircle(d)
-        })// forEach
+    function determineCommitPositions(d) {
+        initialCommitCirclePack(d)
+
+        // if(d.n_commits < 400) {
+        //     // Create a smaller version of the data to send to the worker, which only contains an array of all the x and y positions of d.values
+        //     let commits_worker = d.values.map(n => ({ x: n.x, y: n.y }))
+
+        //     worker.postMessage({
+        //         id: d.index,
+        //         circles: commits_worker,
+        //         padding: PADDING
+        //     })//postMessage
+
+        //     //Once done, save the new positions and draw the inner nodes
+        //     worker.onmessage = function (event) {
+        //         let circles = event.data.circles
+        //         let index = event.data.id
+        //         console.log(index, circles)
+        //         //Save new positions
+        //         commits_by_month[index].values.forEach((d, i) => {
+        //             d.x = circles[i].x
+        //             d.y = circles[i].y
+        //         })
+
+        //         COUNTER_MONTH++
+        //         findEnclosingCircle(d)
+        //         d.commit_positions_determined = true
+        //     }//worker onmessage
+        // } else {
+        //     COUNTER_MONTH++
+        //     findEnclosingCircle(d)
+        //     d.commit_positions_determined = true
+        // }// else
+
+        simulationCommitCircles(d)
+        findEnclosingCircle(d)
+        
+        COUNTER_MONTH++
+        d.commit_positions_determined = true
     }// function determineCommitPositions
+
     /////////////////////////////////////////////////////////////////
     // Do an initial circle pack
     function initialCommitCirclePack(d) {
@@ -401,24 +469,26 @@ const createORCAVisual = (container) => {
 
         /////////////////////////////////////////////////////////////
         // Do a first loop to determine which row and column each month circle is in
-        commits_by_month.forEach((d,i) => {
-            // If the new circle doesn't fit in the current row, go to the next row (except if this is the first circle on the row)
-            if(row_index !== 0 && ((sign === 1 && along_X + 2 * d.r > W) || (sign === -1 && along_X - 2 * d.r < 0))) nextColumn()
+        commits_by_month
+            .filter(d => d.commit_positions_determined === true)
+            .forEach((d,i) => {
+                // If the new circle doesn't fit in the current row, go to the next row (except if this is the first circle on the row)
+                if(row_index !== 0 && ((sign === 1 && along_X + 2 * d.r > W) || (sign === -1 && along_X - 2 * d.r < 0))) nextColumn()
 
-            d.x = along_X + sign * d.r
-            d.y = along_Y
+                d.x = along_X + sign * d.r
+                d.y = along_Y
 
-            d.row = row
-            row_index++
+                d.row = row
+                row_index++
 
-            along_X = along_X + sign * (2*d.r + padding)
+                along_X = along_X + sign * (2*d.r + padding)
 
-            // If the next position is too far to the right, go to the next row
-            // Except is this is the final element
-            if(i != commits_by_month.length-1 && ((sign === 1 && along_X > W) || (sign === -1 && along_X < 0))) nextColumn()
+                // If the next position is too far to the right, go to the next row
+                // Except is this is the final element
+                if(i != commits_by_month.length-1 && ((sign === 1 && along_X > W) || (sign === -1 && along_X < 0))) nextColumn()
 
-            index++
-        })//forEach
+                index++
+            })//forEach
 
         function nextColumn() {
             row++
@@ -429,18 +499,21 @@ const createORCAVisual = (container) => {
         }// function nextColumn
 
         // Just to be sure, but what is the final row's id
-        row = commits_by_month[commits_by_month.length -1].row
+        let n_circles_determined = commits_by_month.filter(d => d.commit_positions_determined === true).length
+        if(n_circles_determined > 0) row = commits_by_month[n_circles_determined - 1].row
 
         /////////////////////////////////////////////////////////////
         // Center the circles within each row
-        for(let i = 0; i <= row; i++) {
-            let circles = commits_by_month.filter(d => d.row === i)
-            let row_width = d3.sum(circles, d => 2*d.r + padding) - padding
-            let row_offset = (W - row_width) / 2
-            circles.forEach(d => {
-                d.x = d.x + row_offset * (i % 2 === 0 ? 1 : -1)
-            })//forEach
-        }//for i
+        // if(!FIRST_DRAW) {
+        //     for(let i = 0; i <= row; i++) {
+        //         let circles = commits_by_month.filter(d => d.row === i)
+        //         let row_width = d3.sum(circles, d => 2*d.r + padding) - padding
+        //         let row_offset = (W - row_width) / 2
+        //         circles.forEach(d => {
+        //             d.x = d.x + row_offset * (i % 2 === 0 ? 1 : -1)
+        //         })//forEach
+        //     }//for i
+        // }// if
 
         /////////////////////////////////////////////////////////////
         row_heights = []
@@ -456,7 +529,7 @@ const createORCAVisual = (container) => {
         row_heights.push(height_offset)
         
         // Set the correct height by looking at the largest circle of the current row and the one above
-        let largest_radius_current
+        let largest_radius_current = largest_circle
         for(let i = 1; i <= row; i++) {
             let circles_above = commits_by_month.filter(d => d.row === i-1)
             let circles_current = commits_by_month.filter(d => d.row === i)
