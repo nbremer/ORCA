@@ -43,6 +43,9 @@ const createORCAVisual = (container) => {
     let CLICK_ACTIVE = false
     let CLICKED_NODE = null
 
+    // Drawing
+    let FIRST_DRAW = true
+
     // Visual variables
     const PADDING = 1.5
 
@@ -152,7 +155,6 @@ const createORCAVisual = (container) => {
         // Initial simple data preparation
         prepareData()
         // Find the positions of the commits within each month's circle
-        initialCommitCirclePack()
         determineCommitPositions()
 
         /////////////////////////////////////////////////////////////
@@ -172,61 +174,13 @@ const createORCAVisual = (container) => {
     /////////////////////////////////////////////////////////////////
 
     function draw() {
-
-        /////////////////////////////////////////////////////////////
-        // Fill the background with a color
-        context.fillStyle = COLOR_BACKGROUND
-        context.fillRect(0, 0, WIDTH, HEIGHT)
+        drawBackground(context)
 
         context.save()
         context.translate(MARGIN.width, MARGIN.height)
 
-        /////////////////////////////////////////////////////////////
-        // Draw a line behind the circles to show how time connects them all
-        createTimeLinePath()
-        // context.strokeStyle = "#c2c2c2"
-        context.strokeStyle = COLOR_REPO
-        // context.globalAlpha = 0.1
-        // context.lineWidth = 32 //MARGIN.width * 0.15
-        // context.stroke()
-
-        context.globalAlpha = 0.2
-        context.lineWidth = 20 //MARGIN.width * 0.15
-        context.stroke()
-
-        context.globalAlpha = 1
-        context.lineWidth = 5
-        context.stroke()
-
-        context.globalAlpha = 1
-        /////////////////////////////////////////////////////////////
-        // Draw the months and the commits within
-        commits_by_month.forEach((d, i) => {
-            /////////////////////////////////////////////////////////
-            // Draw the month circle
-            drawMonthCircle(context, d, i)
-            
-            /////////////////////////////////////////////////////////
-            // Add the date label
-            monthDateLabel(context, d, i)
-
-            /////////////////////////////////////////////////////////
-            // Draw the commit circles within each month
-            context.strokeStyle = COLOR_BACKGROUND
-            context.lineWidth = 2
-            d.values.forEach(n => {
-                // Draw the commits
-                if(n.files_changed === 0) {
-                    context.fillStyle = COLOR_OWNER
-                    drawCircle(context, n.x + d.x, n.y + d.y, n.radius, true, false)
-                } else {
-                    // Draw two circles, with the overlapping part in another color
-                    drawCommitCircle(context, n)
-                }// else
-
-            })// forEach
-
-        })//forEach
+        drawTimeLine(context)
+        drawAllCommitMonths(context)
 
         context.restore()
     }// function draw
@@ -357,117 +311,77 @@ const createORCAVisual = (container) => {
     //////////////////////// Data Placements ////////////////////////
     /////////////////////////////////////////////////////////////////
 
+    function determineCommitPositions() {
+        commits_by_month.forEach(d => {
+            initialCommitCirclePack(d)
+            // simulationCommitCircles(d)
+            findEnclosingCircle(d)
+        })// forEach
+    }// function determineCommitPositions
     /////////////////////////////////////////////////////////////////
     // Do an initial circle pack
-    function initialCommitCirclePack() {
-        commits_by_month.forEach(d => {
-            d.values.forEach(n => { n.r = n.radius + PADDING })
-            d3.packSiblings(d.values)
-        })// forEach
+    function initialCommitCirclePack(d) {
+        d.values.forEach(n => { n.r = n.radius + PADDING })
+        d3.packSiblings(d.values)
     }// function initialCommitCirclePack
     
-    ////// Determine the positions of the commits within a month ////
-    function determineCommitPositions() {
+    /////////////////////////////////////////////////////////////////
+    //Do a static simulation to create slightly better looking groups
+    function simulationCommitCircles(d) {
 
-        // const scale_padding = d3.scaleLinear()
-        //     .domain([0, 300])
-        //     .range([0, 10])
-        //     .clamp(true)
+        if(d.n_commits < 400) {
+            const simulation = d3.forceSimulation(d.values)
+                // .force("center", d3.forceCenter())
+                // .velocityDecay(0.06)
+                .alphaDecay(1 - Math.pow(0.001, 1 / 200))
+                .force("x", d3.forceX(0).strength(0.02))
+                .force("y", d3.forceY(0).strength(0.02))
+                .force("collide", d3.forceCollide(n => n.radius + PADDING).strength(1))
+                .stop()
+            for (let i = 0; i < 200; ++i) simulation.tick()
+        }// if
 
-        const chunk_size = Math.ceil(commits_by_month.length / 10)
+        // let simulation = d3.forceSimulation()
+        //     // .velocityDecay(0.06)
+        //     // .alphaDecay(1 - Math.pow(0.001, 1 / 400))
+        //     // .force("center", d3.forceCenter())
+        //     .force("x", d3.forceX(0).strength(0.1))
+        //     .force("y", d3.forceY(0).strength(0.1))
+        //     .force("collide", d3.forceCollide(n => n.radius + PADDING).strength(0.3))
+        //     .stop()
 
-        // Create a smaller version of the data to send to the worker
-        // which only contains an array of all the x and y positions of d.values
-        const commits_worker = []
-        commits_by_month.forEach((d, j) => {
-            commits_worker.push({
-                index: j,
-                circles: d.values.map(n => ({ x: n.x, y: n.y }))
-            })
-        })// forEach
+        // //Perform the simulation
+        // simulation
+        //     .nodes(d.values)
+        //     .stop()
 
-        const chunks = []
-        for (let i = 0; i < commits_worker.length; i += chunk_size) {
-            chunks.push(commits_worker.slice(i, i + chunk_size))
-        }// for i
+        // //Manually "tick" through the network
+        // for (let i = 0; i < 300; ++i) {
+        //     simulation.tick()
+        //     //Ramp up collision strength to provide smooth transition
+        //     simulation.force("collide").strength(Math.min(1, 0.3 + Math.pow(i / 120, 2) * 0.7))
+        // }//for i
 
-        let completed_workers = 0
-        let worker_results = Array(chunks.length)
-        const workers = []
-        chunks.forEach((chunk, index) => {
-            const worker = new Worker('lib/web-worker-scripts/worker-force.js')
-            worker.postMessage({ id: index, months: chunk, padding: PADDING })
-            worker.onmessage = handleWorkerMessage
-            workers.push(worker)
-        })// forEach
+    }// function simulationCommitCircles
 
-        function handleWorkerMessage(event) {
-            const workerId = event.data.id
-            worker_results[workerId] = event.data.months
-            
-            completed_workers++
-            console.log(completed_workers, workerId)
-            if (completed_workers === workers.length) {
-                worker_results = worker_results.flat()
-                console.log(worker_results)
-                // drawVisualization(worker_results)
-            }// if
-        }// function handleWorkerMessage
-
-            /////////////////////////////////////////////////////////
-            // //Do a static simulation to create slightly better looking groups
-            // if(d.n_commits < 400) {
-            //     const simulation = d3.forceSimulation(d.values)
-            //         // .force("center", d3.forceCenter())
-            //         // .velocityDecay(0.06)
-            //         .alphaDecay(1 - Math.pow(0.001, 1 / 200))
-            //         .force("x", d3.forceX(0).strength(0.02))
-            //         .force("y", d3.forceY(0).strength(0.02))
-            //         .force("collide", d3.forceCollide(n => n.radius + PADDING).strength(1))
-            //         .stop()
-            //     for (let i = 0; i < 200; ++i) simulation.tick()
-            // }// if
-
-            // let simulation = d3.forceSimulation()
-            //     // .velocityDecay(0.06)
-            //     // .alphaDecay(1 - Math.pow(0.001, 1 / 400))
-            //     // .force("center", d3.forceCenter())
-            //     .force("x", d3.forceX(0).strength(0.1))
-            //     .force("y", d3.forceY(0).strength(0.1))
-            //     .force("collide", d3.forceCollide(n => n.radius + PADDING).strength(0.3))
-            //     .stop()
-
-            // //Perform the simulation
-            // simulation
-            //     .nodes(d.values)
-            //     .stop()
-
-            // //Manually "tick" through the network
-            // for (let i = 0; i < 300; ++i) {
-            //     simulation.tick()
-            //     //Ramp up collision strength to provide smooth transition
-            //     simulation.force("collide").strength(Math.min(1, 0.3 + Math.pow(i / 120, 2) * 0.7))
-            // }//for i
-
-
-
-    }// function determineCommitPositions
-
-    function findEnclosingCircle() {
-        /////////////////////////////////////////////////////////////
-        // Find the smallest enclosing circle around all the commit circles
+    /////////////////////////////////////////////////////////////////
+    // Find the smallest enclosing circle around all the commit circles
+    function findEnclosingCircle(d) {
+        const scale_padding = d3.scaleLinear()
+            .domain([0, 300])
+            .range([0, 10])
+            .clamp(true)
+        
         // With the locations of the children known, calculate the smallest enclosing circle
-        commits_by_month.forEach(d => {
-            d.values.forEach(n => { n.r = n.radius + 0})
-            let parent_circle = d3.packEnclose(d.values)
+        d.values.forEach(n => { n.r = n.radius + 0})
+        let parent_circle = d3.packEnclose(d.values)
 
-            d.values.forEach(n => { 
-                n.r = n.radius
-            })
+        d.values.forEach(n => { 
+            n.r = n.radius
+        })
 
-            //Save the parent radius
-            d.r = parent_circle.r + 12 + scale_padding(parent_circle.r)
-        })// forEach
+        //Save the parent radius
+        d.r = parent_circle.r + 12 + scale_padding(parent_circle.r)
     }// function findEnclosingCircle
 
     ///////////// Determine the positions of each month /////////////
@@ -576,8 +490,39 @@ const createORCAVisual = (container) => {
     }// function setCommitBasePositions
 
     /////////////////////////////////////////////////////////////////
+    /////////////////// General Drawing Functions ///////////////////
+    /////////////////////////////////////////////////////////////////
+
+    // Draw the background
+    function drawBackground(context) {
+        // Fill the background with a color
+        context.fillStyle = COLOR_BACKGROUND
+        context.fillRect(0, 0, WIDTH, HEIGHT)
+    }// function drawBackground
+
+    /////////////////////////////////////////////////////////////////
     //////////////////////////// Timeline ///////////////////////////
     /////////////////////////////////////////////////////////////////
+    function drawTimeLine(context) {
+        // Draw a line behind the circles to show how time connects them all
+        createTimeLinePath()
+        // context.strokeStyle = "#c2c2c2"
+        context.strokeStyle = COLOR_REPO
+        // context.globalAlpha = 0.1
+        // context.lineWidth = 32 //MARGIN.width * 0.15
+        // context.stroke()
+
+        context.globalAlpha = 0.2
+        context.lineWidth = 20 //MARGIN.width * 0.15
+        context.stroke()
+
+        context.globalAlpha = 1
+        context.lineWidth = 5
+        context.stroke()
+
+        context.globalAlpha = 1
+    } // function drawTimeLine
+
     // Draw a line behind the circles to show how time connects them all
     function createTimeLinePath() {
         let O = 0
@@ -631,8 +576,39 @@ const createORCAVisual = (container) => {
     }// function createTimeLinePath
 
     /////////////////////////////////////////////////////////////////
-    /////////////////// General Drawing Functions ///////////////////
+    //////////////////// Circle Drawing Functions ///////////////////
     /////////////////////////////////////////////////////////////////
+
+    // Draw all of the commit months
+    function drawAllCommitMonths(context) {
+        // Draw the months and the commits within
+        commits_by_month.forEach((d, i) => {
+            /////////////////////////////////////////////////////////
+            // Draw the month circle
+            drawMonthCircle(context, d, i)
+            
+            /////////////////////////////////////////////////////////
+            // Add the date label
+            monthDateLabel(context, d, i)
+
+            /////////////////////////////////////////////////////////
+            // Draw the commit circles within each month
+            context.strokeStyle = COLOR_BACKGROUND
+            context.lineWidth = 2
+            d.values.forEach(n => {
+                // Draw the commits
+                if(n.files_changed === 0) {
+                    context.fillStyle = COLOR_OWNER
+                    drawCircle(context, n.x + d.x, n.y + d.y, n.radius, true, false)
+                } else {
+                    // Draw two circles, with the overlapping part in another color
+                    drawCommitCircle(context, n)
+                }// else
+
+            })// forEach
+
+        })//forEach
+    }// function drawAllCommitMonths
 
     // Draw a circle to contain all the commit circles
     function drawMonthCircle(context, d, i) {
