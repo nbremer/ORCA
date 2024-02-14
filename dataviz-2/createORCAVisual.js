@@ -198,7 +198,7 @@ const createORCAVisual = (container) => {
 
         WIDTH = round(width * PIXEL_RATIO)
         MARGIN.width = WIDTH * 0.08
-        MARGIN.height = WIDTH * 0.05
+        MARGIN.height = Math.max(150, WIDTH * 0.05)
         W = WIDTH - 2 * MARGIN.width
 
         // Find the positions of each month's circle now that we have the width
@@ -430,6 +430,8 @@ const createORCAVisual = (container) => {
 
         let sign = 1
 
+        if(commits_by_month === undefined) return
+
         /////////////////////////////////////////////////////////////
         // Do a first loop to determine which row and column each month circle is in
         commits_by_month
@@ -562,7 +564,7 @@ const createORCAVisual = (container) => {
     // Draw a line behind the circles to show how time connects them all
     function createTimeLinePath() {
         let O = 0
-        let radius = MARGIN.height * 0.75
+        let radius = MARGIN.width * 0.7
         context.beginPath()
         context.moveTo(0-O, row_heights[0])
         for(let i = 0; i <= row_heights.length-1; i++) {
