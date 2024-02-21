@@ -3,13 +3,14 @@
 /*************************************/
 
 html {
-    --color-repo-main: #a682e8;
-    --color-repo: #64d6d3;
-    --color-owner: #f2a900;
-    --color-contributor: #ea9df5;
+    --color-repository: #a682e8;
+    --color-insertions: #64d6d3;
+    --color-insertions-transparent: #64d6d385;
+    --color-deletions: #ea9df5;
+    --color-merges: #f2a900;
     --color-text: #4d4950;
     --color-background: #f7f7f7;
-    --color-gradient: linear-gradient(to right, var(--color-contributor), var(--color-repo-main), var(--color-repo)) 1;
+    --color-gradient: linear-gradient(to right, var(--color-deletions), var(--color-repository), var(--color-insertions)) 1;
 }
 
 body {
@@ -17,37 +18,15 @@ body {
     font-family: 'Atkinson Hyperlegible', sans-serif;
 }
 
-.central-repo {
-    /* color: var(--color-repo-main); */
-    background: var(--color-repo-main);
+.repository {
+    background: var(--color-repository);
     padding: 0.1em 0.3em;
     font-weight: 700;
     color: white
 }
 
-.contributor {
-    /* color: var(--color-contributor); */
-    background: var(--color-contributor);
-    padding: 0.1em 0.3em;
-    font-weight: 700;
-}
-
-.repository {
-    background: var(--color-repo);
-    padding: 0.1em 0.3em;
-    /* border-bottom: 0.3em solid var(--color-repo); */
-    font-weight: 700;
-}
-
 .repo-name-only {
     font-style: italic;
-}
-
-.owner {
-    /* color: var(--color-owner); */
-    background: var(--color-owner);
-    padding: 0.1em 0.3em;
-    font-weight: 700;
 }
 
 p {
@@ -55,17 +34,121 @@ p {
     color: var(--color-text);
 }
 
+.header {
+    text-align: center;
+    font-size: 1.0em;
+    padding-top: 0.5em;
+    padding-bottom: 0.5em;
+    margin-bottom: 2em;
+
+    border-bottom: 3px solid var(--color-insertions-transparent);
+    /* border-image: var(--color-gradient); */
+
+    @media only screen and (max-width: 600px) {
+        /* styles for mobile browsers smaller than 600px; */
+        margin-bottom: 1em;
+    }
+}
+
 /*************************************/
 /*************** INTRO ***************/
 /*************************************/
 
 #chart-wrapper {
-    /*min-width: 900px; /* Min size that the visual can become */
-    /*max-width: 1400px; /* Max size that the visual can become */
-
-    border-top: 10px solid var(--color-repo-main);
+    border-top: 10px solid var(--color-repository);
     border-image: var(--color-gradient);
     margin: 0 auto;
+}
+
+#chart-introduction {
+    /* Create a linear gradient for the background going from transparent #f7f7f7 to #f7f7f7 downward */
+    background: linear-gradient(to bottom, rgba(247, 247, 247, 0) 50%, rgba(247, 247, 247, 1) 100%);
+    padding: 3em 5em 0em 5em;
+    display: grid;
+    justify-content: center;
+
+    @media only screen and (max-width: 600px) {
+        padding: 3em 2em 0em 2em;
+    }
+}
+
+#chart-introduction-content {
+    max-width: 1200px;
+
+    display: grid;
+    justify-content: center;
+    align-items: top;
+
+    grid-template-columns: 1fr 2fr;
+    column-gap: 5em;
+    row-gap: 5em;
+
+    @media only screen and (max-width: 600px) {
+        display: block;
+    }
+}
+
+#chart-title {
+    grid-column-start: 1;
+    grid-column-end: 1;
+}
+#chart-title h1 {
+    font-weight: 400;
+    font-size: 2.4em;
+    font-style: italic;
+    margin-bottom: 0.2em; 
+    margin-top: 0em;
+}
+#chart-title h1#title-repo-name {
+    font-weight: 700;
+    font-size: 2.6em;
+    margin-top: 0.2em;
+    font-style: normal;
+}
+#chart-title #last-commit-date {
+    font-size: 0.9em;
+    padding-top: 1em;
+    font-style: italic;
+    opacity: 0.6;
+    padding-bottom: 3em;
+}
+
+#chart-intro-text {
+    grid-column-start: 2;
+    grid-column-end: 2;
+    font-weight: 400;
+    font-size: 1.1em;
+}
+
+/*************************************/
+/******* EXPLANATION / LEGEND ********/
+/*************************************/
+
+#chart-explanation {
+    border-bottom: 3px solid var(--color-insertions-transparent);
+    /* border-image: var(--color-gradient); */
+    
+    padding-bottom: 1.5em;
+
+    @media only screen and (max-width: 600px) {
+        padding-bottom: 0.5em;
+    }
+}
+
+#legend-image {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.legend {
+    height: 130px;
+    width: auto;
+
+    @media only screen and (max-width: 600px) {
+        height: 110px;
+    }
 }
 
 /*************************************/
@@ -79,7 +162,7 @@ p {
 
 #dataviz-download-data {
     text-align: center;
-    background: var(--color-repo-main);
+    background: var(--color-repository);
     color: white;
     border: none;
     padding: 0.5em 1em;
@@ -99,8 +182,8 @@ p {
 }
 
 #dataviz-credit a {
-    border-bottom: 3px solid var(--color-repo-main);
-    border-image:linear-gradient(to right, var(--color-contributor), var(--color-repo)) 1;
+    border-bottom: 3px solid var(--color-repository);
+    border-image:linear-gradient(to right, var(--color-deletions), var(--color-insertions)) 1;
     /* padding: 0.1em 0.3em; */
     font-weight: 700;
     cursor: pointer;
@@ -114,7 +197,7 @@ p {
 
 /* This is all done within the createORCAVisual function */
 
-#chart-container {
+/* #chart-container {
     position: relative;
     background-color: var(--color-background);
 }
@@ -122,7 +205,7 @@ p {
 #chart-container canvas {
     display: block;
     margin: 0;
-}
+} */
 
 /* #canvas, #canvas-click {
     position: absolute;

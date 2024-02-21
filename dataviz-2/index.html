@@ -25,6 +25,35 @@
 	<body>
         <div id="chart-wrapper">
             <div id="chart-introduction">
+
+                <!-- The stuff above the chart -->
+                <div id="chart-introduction-content">
+                    <div id="chart-title">
+                        <h1>All <span class="commit-num"></span>commits of</h1>
+                        <h1><span id="title-repo-name" class="repository">mozilla/pdf.js</span></h1>
+                        <p id="last-commit-date"></p>
+                    </div>
+                    <div id="chart-intro-text">
+                        <p>The <span class="repo-name repository">mozilla/pdf.js</span> repository has seen many improvements from its various contributors since the first commit<span id="first-commit-date"></span>. <strong>The visualization below shows all <span class="commit-num"></span>commits that have been made since then.</strong></p>
+                        
+                        <p>Each commit is represented as a small circle. They're grouped together by (commit) month, giving an overview of which periods had relatively few updates while other time periods saw a lot of activity.</p>
+
+                    </div>
+                </div>
+
+                <!-- The legends -->
+                <div id="chart-explanation">
+                    <p class="header"><strong>HOW TO READ THIS VISUAL</strong></p>
+
+                    <!-- Add the legend.svg in the img folder -->
+                    <div id="legend-image">
+                        <img class="legend" src="img/legend_insertions.png" alt="Circles with a turquoise outer ring have more line insertions than deletions">
+                        <img class="legend" src="img/legend_deletions.png" alt="Circles with a pink outer ring have more line deletions than insertions">
+                        <img class="legend" src="img/legend_similar.png" alt="Dark blue circles have about the same number of insertions and deletions">
+                        <img class="legend" src="img/legend_no_change.png" alt="A small yellow circle represent a commit where no files were changed">
+                        <img class="legend" src="img/legend_version.png" alt="A colored ring around a commit shows a version release">
+                    </div>
+                </div>
             </div>
 
             <!-- The visual will be drawn here -->
@@ -85,12 +114,31 @@
 
                 document.fonts.ready.then(() => {
                     Promise.all(promises).then(values => {
+                        let formatDigit = d3.format(",.0f")
+                        let formatDigitRound = d3.format(",.2r")
+                        let formatPercentage = d3.format(".0%")
+                        let parseDate = d3.timeParse("%Y-%m-%d %H:%M:%S %Z")
+                        let formatDate = d3.utcFormat("%B %-e, %Y")
 
+                        // Create a deep copy of the data in values
                         let data_raw = []
                         data_raw.push(JSON.parse(JSON.stringify(values[0]))) // commits
 
+                        /////////////////////////////////////////////////
+                        // Very specific to this example, but get some statistics on the data and put this in the intro text
+                        let num_commits = values[0].length
+                        document.querySelectorAll(".commit-num").forEach(d => d.innerHTML = `${formatDigit(num_commits)} `)
+
+                        // Latest commit date
+                        let latest_commit_date = formatDate(parseDate(values[0][0].commit_time))
+                        document.getElementById("last-commit-date").innerHTML = `Up to ${latest_commit_date}`
+
+                        // First commit date
+                        let first_commit_date = formatDate(parseDate(values[0][values[0].length - 1].commit_time))
+                        document.getElementById("first-commit-date").innerHTML = ` on ${first_commit_date}`
+
                         /////////////////////////////////////////////
-                        // It expects ...
+                        // It expects one dataset of all the commits made to the repository
                         ORCAVisual(values)
 
                         /////////////////////////////////////////////

@@ -4,7 +4,6 @@
 // TODO: Add version release to hover
 // TODO: Annotations / marking for noteworthy contributions
 // TODO: Need a bbox simulation to not get overlapping annotations?
-// TODO: Zoomable circles?
 
 /////////////////////////////////////////////////////////////////////
 /////////////// Visualization designed & developed by ///////////////
@@ -56,18 +55,16 @@ async function createORCAVisual(container) {
 
     const COLOR_BACKGROUND = "#f7f7f7"
 
-    const COLOR_PURPLE = "#783ce6"
-
-    const COLOR_REPO_MAIN = "#a682e8"
-    const COLOR_REPO = "#64d6d3" 
-    const COLOR_OWNER = "#f2a900"
-    const COLOR_CONTRIBUTOR = "#ea9df5"
-
+    // const COLOR_PURPLE = "#783ce6"
+    // const COLOR_REPO_MAIN = "#a682e8"
+    
     const COLOR_INSERTIONS = "#78ded0"
     const COLOR_DELETIONS = "#f6a2f4"
     const COLOR_OVERLAP = "#4070c4" 
-
-    const COLOR_LINK = "#e8e8e8"
+    const COLOR_MERGE = "#f2a900"
+    
+    const COLOR_TIMELINE = "#64d6d3" 
+    // const COLOR_TIMELINE = "#bcc2d2"
     const COLOR_TEXT = "#4d4950"
 
     /////////////////////////////////////////////////////////////////
@@ -621,7 +618,7 @@ async function createORCAVisual(container) {
         // Draw a line behind the circles to show how time connects them all
         createTimeLinePath()
         // context.strokeStyle = "#c2c2c2"
-        context.strokeStyle = COLOR_REPO
+        context.strokeStyle = COLOR_TIMELINE
         // context.globalAlpha = 0.1
         // context.lineWidth = 32 //MARGIN.width * 0.15
         // context.stroke()
@@ -726,7 +723,7 @@ async function createORCAVisual(container) {
     function drawMonthCircle(context, d, i) {
         // Draw the month circle
         context.fillStyle = COLOR_BACKGROUND
-        context.strokeStyle = COLOR_REPO
+        context.strokeStyle = COLOR_TIMELINE
 
         drawCircle(context, d.x, d.y, d.r + 7, true, false)
         // Also stroke the somewhat larger circle
@@ -765,7 +762,7 @@ async function createORCAVisual(container) {
     // Draw the commits
     function drawCommitCircle(context, d) {
             if(d.files_changed === 0) {
-                context.fillStyle = COLOR_OWNER
+                context.fillStyle = COLOR_MERGE
                 drawCircle(context, d.x_base, d.y_base, d.radius_draw, true, false)
             } else {
                 // Draw two circles, with the overlapping part in another color
@@ -773,11 +770,11 @@ async function createORCAVisual(container) {
             }// else
 
             if(d.is_release) {
-                // context.strokeStyle = COLOR_REPO_MAIN
-                if(d.files_changed === 0) context.strokeStyle = COLOR_OWNER
-                else if(d.line_insertions > d.line_deletions) context.strokeStyle = COLOR_INSERTIONS
-                else if(d.line_insertions < d.line_deletions) context.strokeStyle = COLOR_DELETIONS
-                else context.strokeStyle = COLOR_OVERLAP
+                context.strokeStyle = COLOR_MERGE
+                // if(d.files_changed === 0) context.strokeStyle = COLOR_MERGE
+                // else if(d.line_insertions > d.line_deletions) context.strokeStyle = COLOR_INSERTIONS
+                // else if(d.line_insertions < d.line_deletions) context.strokeStyle = COLOR_DELETIONS
+                // else context.strokeStyle = COLOR_OVERLAP
 
                 let lw = 4
                 context.lineWidth = lw
@@ -869,7 +866,7 @@ async function createORCAVisual(container) {
         context.arc(d.x_base, d.y_base, r, 0, TAU)
 
         let COL
-        if(d.files_changed === 0) COL = COLOR_OWNER
+        if(d.files_changed === 0) COL = COLOR_MERGE
         else if (d.line_insertions > d.line_deletions) COL = COLOR_INSERTIONS
         else if (d.line_insertions < d.line_deletions) COL = COLOR_DELETIONS
         else COL = COLOR_OVERLAP
@@ -958,7 +955,7 @@ async function createORCAVisual(container) {
             context.moveTo(d.x, d.y + d.r)
             context.lineTo(d.x, y - offset)
             context.globalAlpha = 0.7
-            context.strokeStyle = COLOR_REPO
+            context.strokeStyle = COLOR_TIMELINE
             context.lineWidth = 3
             context.stroke()
             context.globalAlpha = 1
