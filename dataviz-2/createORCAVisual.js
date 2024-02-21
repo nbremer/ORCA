@@ -1,8 +1,6 @@
 // FINAL: Update GitHub explanation
 
-// TODO: Add hovers (div?)
-// TODO: Add version release to hover
-// TODO: Annotations / marking for noteworthy contributions
+// TODO: Annotations / marking for noteworthy contributions?
 // TODO: Need a bbox simulation to not get overlapping annotations?
 
 /////////////////////////////////////////////////////////////////////
@@ -39,8 +37,6 @@ async function createORCAVisual(container) {
     let delaunay
     let HOVER_ACTIVE = false
     let HOVERED_NODE = null
-    let CLICK_ACTIVE = false
-    let CLICKED_NODE = null
 
     // Drawing
     let INITIAL_CIRCLE_DRAW = true
@@ -88,33 +84,33 @@ async function createORCAVisual(container) {
     container.appendChild(canvas_animation)
     container.appendChild(canvas_hover)
     
-    // Set some important stylings of each canvas
-    container.style.position = "relative"
-    container.style["background-color"] = COLOR_BACKGROUND
+    // // Set some important stylings of each canvas
+    // container.style.position = "relative"
+    // container.style["background-color"] = COLOR_BACKGROUND
 
-    styleCanvas(canvas)
-    styleCanvas(canvas_animation)
-    styleCanvas(canvas_hover)
+    // styleCanvas(canvas)
+    // styleCanvas(canvas_animation)
+    // styleCanvas(canvas_hover)
 
-    styleBackgroundCanvas(canvas)
-    styleBackgroundCanvas(canvas_animation)
+    // styleBackgroundCanvas(canvas)
+    // styleBackgroundCanvas(canvas_animation)
 
-    canvas_hover.style.position = "relative"
-    canvas_hover.style.z_index = "1"
+    // canvas_hover.style.position = "relative"
+    // canvas_hover.style.z_index = "1"
 
-    function styleCanvas(canvas) {
-        canvas.style.display = "block"
-        canvas.style.margin = "0"
-    }// function styleCanvas
+    // function styleCanvas(canvas) {
+    //     canvas.style.display = "block"
+    //     canvas.style.margin = "0"
+    // }// function styleCanvas
 
-    function styleBackgroundCanvas(canvas) {
-        canvas.style.position = "absolute"
-        canvas.style.top = "0"
-        canvas.style.left = "0"
-        canvas.style.pointer_events = "none"
-        canvas.style.z_index = "0"
-        canvas.style.transition = "opacity 100ms ease-in"
-    }// function styleBackgroundCanvas
+    // function styleBackgroundCanvas(canvas) {
+    //     canvas.style.position = "absolute"
+    //     canvas.style.top = "0"
+    //     canvas.style.left = "0"
+    //     canvas.style.pointer_events = "none"
+    //     canvas.style.z_index = "0"
+    //     // canvas.style.transition = "opacity 100ms ease-in"
+    // }// function styleBackgroundCanvas
 
     /////////////////////////////////////////////////////////////////
     /////////////////////////// Set Sizes ///////////////////////////
@@ -136,6 +132,7 @@ async function createORCAVisual(container) {
     let formatDateUTC = d3.utcFormat("%Y-%m")
     let formatGroupMonth = d3.timeFormat("%Y-%m")
     let formatDate = d3.utcFormat("%b %Y")
+    let formatDateFull = d3.utcFormat("%B %-e, %Y")
     let formatMonth = d3.utcFormat("%b")
     let formatYear = d3.utcFormat("%Y")
     // let formatDateExact = d3.utcFormat("%b %d, %Y")
@@ -178,7 +175,7 @@ async function createORCAVisual(container) {
         await delay(0)
 
         ////////////////////// Setup the Hover //////////////////////
-        setupHover()
+        setupInteraction()
 
         // Find the positions of the commits within each month's circle using a force simulation that creates more visually pleasing circular results
         initialDrawMonthCirclesPerMonth()
@@ -296,6 +293,9 @@ async function createORCAVisual(container) {
             d.is_release = /v\d/.test(d.decorations)
             // Make the radius bigger to add a stroke around it
             if(d.is_release) {
+                // Remove the "tag: " from the decorations
+                d.commit_release = d.decorations.replace("tag: ", "")
+                // d.commit_release = d.decorations.match(/v\d/)[0]
                 if(d.files_changed === 0) d.radius += 20
                 else d.radius += 16
                 d.radius_draw = scale_radius(0) + (d.is_release ? 3 : 0)
@@ -479,7 +479,7 @@ async function createORCAVisual(container) {
             chart.resize()
 
             // Setup the hover
-            setupHover()
+            setupInteraction()
             console.log("Done drawing")
         }// else
     }// function increaseFinalOpacities
@@ -812,49 +812,106 @@ async function createORCAVisual(container) {
     //////////////////////// Hover Functions ////////////////////////
     /////////////////////////////////////////////////////////////////
     // Setup the hover on the top canvas, get the mouse position and call the drawing functions
-    function setupHover() {
-        d3.select("#canvas-hover").on("mousemove", function(event) {
-            // Get the position of the mouse on the canvas
-            let [mx, my] = d3.pointer(event, this);
-            let [d, FOUND] = findNode(mx, my);
+    function setupInteraction() {
+        d3.select("#canvas-hover")
+            // .on("touchstart", function (event) {
+            //     // Tell the browser we are not going to want an emulated mousemove
+            //     // But then you can't move the chart anymore
+            //     // if(!HOVER_ACTIVE) event.preventDefault()
 
-            // Draw the hover state on the top canvas
-            if(FOUND) {
-                HOVER_ACTIVE = true
-                HOVERED_NODE = d
+            //     // Get the position of the mouse on the canvas
+            //     let [mx, my] = d3.pointers(event, this)[0];
+            //     initializeHoverEvent(event, mx, my, "touch")
+            // })
+            .on("mousemove", function(event) {
+                event.stopPropagation() // Not sure if this is needed
 
-                drawHoverState(context_hover, d)
+                // Get the position of the mouse on the canvas
+                let [mx, my] = d3.pointer(event, this);
+                initializeHoverEvent(event, mx, my)
+            })
+            // .on("touchmove", hideTooltip)
+        	.on("click", clickOnNode)
 
-            } else {
-                HOVER_ACTIVE = false
-                HOVERED_NODE = null
+        d3.select("body").on("click", hideTooltip)
+        d3.select("#tooltip-close").on("click", hideTooltip)
 
-                context_hover.clearRect(0, 0, WIDTH, HEIGHT)
-            }// else
+    }// function setupInteraction
 
-        })// on mousemove
+    /////////////////////////////////////////////////////////////////
+    function initializeHoverEvent(event, mx, my, type) {
+        let [d, FOUND] = findNode(mx, my);
 
-    }// function setupHover
+        // Draw the hover state on the top canvas
+        if(FOUND) {
+            HOVER_ACTIVE = true
+            HOVERED_NODE = d
+            drawHoverState(context_hover, d, type)
+        } else {
+            hideTooltip(event)
+        }// else
+    }// function initializeHoverEvent
 
+    /////////////////////////////////////////////////////////////////
+    // Turn the mouse position into a canvas x and y location and see if it's close enough to a node
+    function findNode(mx, my) {
+        mx = ((mx * PIXEL_RATIO) - MARGIN.width)
+        my = ((my * PIXEL_RATIO) - MARGIN.height)
+
+        //Get the closest hovered node
+        let point = delaunay.find(mx, my)
+        let d = commits[point]
+
+        // Get the distance from the mouse to the node
+        let dist = sqrt((d.x_base - mx)**2 + (d.y_base - my)**2)
+        // If the distance is too big, don't show anything
+        let FOUND = dist < d.r + 40
+
+        if(FOUND) {
+            // console.log(d)
+            // console.log(d.files_changed, d.line_insertions, d.line_deletions, d.lines_changed, d.commit_year, d.commit_month)
+        }// if
+
+        return [d, FOUND]
+    }// function findNode
+
+    /////////////////////////////////////////////////////////////////
+    //////////////////////// Click Functions ////////////////////////
+    /////////////////////////////////////////////////////////////////
+
+    function clickOnNode(event) {
+        event.stopPropagation() // Not sure if this is needed
+    }// function clickOnNode
+
+    /////////////////////////////////////////////////////////////////
+    ///////////////// General Interaction Functions /////////////////
+    /////////////////////////////////////////////////////////////////
+
+    /////////////////////////////////////////////////////////////////
     // Draw the hovered node and its links and neighbors and a tooltip
-    function drawHoverState(context, d) {
+    function drawHoverState(context, d, type) {
         context.clearRect(0, 0, WIDTH, HEIGHT)
-        // context.save()
-        // context.translate(MARGIN.width, MARGIN.height)
-            context.fillStyle = COLOR_BACKGROUND
-            context.globalAlpha = 0.7
-            drawCircle(context, d.month_data.x, d.month_data.y, d.month_data.r, true, false)
-            context.globalAlpha = 1
-            
-            // Show the number of commits
-            monthDateLabel(context_hover, d.month_data, d.month_data.index, true)
 
-            // Draw the hovered commit circle
-            drawCommitCircle(context, d)
+        context.fillStyle = COLOR_BACKGROUND
+        context.globalAlpha = 0.7
+        drawCircle(context, d.month_data.x, d.month_data.y, d.month_data.r, true, false)
+        context.globalAlpha = 1
+        
+        // Show the number of commits
+        monthDateLabel(context_hover, d.month_data, d.month_data.index, true)
 
-            // Show a ring around the hovered node
-            drawHoverRing(context, d)
-        // context.restore()
+        // Draw the hovered commit circle
+        drawCommitCircle(context, d)
+
+        // Show a ring around the hovered node
+        drawHoverRing(context, d)
+
+        // Update and show the tooltip
+        if(container.offsetWidth > 500) showTooltipMousemove(d)
+        else showTooltipTouch(d)
+        // if(type === "mousemove") showTooltipMousemove(d)
+        // else if(type === "touch") showTooltipTouch(d)
+
     }// function drawHoverState
 
     //////////////////////// Draw Hover Ring ////////////////////////
@@ -877,35 +934,126 @@ async function createORCAVisual(container) {
     }// function drawHoverRing
 
     /////////////////////////////////////////////////////////////////
-    //////////////////////// Click Functions ////////////////////////
+    // Show the tooltip for when a mouse moves over the canvas
+    function showTooltipMousemove(d) {
+
+        // Update all the textual and color parts of the tooltip
+        updateTooltipInner(d)
+        //Hide the X mark in the top right because it's a hover
+        document.getElementById("tooltip-close").style.opacity = 0
+        /////////////////////////////////////////////////////////////
+
+        // Find the dimensions of the tooltip
+        let tooltip_bbox = document.getElementById("tooltip").getBoundingClientRect()
+
+        // Find the position of the tooltip
+        let y = (d.y_base + MARGIN.height)/PIXEL_RATIO - tooltip_bbox.height - d.r/PIXEL_RATIO - 30
+        let x = (d.x_base + MARGIN.width)/PIXEL_RATIO - tooltip_bbox.width / 2
+
+        /////////////////////////////////////////////////////////////
+
+        //Show and move the tooltip
+        d3.select("#tooltip")
+            .style("top", `${y}px`)
+            .style("left", `${x}px`)
+            // .transition("tooltip").duration(0)
+            .style("opacity", 1)
+
+    }// function showTooltipMousemove
+
     /////////////////////////////////////////////////////////////////
+    // Show the tooltip for when a touch event happened (mobile)
+    function showTooltipTouch(d) {
 
+        // Update all the textual and color parts of the tooltip
+        updateTooltipInner(d)
+        //Show the X mark in the top right because it was started by a touch
+        document.getElementById("tooltip-close").style.opacity = 1
+
+        /////////////////////////////////////////////////////////////
+
+        // Find the dimensions of the tooltip
+        let tooltip_bbox = document.getElementById("tooltip").getBoundingClientRect()
+
+        // Find the position of the tooltip
+        let y = (d.y_base + MARGIN.height)/PIXEL_RATIO - tooltip_bbox.height - d.r/PIXEL_RATIO - 30
+        // Place it in the middle of the screen
+        let x = (WIDTH/2)/PIXEL_RATIO - tooltip_bbox.width / 2
+        // let x = (d.x_base + MARGIN.width)/PIXEL_RATIO - tooltip_bbox.width / 2
+
+        /////////////////////////////////////////////////////////////
+
+        //Show and move the tooltip
+        d3.select("#tooltip")
+            .style("top", `${y}px`)
+            .style("left", `${x}px`)
+            // .style("width", "100vw")
+            // .style("max-width", "100vw")
+            // .transition("tooltip").duration(0)
+            .style("opacity", 1)
+
+    }// function showTooltipTouch
 
     /////////////////////////////////////////////////////////////////
-    ///////////////// General Interaction Functions /////////////////
+    // Hide the tooltip
+    function hideTooltip(event) {
+        event.stopPropagation()
+        
+        //Hide tooltip
+        d3.select("#tooltip")
+            // .transition("tooltip").duration(200)
+            .style("opacity", 0)
+
+        // Reset
+        HOVER_ACTIVE = false
+        HOVERED_NODE = null
+        context_hover.clearRect(0, 0, WIDTH, HEIGHT)
+    }// function hideTooltip
+
     /////////////////////////////////////////////////////////////////
+    // Update the tooltip with the correct information
+    function updateTooltipInner(d) {
+        // Update the tooltip's numbers and text
+        document.getElementById("tooltip-author-name").innerHTML = `${d.author_name}`
+        document.getElementById("tooltip-commit-time").innerHTML = `${formatDateFull(d.commit_time)}`
+        document.getElementById("tooltip-commit-title").innerHTML = `${d.commit_title}`
 
-    // Turn the mouse position into a canvas x and y location and see if it's close enough to a node
-    function findNode(mx, my) {
-        mx = ((mx * PIXEL_RATIO) - MARGIN.width)
-        my = ((my * PIXEL_RATIO) - MARGIN.height)
+        document.getElementById("tooltip-num-files").innerHTML = `${d.files_changed === 0 ? "no" : d.files_changed} file${d.files_changed === 1 ? "" : "s"}`
+        document.getElementById("tooltip-num-insertions").innerHTML = `${d.line_insertions} insertion${d.line_insertions === 1 ? "" : "s"}`
+        document.getElementById("tooltip-num-deletions").innerHTML = `${d.line_deletions} deletion${d.line_deletions === 1 ? "" : "s"}`
 
-        //Get the closest hovered node
-        let point = delaunay.find(mx, my)
-        let d = commits[point]
+        document.getElementById("tooltip-commit-hash").innerHTML = `${d.commit_hash}`
 
-        // Get the distance from the mouse to the node
-        let dist = sqrt((d.x_base - mx)**2 + (d.y_base - my)**2)
-        // If the distance is too big, don't show anything
-        let FOUND = dist < d.r + 40 //(CLICK_ACTIVE ? 10 : 50)
+        // Check if this is a release
+        if(d.is_release) {
+            document.getElementById("tooltip-commit-release-header").style.display = "block"
+            document.getElementById("tooltip-commit-release").innerHTML = `${d.commit_release}`
+            document.getElementById("tooltip-commit-release").style.display = "block"
+        } else {
+            document.getElementById("tooltip-commit-release-header").style.display = "none"
+            document.getElementById("tooltip-commit-release").style.display = "none"
+        }// else
 
-        if(FOUND) {
-            // console.log(d)
-            // console.log(d.files_changed, d.line_insertions, d.line_deletions, d.lines_changed, d.commit_year, d.commit_month)
-        }// if
+        // Check if any files changed
+        if(d.files_changed === 0) {
+            document.getElementById("tooltip-commit-changes").style.display = "none"
+            document.getElementById("tooltip-files-changed").style.paddingBottom = "1em"
+        } else {
+            document.getElementById("tooltip-commit-changes").style.display = "block"
+            document.getElementById("tooltip-files-changed").style.paddingBottom = null
+        }// else
 
-        return [d, FOUND]
-    }// function findNode
+        /////////////////////////////////////////////////////////////
+        // Update some of the colors
+        let COL
+        if(d.files_changed === 0) COL = COLOR_MERGE
+        else if (d.line_insertions > d.line_deletions) COL = COLOR_INSERTIONS
+        else if (d.line_insertions < d.line_deletions) COL = COLOR_DELETIONS
+        else COL = COLOR_OVERLAP
+
+        document.getElementById("tooltip").style.borderTop = `4px solid ${COL}`
+        document.getElementById("tooltip-close").style.color = COL
+    }// function updateTooltipInner
 
     /////////////////////////////////////////////////////////////////
     ///////////////////////// Text Functions ////////////////////////

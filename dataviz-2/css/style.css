@@ -50,6 +50,14 @@ p {
     }
 }
 
+.insertions {
+    color: var(--color-insertions);
+}
+
+.deletions {
+    color: var(--color-deletions);
+}
+
 /*************************************/
 /*************** INTRO ***************/
 /*************************************/
@@ -195,9 +203,7 @@ p {
 /*************** CHART ***************/
 /*************************************/
 
-/* This is all done within the createORCAVisual function */
-
-/* #chart-container {
+#chart-container {
     position: relative;
     background-color: var(--color-background);
 }
@@ -205,17 +211,106 @@ p {
 #chart-container canvas {
     display: block;
     margin: 0;
-} */
+}
 
-/* #canvas, #canvas-click {
+#canvas, #canvas-animation {
     position: absolute;
     top: 0;
     pointer-events: none;
     z-index: 0;
-    transition: opacity 200ms ease-in;
 }
 
 #canvas-hover {
     position: relative;
     z-index: 1
-}*/
+}
+
+/*************************************/
+/************** TOOLTIP **************/
+/*************************************/
+
+#tooltip {
+    position: absolute;
+    /* display: none; */
+    /* opacity: 0; */
+    text-align: center;  
+    background: white;
+    pointer-events: none;
+    z-index: 2;
+    cursor: default;
+    max-width: 300px;
+    box-shadow: 0 1px 5px rgba(0,0,0,0.1);
+    -moz-box-shadow: 0 1px 5px rgba(0,0,0,0.1);  
+    border-top: 4px solid var(--color-insertions);
+    opacity: 0;
+    transition: opacity 100ms ease-in;
+}
+
+#tooltip p {
+    margin: 0;
+}
+
+.tooltip-container {
+    position: relative;
+    padding: 1em 1em 1.5em 1em;
+    color: var(--color-text);
+}
+
+#tooltip-close {
+    position: absolute;
+    z-index: 2;
+    right: 0;
+    top: 0;
+    width: 30px;
+    height: 30px;
+    line-height: 30px;
+    font-size: 20px;
+    cursor: pointer;
+    text-align: center;
+    pointer-events: all;
+    color: var(--color-insertions);
+}
+
+.tooltip-header {
+    font-style: italic;
+    opacity: 0.5;
+    font-size: 0.7em;
+    letter-spacing: 0.03em;
+}
+
+#tooltip-author-name {
+    font-weight: 700;
+    font-size: 1.1em;
+    padding-bottom: 0.5em;
+}
+
+#tooltip-commit-time {
+    opacity: 0.8;
+    font-size: 0.8em;
+    padding-bottom: 0.9em;
+}
+
+#tooltip-commit-title {
+    font-style: italic;
+    font-size: 0.8em;
+    padding-bottom: 1em;
+}
+
+#tooltip-commit-release {
+    font-weight: 700;
+    padding-bottom: 1em;
+}
+
+.tooltip-changes {
+    font-size: 0.8em;
+}
+
+#tooltip-commit-changes {
+    padding-bottom: 1em;
+}
+
+#tooltip-commit-hash {
+    font-size: 0.6em;
+    opacity: 0.8;
+}
+

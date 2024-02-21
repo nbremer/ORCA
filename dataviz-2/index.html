@@ -58,6 +58,23 @@
 
             <!-- The visual will be drawn here -->
             <div id="chart-container">
+                <div id="tooltip">
+                    <div class="tooltip-container">
+                        <span id="tooltip-close">&times;</span>
+                        <p class="tooltip-header">author</p>
+                        <p id="tooltip-author-name">Name</p>
+                        <p class="tooltip-header">committed on</p>
+                        <p id="tooltip-commit-time">February 7, 2024</p>
+                        <p id="tooltip-commit-title"></p>
+                        <p id="tooltip-commit-release-header" class="tooltip-header">release</p>
+                        <p id="tooltip-commit-release">v4.7.09</p>
+                        <p class="tooltip-header">changes made</p>
+                        <p id="tooltip-files-changed" class="tooltip-changes"><span id="tooltip-num-files">3 files</span> changed</p>
+                        <p id="tooltip-commit-changes" class="tooltip-changes"><span id="tooltip-num-insertions">468 insertions</span> <span class="insertions">(+)</span> / <span id="tooltip-num-deletions">263 deletions</span> <span class="deletions">(-)</span></p>
+                        <p class="tooltip-header">commit hash</p>
+                        <p id="tooltip-commit-hash"></p>
+                    </div>
+                </div>
             </div>
 
             <div id="chart-extra">
@@ -115,8 +132,6 @@
                 document.fonts.ready.then(() => {
                     Promise.all(promises).then(values => {
                         let formatDigit = d3.format(",.0f")
-                        let formatDigitRound = d3.format(",.2r")
-                        let formatPercentage = d3.format(".0%")
                         let parseDate = d3.timeParse("%Y-%m-%d %H:%M:%S %Z")
                         let formatDate = d3.utcFormat("%B %-e, %Y")
 
