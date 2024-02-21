@@ -1,5 +1,6 @@
 // FINAL: Update GitHub explanation
 
+// TODO: Add "Crunching all the commits" loading message at the top, with "reshuffling to optimize"
 // TODO: Annotations / marking for noteworthy contributions?
 // TODO: Need a bbox simulation to not get overlapping annotations?
 
@@ -148,6 +149,9 @@ async function createORCAVisual(container) {
 
     const ease = d3.easeQuadInOut
     // const opacityInterpolator = d3.interpolate(0, 1)
+
+    const seed = 19
+    let rng = new Math.seedrandom(seed)
 
     /////////////////////////////////////////////////////////////////
     //////////////////////// Draw the Visual ////////////////////////
@@ -328,6 +332,14 @@ async function createORCAVisual(container) {
             d.year = d.values[0].commit_year
             d.n_commits = d.values.length
 
+            // Sort the values by the number of lines changed from big to small
+            // To try and make the biggest circles stay along the centers of the months with hundreds of commits
+            d.values.sort((a, b) => b.radius - a.radius)
+            // Add a little bit of randomness to the ordering again
+            for(let i = 0; i < 2; i++) d.values.sort((a, b) => 0.5 - rng())
+            if(d.n_commits > 250) d.values.sort((a, b) => 0.5 - rng())
+            if(d.n_commits > 400) d.values.sort((a, b) => 0.5 - rng())
+
             let total_files = 0
             let total_insertions = 0
             let total_deletions = 0
@@ -367,8 +379,10 @@ async function createORCAVisual(container) {
         if(!DO_INITIAL) {
             simulationCommitCircles(d)
             d.commit_circle_simulation = true
+            d.values.forEach(n => n.commit_circle_simulation = true)
         }
-        if(DO_INITIAL) findEnclosingCircle(d)
+        // if(DO_INITIAL) 
+        findEnclosingCircle(d, DO_INITIAL)
         
         // d.commit_positions_determined = true
     }// function determineCommitPositions
@@ -377,13 +391,6 @@ async function createORCAVisual(container) {
     // Do an initial circle pack
     function initialCommitCirclePack(d) {
         d.values.forEach(n => { n.r = n.radius + PADDING })
-        // // Sort the values by the number of lines changed from big to small
-        // d.values.sort((a, b) => b.radius - a.radius)
-        // // Add a little bit of randomness to the ordering again
-        // d.values.sort((a, b) => 0.5 - Math.random())
-        // d.values.sort((a, b) => 0.5 - Math.random())
-        // d.values.sort((a, b) => 0.5 - Math.random())
-
         // Pack the circles
         d3.packSiblings(d.values)
     }// function initialCommitCirclePack
@@ -410,10 +417,12 @@ async function createORCAVisual(container) {
 
     /////////////////////////////////////////////////////////////////
     // Find the smallest enclosing circle around all the commit circles
-    function findEnclosingCircle(d) {
+    function findEnclosingCircle(d, DO_INITIAL = false) {
         const scale_padding = d3.scaleLinear()
-            .domain([0, 399, 400])
-            .range([3, 2, 12])
+            .domain([0, 400])
+            .range([3, 12])
+            // .domain([0, 399, 400])
+            // .range([3, 2, 12])
             .clamp(true)
         
         // With the locations of the children known, calculate the smallest enclosing circle
@@ -425,7 +434,7 @@ async function createORCAVisual(container) {
         })
 
         //Save the parent radius
-        d.r = parent_circle.r + 12 + scale_padding(parent_circle.r)
+        d.r = parent_circle.r + scale_padding(parent_circle.r) + (DO_INITIAL ? 2 : 12)
     }// function findEnclosingCircle
 
     /////////////////////////////////////////////////////////////////
@@ -449,7 +458,7 @@ async function createORCAVisual(container) {
             draw()
 
             // Update the delaunay for the mouse events (during the loading animation)
-            delaunay = d3.Delaunay.from(commits_by_month.filter(d => d.commit_circle_simulation).map(d => d.values).flat().map(d => [d.x_base, d.y_base]))
+            delaunay = d3.Delaunay.from(commits.filter(d => d.commit_circle_simulation).map(d => [d.x_base, d.y_base]))
 
             // When the last month has run
             if(i === commits_by_month.length-1) {
