@@ -52,10 +52,12 @@ p {
 
 .insertions {
     color: var(--color-insertions);
+    font-weight: 700;
 }
 
 .deletions {
     color: var(--color-deletions);
+    font-weight: 700;
 }
 
 /*************************************/
@@ -159,6 +161,18 @@ p {
     }
 }
 
+#legend-note {
+    text-align: center;
+    margin: 1.5em auto 0.5em auto;
+    font-size: 0.8em;
+    opacity: 0.6;
+
+    @media only screen and (max-width: 600px) {
+        max-width: 200px;
+        margin: 1.5em auto 2em auto;
+    }
+}
+
 /*************************************/
 /************** CREDITS **************/
 /*************************************/
@@ -241,7 +255,7 @@ p {
     max-width: 300px;
     box-shadow: 0 1px 5px rgba(0,0,0,0.1);
     -moz-box-shadow: 0 1px 5px rgba(0,0,0,0.1);  
-    border-top: 4px solid var(--color-insertions);
+    border-top: 6px solid var(--color-insertions);
     opacity: 0;
     transition: opacity 100ms ease-in;
 }
@@ -285,12 +299,13 @@ p {
 }
 
 #tooltip-commit-time {
-    opacity: 0.8;
+    /* opacity: 0.8; */
     font-size: 0.8em;
     padding-bottom: 0.9em;
 }
 
 #tooltip-commit-title {
+    opacity: 0.7;
     font-style: italic;
     font-size: 0.8em;
     padding-bottom: 1em;

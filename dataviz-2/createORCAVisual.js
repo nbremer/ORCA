@@ -142,7 +142,8 @@ async function createORCAVisual(container) {
 
     const scale_radius = d3.scalePow()
         .exponent(0.5)
-        .range([2.5, 12, 16])
+        // .range([2.5, 12])
+        .range([2.5, 12, 20, 20*sqrt(10)])
         .clamp(true)
 
     const ease = d3.easeQuadInOut
@@ -264,7 +265,8 @@ async function createORCAVisual(container) {
             d.files_changed = +d.files_changed
             d.line_insertions = +d.line_insertions
             d.line_deletions = +d.line_deletions
-            d.lines_changed = d.line_insertions + d.line_deletions
+            d.lines_changed = max(d.line_insertions, d.line_deletions)
+            // d.lines_changed = d.line_insertions + d.line_deletions
 
             // Time
             d.author_time = parseDate(d.author_time)
@@ -277,9 +279,10 @@ async function createORCAVisual(container) {
         // Find quantile numbers of the number of lines changed
         let QUANTILE90 = d3.quantile(commits.filter(d => d.lines_changed > 0), 0.90, d => d.lines_changed)
         let QUANTILE99 = d3.quantile(commits.filter(d => d.lines_changed > 0), 0.99, d => d.lines_changed)
+        let MAX_NUM = d3.max(commits, d => d.lines_changed)
         // Set the radius scale
-        scale_radius.domain([0, QUANTILE90, QUANTILE99])
-        // console.log(scale_radius.domain())
+        // scale_radius.domain([0, QUANTILE90])
+        scale_radius.domain([0, QUANTILE90, QUANTILE99, 10*QUANTILE99])
 
         // Calculate the Visual variables
         commits.forEach(d => {
@@ -374,6 +377,14 @@ async function createORCAVisual(container) {
     // Do an initial circle pack
     function initialCommitCirclePack(d) {
         d.values.forEach(n => { n.r = n.radius + PADDING })
+        // // Sort the values by the number of lines changed from big to small
+        // d.values.sort((a, b) => b.radius - a.radius)
+        // // Add a little bit of randomness to the ordering again
+        // d.values.sort((a, b) => 0.5 - Math.random())
+        // d.values.sort((a, b) => 0.5 - Math.random())
+        // d.values.sort((a, b) => 0.5 - Math.random())
+
+        // Pack the circles
         d3.packSiblings(d.values)
     }// function initialCommitCirclePack
     
@@ -790,12 +801,12 @@ async function createORCAVisual(container) {
             context.fillStyle = COLOR_INSERTIONS
             drawCircle(context, n.x_base, n.y_base, n.radius_insertions, true, false)
             context.fillStyle = COLOR_OVERLAP
-            drawCircle(context, n.x_base, n.y_base, n.radius_deletions, true, false)
+            if(n.line_deletions > 0) drawCircle(context, n.x_base, n.y_base, n.radius_deletions, true, false)
         } else {
             context.fillStyle = COLOR_DELETIONS
             drawCircle(context, n.x_base, n.y_base, n.radius_deletions, true, false)
             context.fillStyle = COLOR_OVERLAP
-            drawCircle(context, n.x_base, n.y_base, n.radius_insertions, true, false)
+            if(n.line_insertions > 0) drawCircle(context, n.x_base, n.y_base, n.radius_insertions, true, false)
         }// else
     }// function drawInsertDeleteCommitCircle
 
@@ -1051,7 +1062,7 @@ async function createORCAVisual(container) {
         else if (d.line_insertions < d.line_deletions) COL = COLOR_DELETIONS
         else COL = COLOR_OVERLAP
 
-        document.getElementById("tooltip").style.borderTop = `4px solid ${COL}`
+        document.getElementById("tooltip").style.borderTop = `6px solid ${COL}`
         document.getElementById("tooltip-close").style.color = COL
     }// function updateTooltipInner
 
