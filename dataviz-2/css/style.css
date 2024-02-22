@@ -8,6 +8,7 @@ html {
     --color-insertions-transparent: #64d6d385;
     --color-deletions: #ea9df5;
     --color-merges: #f2a900;
+    --color-overlap: #4070c4;
     --color-text: #4d4950;
     --color-background: #f7f7f7;
     --color-gradient: linear-gradient(to right, var(--color-deletions), var(--color-repository), var(--color-insertions)) 1;
@@ -41,7 +42,7 @@ p {
     padding-bottom: 0.5em;
     margin-bottom: 2em;
 
-    border-bottom: 3px solid var(--color-insertions-transparent);
+    border-bottom: 3px solid var(--color-insertions);
     /* border-image: var(--color-gradient); */
 
     @media only screen and (max-width: 600px) {
@@ -135,10 +136,10 @@ p {
 /*************************************/
 
 #chart-explanation {
-    border-bottom: 3px solid var(--color-insertions-transparent);
-    /* border-image: var(--color-gradient); */
+    border-bottom: 3px solid var(--color-insertions);
+    /* border-image: linear-gradient(to right, var(--color-insertions), var(--color-overlap)) 1; */
     
-    padding-bottom: 1.5em;
+    padding-bottom: 1.0em;
 
     @media only screen and (max-width: 600px) {
         padding-bottom: 0.5em;
@@ -165,13 +166,32 @@ p {
     text-align: center;
     margin: 1.5em auto 0.5em auto;
     font-size: 0.8em;
-    opacity: 0.6;
+    opacity: 0.8;
 
     @media only screen and (max-width: 600px) {
         max-width: 200px;
         margin: 1.5em auto 2em auto;
     }
 }
+
+#loading {
+    text-align: center;
+    font-style: italic;
+    font-size: 1em;
+    /* opacity: 0.8; */
+    margin-top: 2em;
+    margin-bottom: 0em;
+    padding-bottom: 0.5em;
+
+    & span {
+        background: var(--color-overlap);
+        /* background: linear-gradient(to right, var(--color-insertions), var(--color-overlap)); */
+        color: var(--color-background);
+        padding: 0.4em 1em;
+        font-weight: 700;
+    }
+}
+
 
 /*************************************/
 /************** CREDITS **************/
@@ -180,6 +200,7 @@ p {
 #chart-extra {
     position: relative;
     text-align: center;
+    padding-top: 3em
 }
 
 #dataviz-download-data {
@@ -220,6 +241,7 @@ p {
 #chart-container {
     position: relative;
     background-color: var(--color-background);
+    padding-bottom: 2em;
 }
 
 #chart-container canvas {

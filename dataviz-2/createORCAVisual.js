@@ -1,6 +1,5 @@
 // FINAL: Update GitHub explanation
 
-// TODO: Add "Crunching all the commits" loading message at the top, with "reshuffling to optimize"
 // TODO: Annotations / marking for noteworthy contributions?
 // TODO: Need a bbox simulation to not get overlapping annotations?
 
@@ -215,7 +214,7 @@ async function createORCAVisual(container) {
 
         WIDTH = round(width * PIXEL_RATIO)
         MARGIN.width = WIDTH * 0.08
-        MARGIN.height = Math.max(150, WIDTH * 0.05)
+        MARGIN.height = Math.max(100, WIDTH * 0.04)
         W = WIDTH - 2 * MARGIN.width
 
         // Find the positions of each month's circle now that we have the width
@@ -487,6 +486,9 @@ async function createORCAVisual(container) {
 
     // A requestAnimationFrame function to increase the opacity a few more times for all the circles to get to an opacity of 1
     function increaseFinalOpacities(j) {
+        //Update the loading message at the top
+        document.getElementById("loading-message").innerHTML = "Re-optimizing circles..."
+
         increaseOpacity(j)
         let all_finished = commits_by_month.every(d => d.finished_appearing)
         draw()
@@ -498,8 +500,13 @@ async function createORCAVisual(container) {
             // Do a final resize
             chart.resize()
 
-            // Setup the hover
-            setupInteraction()
+            // Hide the loading message
+            // document.getElementById("loading-message").innerHTML = "Done!"
+            d3.select("#loading-message")
+                .transition().duration(500)
+                .delay(1000)
+                .style("opacity", 0)
+
             console.log("Done drawing")
         }// else
     }// function increaseFinalOpacities
