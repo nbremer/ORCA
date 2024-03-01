@@ -35,22 +35,6 @@ p {
     color: var(--color-text);
 }
 
-.header {
-    text-align: center;
-    font-size: 1.0em;
-    padding-top: 0.5em;
-    padding-bottom: 0.5em;
-    margin-bottom: 2em;
-
-    border-bottom: 3px solid var(--color-insertions);
-    /* border-image: var(--color-gradient); */
-
-    @media only screen and (max-width: 600px) {
-        /* styles for mobile browsers smaller than 600px; */
-        margin-bottom: 1em;
-    }
-}
-
 .insertions {
     color: var(--color-insertions);
     font-weight: 700;
@@ -59,6 +43,70 @@ p {
 .deletions {
     color: var(--color-deletions);
     font-weight: 700;
+}
+
+.code {
+    font-family: 'Fira Code', monospace;
+    background-color: var(--color-insertions-transparent);
+    font-size: 0.9em;
+    padding: 0.2em 0.4em;
+}
+
+a {
+    border-bottom: 3px solid var(--color-insertions);
+    border-image:linear-gradient(to right, var(--color-insertions), var(--color-deletions)) 1;
+    /* padding: 0.1em 0.3em; */
+    font-weight: 700;
+    cursor: pointer;
+    color: var(--color-text);
+    text-decoration: none;
+}
+
+.double-column {
+    padding: 3em 5em 2em 5em;
+
+    font-size: 1.2em;
+
+    display: grid;
+    justify-content: center;
+    align-items: top;
+
+    grid-template-columns: 1fr 1fr;
+    column-gap: 7em;
+    row-gap: 1em;
+
+    @media only screen and (max-width: 600px) {
+        display: block;
+        padding: 3em 2em 0em 2em;
+    }
+}
+
+.double-column p {
+    line-height: 160%;
+    font-size: 0.8em;
+}
+
+.double-column .header {
+    grid-column-start: 1;
+    grid-column-end: 3;
+    grid-row-start: 1;
+    grid-row-end: 1;
+}
+
+.header {
+    text-align: center;
+    font-size: 1.0em;
+    padding-top: 0.5em;
+    padding-bottom: 0.5em;
+    margin-bottom: 2em;
+
+    border-bottom: 3px solid var(--color-insertions);
+    border-image: var(--color-gradient);
+
+    @media only screen and (max-width: 600px) {
+        /* styles for mobile browsers smaller than 600px; */
+        margin-bottom: 1em;
+    }
 }
 
 /*************************************/
@@ -138,6 +186,7 @@ p {
 #chart-explanation {
     border-bottom: 3px solid var(--color-insertions);
     /* border-image: linear-gradient(to right, var(--color-insertions), var(--color-overlap)) 1; */
+    border-image: var(--color-gradient);
     
     padding-bottom: 1.0em;
 
@@ -200,7 +249,8 @@ p {
 #chart-extra {
     position: relative;
     text-align: center;
-    padding-top: 3em
+    /* padding-top: 3em */
+    padding: 3em 2em 1em 2em;
 }
 
 #dataviz-download-data {
@@ -222,16 +272,6 @@ p {
     margin-bottom: 2em;
     opacity: 0.8;
     font-size: 0.9em;
-}
-
-#dataviz-credit a {
-    border-bottom: 3px solid var(--color-repository);
-    border-image:linear-gradient(to right, var(--color-deletions), var(--color-insertions)) 1;
-    /* padding: 0.1em 0.3em; */
-    font-weight: 700;
-    cursor: pointer;
-    color: var(--color-text);
-    text-decoration: none;
 }
 
 /*************************************/

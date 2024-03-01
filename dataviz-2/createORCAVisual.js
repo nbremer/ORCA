@@ -365,6 +365,16 @@ async function createORCAVisual(container) {
                 n.month_data = d
             })// forEach
         })// forEach
+
+        // Loop backwards over the months and see which month is the first one of that year
+        let first_month_of_year = new Map()
+        for(let i = commits_by_month.length-1; i >= 0; i--) {
+            let d = commits_by_month[i]
+            if(!first_month_of_year.has(d.year)) {
+                first_month_of_year.set(d.year, d)
+                d.first_month_of_year = true
+            }// if
+        }// for i
     }// function prepareData
 
     /////////////////////////////////////////////////////////////////
@@ -517,7 +527,7 @@ async function createORCAVisual(container) {
     function determineMonthPositionsAlongTimeline() {
         // Loop over all the months and place them in a grid of N columns
         const padding = 50
-        const padding_row = 80
+        const padding_row = 120
         
         let along_X = 0
         let along_Y = 0
@@ -807,6 +817,7 @@ async function createORCAVisual(container) {
                 context.lineWidth = lw
                 drawCircle(context, d.x_base, d.y_base, d.radius - lw/2 - 4, true, true)
             }// if
+
     }// function drawCommitCircle
 
     /////////////////////////////////////////////////////////////////
@@ -1094,23 +1105,19 @@ async function createORCAVisual(container) {
         // Label for the year or month
         let text
         let y = d.y + d.r + 6
-        if((i === 0 || i === commits_by_month.length-1) && d.month !== 0) {
+        // The first and last month of all the data
+        if(d.first_month_of_year === true) { //i === 0 || i === commits_by_month.length-1 || 
             y += 18
             drawTickMark(6)
             context.textBaseline = "top"
-            setFont(context, 23, 700, "normal")
-            text = `${formatDate(d.values[0].commit_time)}`
+            setFont(context, 23, 400, "normal")
+            text = `${formatMonth(d.values[0].commit_time)}`
+            // text = `${formatDate(d.values[0].commit_time)}`
             if(!show_commits) context.fillText(text, d.x, y)
             y += 26
-
-        } else if(d.month === 0) {
-            y += 18
-            drawTickMark(6)
-            context.textBaseline = "top"
-            setFont(context, 30, 700, "normal")
-            text = d.year
-            if(!show_commits) context.fillText(text, d.x, y)
-            y += 32
+            setFont(context, 23, 700, "normal")
+            if(!show_commits) context.fillText(d.year, d.x, y)
+            y += 26
 
         } else {
             y += 16

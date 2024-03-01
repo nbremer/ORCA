@@ -84,6 +84,36 @@
                 </div>
             </div>
 
+            <div id="technical-explanation" class="double-column">
+                <p class="header"><strong>TECHNICAL DETAILS</strong></p>
+                <div>
+                    <p style="font-weight: 700;">The Complexity</p>
+                    <p>This section is for those that would like to learn a little about how this visual works on a technical level. In general, I used many of <a href="https://d3js.org/" target="_blank">d3.js</a>'s handy layout functions. The actual drawing happens with an HTML5 canvas, because with thousands of small circles to be drawn, SVG would perform too slowly. Especially since there is also an animation and hover & click events.</p>
+                    <p>I find that the best way to get a nice round grouping of circles, is to use <span class="code">d3.forceSimulation</span>. However, for the case of <span class="repo-name repository">mozilla/pdf.js</span>, there are over 100 months to run such a simulation for. This made the page too slow to load if I let the force simulation run for each month first.</p>
+                    <p>I could have pre-calculated the positions and then used these final positions to instantly create the visual for any viewer. However, I want this visual, its code, to be able to handle the commit history of (almost) any repository. Therefore, I couldn't use any pre-calculation.</p>
+                    <p>I tried many approaches to make the calculations faster to still have all the calculations performed at the start (e.g. web workers). However, nothing proved fast enough. In the end, I instead combined several functions and a loading animation to make the "perceived" performance seem fast enough (although perhaps not on mobile).</p>
+                </div>
+                <div>
+                    <p style="font-weight: 700;">The Approach</p>
+                    <p>First I use <span class="code">d3.packSiblings</span> on all the commits of a month to pack them into a circle. This is a good start (but often visually not good enough for a case like this where all of the circles have different radii). Next, I use <span class="code">d3.packEnclose</span> to get the radius of the smallest enclosing circle that fits all of the commit circles. These two functions run really fast and with the information of the smallest enclosing circle, I draw the blue timeline with the month circles on top.</p>
+                    <p>With the timeline drawn I then loop over each month's commits again and now run a proper <span class="code">d3.forceSimulation</span> for each month. Once a month is done, I let the circles slowly appear in an animation and move on to the next circle to run the simulation and afterwards let it appear. Doing this for all of the months takes several seconds, but due to the "fading in" of each month, it turns the result into an intriguing animation.</p>
+                    <p>After all the months have gone through the force simulation, many of them can get a smaller enclosing circle (because the simulation does a better job of packing the circles in a tight ball than the initial (fast) packing approach). In the end, I therefore quickly run the <span class="code">d3.packEnclose</span> one more time and draw the visual in its end state, with nicely fitting circles around each month.</p>
+                </div>
+
+            </div>
+
+            <div id="data-explanation" class="double-column">
+                <p class="header"><strong>DATA DETAILS</strong></p>
+                <div>
+                    <p>Thanks to a lot of help to figure it out, I used the following (terminal) code to get the git commit history of a repository: <span class="code">( echo "commit_hash", "decorations","committer_email", "committer_name", "commit_time", "author_email", "author_name", "author_time", "commit_title"; git log --pretty='format:commit, %H, ^%D^, %ce, ^%cN^, %ci, %ae, ^%aN^, %ai, ^%s^' --shortstat --tags  -M20 -C20 origin/master ) > log.txt</span> (you need to be in the repo folder to run this). </p>
+                    <p>You can find more information about what kind of git log options you have in the <a href="https://git-scm.com/docs/pretty-formats" target="_blank">pretty-formats</a> and <a href="https://git-scm.com/docs/git-log" target="_blank">git log</a> documentation.</p>
+                </div>
+                <div>
+                    <p>It's this dataset that contains all of the information that is used in this visual and its almost perfect to use as-is. However, the number of files changes, line insertions and line deletions are added as a separate row each time. Something such as <span class="code">2 files changed, 13 insertions(+), 26 deletions(-)</span>. Therefore, to get this final bit in a <span class="code">csv</span> ready format, I had to run the <span class="code">.txt</span> file through R for some final minor data preparation.</p>
+                    <p style="font-style: italic;">Why the weird <span class="code">^</span> around some of the fields. Honestly, because it was the only way I could get the textual fields, such as the commit title, to be read properly in R. Otherwise some of the rows would split up into new columns due to the usage of a variety of <span class="code">", ', `, #</span> and other marks. I therefore used the <span class="code">^</span> to act as a <span class="code">quote</span>.</p>
+                </div>
+            </div>
+
             <div id="chart-extra">
                 <button id="dataviz-download-data">Download the RAW data</button>
                 <p id="dataviz-credit">Visualization Designed & Created by Nadieh Bremer | <a href="https://www.visualcinnamon.com/" target="_blank">Visual Cinnamon</a></p>
@@ -93,12 +123,20 @@
         <script>
             let params = new URLSearchParams(window.location.search)
             const REPOSITORY = [
-                "pdfjs"
+                "pdfjs",
+                "visualcinnamon"
             ].indexOf(params.get("repo")) === -1 ? "pdfjs" : params.get("repo")
 
             let REPOSITORY_FULL = "mozilla/pdf.js" // Default
+            if (REPOSITORY === "visualcinnamon") REPOSITORY_FULL = "nbremer/visualcinnamon"
 
             let REPOSITORY_NAME = REPOSITORY_FULL.substring(REPOSITORY_FULL.indexOf("/") + 1)
+
+            // Replace the "title-repo-name" with the repository name
+            document.getElementById("title-repo-name").innerHTML = REPOSITORY_FULL
+            // Replace all the classed "repo-name" with the repository name
+            document.querySelectorAll(".repo-name").forEach(d => d.innerHTML = REPOSITORY_FULL)
+            document.querySelectorAll(".repo-name-only").forEach(d => d.innerHTML = REPOSITORY_NAME)
 
             /////////////////////////////////////////////////////////
             ///////////////////////// START /////////////////////////
