@@ -9,6 +9,7 @@
 
         <!-- Styling -->
         <link rel="stylesheet" href="css/style.css">
+        <link rel="stylesheet" href="css/awesomplete.css">
 		
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -18,6 +19,7 @@
         <!-- JavaScript libraries -->
         <script src="lib/d3.v7.js"></script>
         <script src="lib/seedRandom.min.js"></script>
+        <script src="lib/awesomplete.min.js"></script>
 
         <!-- Custom JavaScript file -->
         <script src="createORCAVisual.js"></script>
@@ -64,8 +66,16 @@
                 </div>
             </div>
 
-            <!-- Loading message -->
+            <!-- Loading & Interaction message -->
             <div id="loading"><span id="loading-message">Crunching all the commits...</span></div>
+
+            <!-- Search box -->
+            <div id="search-box-outer" class="search-box">
+                <div id="search-box-inner">
+                    <p><b>Search for contributors</b></p>
+                    <input id="search-box" class="search-box-input" placeholder="Name...">
+                </div>
+            </div>
 
             <!-- The visual will be drawn here -->
             <div id="chart-container">
@@ -165,6 +175,7 @@
 
             // Replace the "title-repo-name" with the repository name
             document.getElementById("title-repo-name").innerHTML = REPOSITORY_FULL
+
             // Replace all the classed "repo-name" with the repository name
             document.querySelectorAll(".repo-name").forEach(d => d.innerHTML = REPOSITORY_FULL)
             document.querySelectorAll(".repo-name-only").forEach(d => d.innerHTML = REPOSITORY_NAME)
@@ -204,21 +215,21 @@
                         let parseDate = d3.timeParse("%Y-%m-%d %H:%M:%S %Z")
                         let formatDate = d3.utcFormat("%B %-e, %Y")
 
-                        /////////////////////////////////////////////////
+                        /////////////////////////////////////////////
                         // If no ORCA data was supplied, hide the parts of the page that are related to it
                         if(!values[1]) {
-                            // Hide the divs and other elements related to ORCA
+                            // Hide the DIVs and other elements related to ORCA
                             document.getElementById("orca-note").style.display = "none"
                             document.getElementById("orca-names").style.display = "none"
                             document.getElementById("orca-legend").style.display = "none"
                         }// if
 
-                        /////////////////////////////////////////////////
+                        /////////////////////////////////////////////
                         // Create a deep copy of the data in values
                         let data_raw = []
                         data_raw.push(JSON.parse(JSON.stringify(values[0]))) // commits
 
-                        /////////////////////////////////////////////////
+                        /////////////////////////////////////////////
                         // Very specific to this example, but get some statistics on the data and put this in the intro text
                         let num_commits = values[0].length
                         document.querySelectorAll(".commit-num").forEach(d => d.innerHTML = `${formatDigit(num_commits)} `)
@@ -232,26 +243,99 @@
                         document.getElementById("first-commit-date").innerHTML = ` on ${first_commit_date}`
 
                         /////////////////////////////////////////////
-                        // It expects one dataset of all the commits made to the repository
+                        // It expects a dataset of all the commits made to the repository
+                        // and possibly a dataset of the ORCA recipients, but the latter is not required
                         ORCAVisual(values)
 
-                        /////////////////////////////////////////////////
+                        /////////////////////////////////////////////
                         // Very specific to this example, but let people click on the ORCA names and have those commits fixed in the visual
                         document.querySelectorAll(".orca-name").forEach(function (span) {
                             span.addEventListener("click", function (event) {
                                 event.stopPropagation()
                                 let name = event.target.innerText
-                                // Call your function here with the name as an argument
-                                clickOrcaContributor(name)
-                            })
+                                // Highlight the commits of the clicked person
+                                ORCAVisual.highlight(name)
+                            })// on click
                         })// orca-name
 
-                        function clickOrcaContributor(name) {
-                            // Your code here
-                            console.log(name)
-                            ORCAVisual.highlight(name)
-                        }// function clickOrcaContributor
+                        /////////////////////////////////////////////
+                        ////////////// Search functions /////////////
+                        /////////////////////////////////////////////
+                        const setupSearchBox = (data, ORCAVisual) => {
+                            const search_box = document.getElementById("search-box")
+                            const awesomplete_box = new Awesomplete(search_box, { maxItems: 45 })
+    
+                            //Create a search box with autocomplete and other awesome features
+                            //https://leaverou.github.io/awesomplete/
+                            // Create a list of the unique author names from the data using a Set
+                            // Sort them alphabetically
+                            const uniqueAuthorNames = [...new Set(data.map(d => d.author_name))]
+                            const data_list = uniqueAuthorNames.map(function(d,i) { return { id: i, label: d } })
+                            awesomplete_box.list = data_list.map(d => d.label)
+                            awesomplete_box.sort = (a, b) => a.localeCompare(b)
+                            
+                            //Reset the visual when the search box is focused
+                            search_box.addEventListener("focus", function (e) {
+                                event.stopPropagation()
+                                event.preventDefault()
+                                ORCAVisual.reset()
+                            })
+                            
+                            //Highlight all possible options during input / writing
+                            let list
+                            search_box.addEventListener("input", function (e) {
+                                let value = this.value
+                                if(value.length >= 2) {
+                                    //Set the list hover listeners
+                                    list = document.querySelectorAll(`#search-box-outer li`)
+                                    if(list) {
+                                        for (let i = 0; i < list.length; i++) {
+                                            list[i].addEventListener("mouseover", revealHoveredItem)
+                                        }//for i
+                                    }//if
+                                } else {
+                                    ORCAVisual.reset()
+                                }// else
+                            })//on input
+    
+                            //Reveal the hovered item in the list
+                            function revealHoveredItem() {
+                                let label = this.textContent
+                                let chosen = data_list.find(d => d.label === label)
+                                ORCAVisual.highlight(chosen.label)
+                            }//function revealHoveredItem
+    
+                            //When the list is closed
+                            search_box.addEventListener("awesomplete-close", function (reason) {
+                                event.stopPropagation()
+                                if(list) {
+                                    for (let i = 0; i < list.length; i++) {
+                                        list[i].removeEventListener("mouseover", revealHoveredItem)
+                                    }//for i
+                                }//if
+                            })//on close
+    
+                            //When a selection from the list is made via click or enter
+                            search_box.addEventListener("awesomplete-selectcomplete", function (text) {
+                                event.stopPropagation()
+                                search_box.blur()
+                                let label = text.text.label
+                                let chosen = data_list.find(d => d.label === label)
+                                ORCAVisual.highlight(chosen.label, true)
+                            })//on select
+    
+                            //When highlighting an element in the list using the up/down arrow
+                            search_box.addEventListener("awesomplete-highlight", function (text) {
+                                let label = text.text.label
+                                let chosen = data_list.find(d => d.label === label)
+                                ORCAVisual.highlight(chosen.label)
+                            })//on list highlight
+                        }// function setupSearchBox
 
+                        setupSearchBox(values[0], ORCAVisual)
+
+                        /////////////////////////////////////////////
+                        /////////////// Download Data ///////////////
                         /////////////////////////////////////////////
                         // Let people download the raw commit data
                         const download_button = document.getElementById("dataviz-download-data")

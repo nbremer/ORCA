@@ -1,8 +1,5 @@
 // FINAL: Create README GitHub explanation
 
-// TODO: Can we highlight if this commit was made by someone who received ORCA? Author commit. Try a different shape, like a hexagon or square. Also add this ORCA info to the legend.
-
-// TODO: Click on ORCA name in text and see their commits fixed
 // TODO: Add search box to search for a specific person
 // TODO - Stretch Goal: Animation between the first and second circle pack
 
@@ -43,6 +40,7 @@ async function createORCAVisual(container) {
     let CLICK_ACTIVE = false
     let CLICKED_NODE = null
     let MESSAGE_SET = false
+    let FIX_CLICK = false
 
     // Drawing
     let INITIAL_CIRCLE_DRAW = true
@@ -257,7 +255,7 @@ async function createORCAVisual(container) {
         // Draw the visual
         draw()
         // Draw the possible click/hover state on top
-        if(CLICK_ACTIVE) drawHoverState(context_hover, CLICKED_NODE)
+        if(CLICK_ACTIVE) drawHoverState(context_hover, CLICKED_NODE, true)
         else if(HOVER_ACTIVE) drawHoverState(context_hover, HOVERED_NODE)
 
         INITIAL_CIRCLE_DRAW = false
@@ -421,10 +419,7 @@ async function createORCAVisual(container) {
             d.commit_circle_simulation = true
             d.values.forEach(n => n.commit_circle_simulation = true)
         }
-        // if(DO_INITIAL) 
-        findEnclosingCircle(d, DO_INITIAL)
-        
-        // d.commit_positions_determined = true
+        if(DO_INITIAL) findEnclosingCircle(d, DO_INITIAL)
     }// function determineCommitPositions
 
     /////////////////////////////////////////////////////////////////
@@ -539,6 +534,11 @@ async function createORCAVisual(container) {
 
         if(!all_finished) requestAnimationFrame(() => increaseFinalOpacities(j + 1)) 
         else {
+            // Redo the smallest enclosing circle for each month
+            commits_by_month.forEach(d => {
+                findEnclosingCircle(d, false)
+            })//forEach
+
             // Finish the initial draw
             FIRST_DRAW = false
             // Do a final resize
@@ -908,7 +908,8 @@ async function createORCAVisual(container) {
             //     initializeHoverEvent(event, mx, my, "touch")
             // })
             .on("mousemove", function(event) {
-                event.stopPropagation() // Not sure if this is needed
+                event.stopPropagation()
+                FIX_CLICK = false //reset workaround
 
                 // Get the position of the mouse on the canvas
                 let [mx, my] = d3.pointer(event, this);
@@ -916,14 +917,14 @@ async function createORCAVisual(container) {
             })
             // .on("touchmove", hideTooltip)
         	.on("click", function(event) {
-                event.stopPropagation() // Not sure if this is needed
+                event.stopPropagation()
 
                 // Get the position of the mouse on the canvas
                 let [mx, my] = d3.pointer(event, this);
                 initializeClickEvent(event, mx, my)
             })
 
-        d3.select("body").on("click", resetClick)
+        d3.select("body").on("click", function(event) { if(!FIX_CLICK) resetClick(event) })
         d3.select("#tooltip-close").on("click", resetClick)
 
     }// function setupInteraction
@@ -1020,7 +1021,7 @@ async function createORCAVisual(container) {
 
     /////////////////////////////////////////////////////////////////
     // Draw the hovered node and its links and neighbors and a tooltip
-    function drawHoverState(context, d) {
+    function drawHoverState(context, d, hide_tooltip = false) {
         context.clearRect(0, 0, WIDTH, HEIGHT)
 
         // Draw a partly transparent circle on top of each month's commit circle
@@ -1046,15 +1047,19 @@ async function createORCAVisual(container) {
         // Show a ring around the hovered node
         if(HOVER_ACTIVE) drawHoverRing(context, d)
 
-        // Update and show the tooltip
-        if(container.offsetWidth > 500) showTooltipMousemove(d)
-        else showTooltipTouch(d)
-        // if(type === "mousemove") showTooltipMousemove(d)
-        // else if(type === "touch") showTooltipTouch(d)
+        if(!hide_tooltip) {
+            // Update and show the tooltip
+            if(container.offsetWidth > 500) showTooltipMousemove(d)
+            else showTooltipTouch(d)
+            // if(type === "mousemove") showTooltipMousemove(d)
+            // else if(type === "touch") showTooltipTouch(d)
+        }// if
 
         // Update the message on top
         if(CLICK_ACTIVE === false || (CLICK_ACTIVE && MESSAGE_SET === false)) {
-            document.getElementById("loading-message").innerHTML = `Highlighting all ${formatNumber(author_commits.length)} commits by ${d.author_name}`
+            let message_div = document.getElementById("loading-message")
+            if(author_commits.length === 1) message_div.innerHTML = `Highlighting the one commit by ${d.author_name}`
+            else message_div.innerHTML = `Highlighting all ${formatNumber(author_commits.length)} commits by ${d.author_name}`
             showMessage(0)
             MESSAGE_SET = true
         }// if
@@ -1151,8 +1156,13 @@ async function createORCAVisual(container) {
             .style("opacity", 0)
             
         if(!CLICK_ACTIVE) {
-            // Hide the message
-            hideMessage(400, 0)
+            // Hide the message, except if we're still in the first draw
+            if(!FIRST_DRAW) hideMessage(400, 0)
+            else {
+                MESSAGE_SET = false
+                document.getElementById("loading-message").innerHTML = "Crunching all the commits..."
+            }// else
+
             MESSAGE_SET = false
             // Reset
             HOVER_ACTIVE = false
@@ -1354,17 +1364,26 @@ async function createORCAVisual(container) {
         return chart
     }// chart.width
 
-    chart.highlight = function (value) {
+    // Highlight all the commits made by a certain contributor
+    chart.highlight = function (value, fix = false) {
+        console.log("highlight")
         // See if this contributor can be found in the commit data
         let d = commits.find(d => d.author_name === value)
         // If something is found, run the click function
         if(d !== undefined) {
+            if(fix) FIX_CLICK = true //workaround for the click event not firing on search box
             MESSAGE_SET = false
             setClick(d)
             hideTooltip()
         }// if
         return chart
     }// chart.highlight
+
+    // Reset any click/hover events
+    chart.reset = function () {
+        resetClick() 
+        return chart
+    }// chart.reset
 
     return chart
 
