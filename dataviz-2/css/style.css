@@ -209,6 +209,7 @@ li::before {
 .orca-name {
     font-weight: 700;
     font-style: italic;
+    cursor: pointer;
 }
 
 /*************************************/
@@ -237,6 +238,7 @@ li::before {
 .legend {
     height: 130px;
     width: auto;
+    padding: 0em 0.5em;
 
     @media only screen and (max-width: 600px) {
         height: 110px;

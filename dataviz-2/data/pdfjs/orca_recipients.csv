@@ -1,0 +1,10 @@
+name,email,contribution
+"Jonas Jenwald","jonas.jenwald@gmail.com","Major contributor, he has a huge impact on the project"
+"Tim van der Meij","info@timvandermeij.nl","Major contributor, he has a large impact on the project"
+"Takashi Tamura","","Fixing Typescript support and improving build configuration"
+"Jani Pehkonen","janip@ee.oulu.fi","Implementing visibility expressions for optional content, and fixing a bug with Encoding, and providing an icon for “Find Current Outline Item”"
+"Michael Wu","","Fixing Typescript definitions"
+"Christophe Coevoet","stof@notk.org","Fixing Typescript build system"
+"Ben Wagner","bungeman@chromium.org","Fixing bugs with gradient color stops and PostScript trigonomic operators"
+"Jane-Kotovich","jenyakotovich@gmail.com","Fixing bugs in XFA and JavaScript support"
+"Dominik Hufnagel","dominik.hufnagel@yoshteq.de","Fixing bugs in form support (font size and color, and checkboxes)

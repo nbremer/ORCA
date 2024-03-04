@@ -1,8 +1,9 @@
 // FINAL: Create README GitHub explanation
 
-// TODO: Mark the ORCA recipients
-// TODO: Can we highlight if this commit was made by someone who received ORCA? Author commit. Try a different shape, like a hexagon or square. Also add this to the legend.
+// TODO: Can we highlight if this commit was made by someone who received ORCA? Author commit. Try a different shape, like a hexagon or square. Also add this ORCA info to the legend.
 
+// TODO: Click on ORCA name in text and see their commits fixed
+// TODO: Add search box to search for a specific person
 // TODO - Stretch Goal: Animation between the first and second circle pack
 
 /////////////////////////////////////////////////////////////////////
@@ -25,12 +26,11 @@ async function createORCAVisual(container) {
     let max = Math.max
     let sqrt = Math.sqrt
 
-    // Default repo
-    let REPO_CENTRAL = "mozilla/pdf.js"
-
     // Datasets
     let commits
     let commits_by_month
+    let orca_recipients
+    let ORCA_PRESENT = false
 
     // Grid
     let row_heights = []
@@ -150,7 +150,7 @@ async function createORCAVisual(container) {
     const scale_radius = d3.scalePow()
         .exponent(0.5)
         // .range([2.5, 12])
-        .range([2.5, 12, 20, 20*sqrt(10)])
+        .range([3, 12, 20, 20*sqrt(10)])
         .clamp(true)
 
     const ease = d3.easeQuadInOut
@@ -168,9 +168,15 @@ async function createORCAVisual(container) {
         ////////////////////// Data Preparation /////////////////////
         /////////////////////////////////////////////////////////////
         commits = values[0]
-
         // Initial simple data preparation
         prepareData()
+
+        // Is the dataset of orca recipients present?
+        if(values[1]) {
+            orca_recipients = values[1]
+            ORCA_PRESENT = true
+            addOrcaToCommits()
+        }// if
 
         /////////////////////////////////////////////////////////////
         // Do an initial pass of finding the positions of the commits within each month's circle using circle packing
@@ -239,7 +245,7 @@ async function createORCAVisual(container) {
 
         // Reset the delaunay for the mouse events
         if(!FIRST_DRAW) {
-            if(CLICK_ACTIVE) delaunay_points = commits.filter(n => n.author_email === CLICKED_NODE.author_email)
+            if(CLICK_ACTIVE) delaunay_points = commits.filter(n => n.author_email === CLICKED_NODE.author_email || n.author_name.toLowerCase() === CLICKED_NODE.author_name.toLowerCase())
             else delaunay_points = commits
             doDelaunay(delaunay_points)
             // delaunay = d3.Delaunay.from(commits.map(d => [d.x_base, d.y_base]))
@@ -394,6 +400,15 @@ async function createORCAVisual(container) {
     }// function prepareData
 
     /////////////////////////////////////////////////////////////////
+    // Find all the commits made by ORCA recipients based on the name (lowercase) or email
+    function addOrcaToCommits() {
+        // Loop over all the commits and see if the author is an ORCA recipient
+        commits.forEach(d => {
+            d.orca_recipient = orca_recipients.some(n => n.email === d.author_email|| n.name.toLowerCase() === d.author_name.toLowerCase())
+        })// forEach
+    }// function addOrcaToCommits
+
+    /////////////////////////////////////////////////////////////////
     /////////////////// General Circle Placements ///////////////////
     /////////////////////////////////////////////////////////////////
 
@@ -484,7 +499,7 @@ async function createORCAVisual(container) {
 
             // Update the delaunay for the mouse events (during the loading animation)
             delaunay_points = commits
-            if(CLICK_ACTIVE) delaunay_points = commits.filter(n => n.author_email === CLICKED_NODE.author_email)
+            if(CLICK_ACTIVE) delaunay_points = commits.filter(n => n.author_email === CLICKED_NODE.author_email || n.author_name.toLowerCase() === CLICKED_NODE.author_name.toLowerCase())
             delaunay = d3.Delaunay.from(delaunay_points.filter(d => d.commit_circle_simulation).map(d => [d.x_base, d.y_base]))
 
             // When the last month has run
@@ -515,6 +530,7 @@ async function createORCAVisual(container) {
     // A requestAnimationFrame function to increase the opacity a few more times for all the circles to get to an opacity of 1
     function increaseFinalOpacities(j) {
         //Update the loading message at the top
+        MESSAGE_SET = false
         document.getElementById("loading-message").innerHTML = "Re-optimizing circles..."
 
         increaseOpacity(j)
@@ -812,53 +828,69 @@ async function createORCAVisual(container) {
 
     // Draw the commits
     function drawCommitCircle(context, d) {
-            if(d.files_changed === 0) {
-                context.fillStyle = COLOR_MERGE
-                drawCircle(context, d.x_base, d.y_base, d.radius_draw, true, false)
-            } else {
-                // Draw two circles, with the overlapping part in another color
-                drawInsertDeleteCommitCircle(context, d)
-            }// else
+        let drawShape = d.orca_recipient ? drawHexagon : drawCircle
 
-            if(d.is_release) {
-                context.strokeStyle = COLOR_MERGE
-                // if(d.files_changed === 0) context.strokeStyle = COLOR_MERGE
-                // else if(d.line_insertions > d.line_deletions) context.strokeStyle = COLOR_INSERTIONS
-                // else if(d.line_insertions < d.line_deletions) context.strokeStyle = COLOR_DELETIONS
-                // else context.strokeStyle = COLOR_OVERLAP
+        if(d.files_changed === 0) {
+            context.fillStyle = COLOR_MERGE
+            if(!d.orca_recipient) drawShape(context, d.x_base, d.y_base, d.radius_draw, true, false)
+            else drawHexagon(context, d.x_base, d.y_base, d.radius_draw, true, false)
+        } else {
+            // Draw two circles, with the overlapping part in another color
+            drawInsertDeleteCommitCircle(context, d)
+        }// else
 
-                let lw = 4
-                context.lineWidth = lw
-                drawCircle(context, d.x_base, d.y_base, d.radius - lw/2 - 4, true, true)
-            }// if
+        if(d.is_release) {
+            context.strokeStyle = COLOR_MERGE
+            // if(d.files_changed === 0) context.strokeStyle = COLOR_MERGE
+            // else if(d.line_insertions > d.line_deletions) context.strokeStyle = COLOR_INSERTIONS
+            // else if(d.line_insertions < d.line_deletions) context.strokeStyle = COLOR_DELETIONS
+            // else context.strokeStyle = COLOR_OVERLAP
+
+            let lw = 4
+            context.lineWidth = lw
+            drawShape(context, d.x_base, d.y_base, d.radius - lw/2 - 4, true, true)
+        }// if
 
     }// function drawCommitCircle
 
     /////////////////////////////////////////////////////////////////
     // Draw a single commit circle
     function drawInsertDeleteCommitCircle(context, n) {
+        let drawShape = n.orca_recipient ? drawHexagon : drawCircle
         // Full circles with the overlapping part in another color
         if(n.radius_insertions > n.radius_deletions) {
             context.fillStyle = COLOR_INSERTIONS
-            drawCircle(context, n.x_base, n.y_base, n.radius_insertions, true, false)
+            drawShape(context, n.x_base, n.y_base, n.radius_insertions, true, false)
             context.fillStyle = COLOR_OVERLAP
-            if(n.line_deletions > 0) drawCircle(context, n.x_base, n.y_base, n.radius_deletions, true, false)
+            if(n.line_deletions > 0) drawShape(context, n.x_base, n.y_base, n.radius_deletions, true, false)
         } else {
             context.fillStyle = COLOR_DELETIONS
-            drawCircle(context, n.x_base, n.y_base, n.radius_deletions, true, false)
+            drawShape(context, n.x_base, n.y_base, n.radius_deletions, true, false)
             context.fillStyle = COLOR_OVERLAP
-            if(n.line_insertions > 0) drawCircle(context, n.x_base, n.y_base, n.radius_insertions, true, false)
+            if(n.line_insertions > 0) drawShape(context, n.x_base, n.y_base, n.radius_insertions, true, false)
         }// else
     }// function drawInsertDeleteCommitCircle
 
     ///////////////////////// Draw a circle /////////////////////////
-    function drawCircle(context, x, y, r, begin = true, stroke = false) {
+    function drawCircle(context, x, y, r, begin = true, stroke = false, fill = true) {
         if(begin === true) context.beginPath()
         context.moveTo((x+r), y)
         context.arc(x, y, r, 0, TAU)
-        if(begin && !stroke) context.fill()
+        if(begin && !stroke && fill) context.fill()
         else if(begin && stroke) context.stroke()
     }//function drawCircle
+
+    ///////////////////////// Draw a hexagon /////////////////////////
+    function drawHexagon(context, x, y, r, begin = true, stroke = false, fill = true) {
+        if(begin === true) context.beginPath()
+        context.moveTo(x + r * cos(0 - PI/2), y + r * sin(0 - PI/2))
+        for (let i = 1; i < 6; i++) {
+            context.lineTo(x + r * cos(i * TAU / 6 - PI/2), y + r * sin(i * TAU / 6 - PI/2))
+        }// for i
+        context.closePath()
+        if(begin && !stroke && fill) context.fill()
+        else if(begin && stroke) context.stroke()
+    }//function drawHexagon
 
     /////////////////////////////////////////////////////////////////
     //////////////////////// Hover Functions ////////////////////////
@@ -930,29 +962,33 @@ async function createORCAVisual(container) {
 
         // Draw the hover state on the top canvas
         if(FOUND) {
-            CLICK_ACTIVE = true
-            CLICKED_NODE = d
-
-            // Reset the delaunay for the hover now that a click is active
-            // Take only the commits that were done by the same author
-            delaunay_points = commits.filter(n => n.author_email === d.author_email)
-            if(FIRST_DRAW) {
-                delaunay = d3.Delaunay.from(delaunay_points.filter(d => d.commit_circle_simulation).map(d => [d.x_base, d.y_base]))
-            } else {
-                doDelaunay(delaunay_points)
-            }// else
-
-            drawHoverState(context_hover, d)
+            setClick(d)
         } else {
-            resetClick()
+            resetClick(event)
         }// else
     }// function initializeClickEvent
 
-    function resetClick() {
+    function setClick(d) {
+        CLICK_ACTIVE = true
+        CLICKED_NODE = d
+
+        // Reset the delaunay for the hover now that a click is active
+        // Take only the commits that were done by the same author
+        delaunay_points = commits.filter(n => n.author_email === d.author_email || d.author_name.toLowerCase() === n.author_name.toLowerCase())
+        if(FIRST_DRAW) {
+            delaunay = d3.Delaunay.from(delaunay_points.filter(d => d.commit_circle_simulation).map(d => [d.x_base, d.y_base]))
+        } else {
+            doDelaunay(delaunay_points)
+        }// else
+
+        drawHoverState(context_hover, d)
+    }// function setClick
+
+    function resetClick(event) {
         CLICK_ACTIVE = false
         CLICKED_NODE = null
 
-        hideTooltip()
+        hideTooltip(event)
         
         // Reset the delaunay to all the nodes
         delaunay_points = commits
@@ -989,7 +1025,7 @@ async function createORCAVisual(container) {
 
         // Draw a partly transparent circle on top of each month's commit circle
         context.fillStyle = COLOR_BACKGROUND
-        context.globalAlpha = 0.7
+        context.globalAlpha = 0.8
         commits_by_month.forEach((d, i) => {
             drawCircle(context, d.x, d.y, d.r, true, false)
         })//forEach
@@ -999,7 +1035,8 @@ async function createORCAVisual(container) {
         if(HOVER_ACTIVE) monthDateLabel(context_hover, d.month_data, d.month_data.index, true)
 
         // Draw the circle for all the commits made by this same author
-        let author_commits = commits.filter(n => n.author_email === d.author_email)
+        let author_commits = commits.filter(n => n.author_email === d.author_email || n.author_name.toLowerCase() === d.author_name.toLowerCase())
+        // console.log(author_commits)
         author_commits.forEach(n => {
             // Draw the hovered commit circle
             drawCommitCircle(context, n)
@@ -1028,9 +1065,8 @@ async function createORCAVisual(container) {
     // Draw a stroked ring around the hovered node
     function drawHoverRing(context, d) {
         let r = d.r + 10
-        context.beginPath()
-        context.moveTo((d.x_base + r), d.y_base)
-        context.arc(d.x_base, d.y_base, r, 0, TAU)
+        let drawShape = d.orca_recipient ? drawHexagon : drawCircle
+        drawShape(context, d.x_base, d.y_base, r, true, false, false)
 
         let COL
         if(d.files_changed === 0) COL = COLOR_MERGE
@@ -1038,7 +1074,7 @@ async function createORCAVisual(container) {
         else if (d.line_insertions < d.line_deletions) COL = COLOR_DELETIONS
         else COL = COLOR_OVERLAP
         context.strokeStyle = COL
-        context.lineWidth = 8
+        context.lineWidth = 6
 
         context.stroke()
     }// function drawHoverRing
@@ -1282,12 +1318,12 @@ async function createORCAVisual(container) {
     //////////////////////// Helper Functions ///////////////////////
     /////////////////////////////////////////////////////////////////
 
+    // Show the note at the top that gives the total number of commits by the hovered/clicked contributor
     function showMessage(duration = 200) {
         d3.select("#loading-message")
             .transition().duration(duration)
             .style("opacity", 1)
     }// function showMessage
-
     function hideMessage(duration, delay) {
         d3.select("#loading-message")
             .transition().duration(duration)
@@ -1318,11 +1354,17 @@ async function createORCAVisual(container) {
         return chart
     }// chart.width
 
-    chart.repository = function (value) {
-        if (!arguments.length) return REPO_CENTRAL
-        REPO_CENTRAL = value
+    chart.highlight = function (value) {
+        // See if this contributor can be found in the commit data
+        let d = commits.find(d => d.author_name === value)
+        // If something is found, run the click function
+        if(d !== undefined) {
+            MESSAGE_SET = false
+            setClick(d)
+            hideTooltip()
+        }// if
         return chart
-    } // chart.repository
+    }// chart.highlight
 
     return chart
 

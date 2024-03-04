@@ -37,9 +37,11 @@
                     <div id="chart-intro-text">
                         <p>The <span class="repo-name repository">mozilla/pdf.js</span> repository has seen many improvements from its various contributors since the first commit<span id="first-commit-date"></span>. <strong>The visualization below shows all <span class="commit-num"></span>commits that have been made since then.</strong></p>
                         
-                        <p>Each commit is represented as a small circle. They're grouped together by (commit) month, giving an overview of which periods had relatively few updates while other time periods saw a lot of activity.</p>
+                        <p>Each commit is represented as a small circle. They're grouped together by commit month, giving an overview of which periods had relatively few updates while other time periods saw a lot of activity.</p>
+                        
+                        <p id="orca-note">Commits made by <a id="explanation-link" href="#orca-names">ORCA</a> supported contributors are shown as small hexagons. For more info on what the "Open Retrospective Compensation Agreement" is, see <a id="explanation-link" href="#orca-names">farther down</a>.</p>
 
-                        <p id="interaction-note"><b>Hover</b> of a circle to get more information about the commit and also see all the other commits made by the same author email. <b>Click</b> on a circle to fix the visual on all the commits from that author email. Click anywhere else to reset.</p>
+                        <p id="interaction-note"><b>Hover</b> of a circle to get more information about the commit and also see all the other commits made by the same author (based on a commit matching on either the name or email from the hovered/clicked commit). <b>Click</b> on a circle to fix the visual on all the commits from that author. Click anywhere else to reset.</p>
 
                     </div>
                 </div>
@@ -53,6 +55,7 @@
                         <img class="legend" src="img/legend_insertions.png" alt="Circles with a turquoise outer ring have more line insertions than deletions">
                         <img class="legend" src="img/legend_deletions.png" alt="Circles with a pink outer ring have more line deletions than insertions">
                         <img class="legend" src="img/legend_similar.png" alt="Dark blue circles have about the same number of insertions and deletions">
+                        <img class="legend" id="orca-legend" src="img/legend_orca.png" alt="A hexagon is a commit made by an ORCA recipient">
                         <img class="legend" src="img/legend_no_change.png" alt="A small yellow circle represent a commit where no files were changed">
                         <img class="legend" src="img/legend_version.png" alt="A colored ring around a commit shows a version release">
                     </div>
@@ -90,7 +93,7 @@
                 <p class="header"><strong>ORCA RECIPIENTS</strong></p>
                 <div>
                     <p style="font-weight: 700;">What is ORCA</p>
-                    <p>ORCA is an experimental retroactive funding model for open source contributors to receive financial compensation for their contributions. ORCA recipients receive an award that reflects the value of their contribution to the hosting organization’s activities.</p>
+                    <p><b>ORCA</b> (the <b>"Open Retrospective Compensation Agreement"</b>) is an experimental retroactive funding model for open source contributors to receive financial compensation for their contributions. ORCA recipients receive an award that reflects the value of their contribution to the hosting organization’s activities.</p>
                     <p style="font-weight: 700;">More text to come from Mozilla / Adam...?</p>
                 </div>
                 <div>
@@ -107,6 +110,7 @@
                         <li><span class="orca-name">Jane-Kotovich</span> | Fixing bugs in XFA and JavaScript support.</li>
                         <li><span class="orca-name">Dominik Hufnagel</span> | Fixing bugs in form support (font size and color, and checkboxes).</li>
                     </ul>
+                    <p><b>Click</b> on any of the names to see all of their commits highlighted in the visual.<br><i style="font-size: 0.8em;">(based on a match on either the name or the email used for the ORCA application)</i></p>
                 </div>
 
             </div>
@@ -172,6 +176,7 @@
             ////////////////// Datasets to Read in //////////////////
             let promises = []
             promises.push(d3.csv(`data/${REPOSITORY}/commits.csv`))
+            promises.push(d3.csv(`data/${REPOSITORY}/orca_recipients.csv`))  // not required
 
             /////////////////// Fonts to activate ///////////////////
             const FONT_FAMILY = "Atkinson Hyperlegible"
@@ -187,19 +192,11 @@
             let width = container.offsetWidth
 
             ///////////////////// Start Drawing /////////////////////
-            // Set-up the visual - Doesn't draw anything yet
-            // createORCAVisual(container).then(ORCAVisual => {
-            //     ORCAVisual
-            //         .width(width)
-            //         .repository(REPOSITORY_FULL)
-            // })
-
             // Read in the data and create the visual
             createORCAVisual(container).then(ORCAVisual => {
                 // Set-up the visual - Doesn't draw anything yet
                 ORCAVisual
                     .width(width)
-                    // .repository(REPOSITORY_FULL)
 
                 document.fonts.ready.then(() => {
                     Promise.all(promises).then(values => {
@@ -207,6 +204,16 @@
                         let parseDate = d3.timeParse("%Y-%m-%d %H:%M:%S %Z")
                         let formatDate = d3.utcFormat("%B %-e, %Y")
 
+                        /////////////////////////////////////////////////
+                        // If no ORCA data was supplied, hide the parts of the page that are related to it
+                        if(!values[1]) {
+                            // Hide the divs and other elements related to ORCA
+                            document.getElementById("orca-note").style.display = "none"
+                            document.getElementById("orca-names").style.display = "none"
+                            document.getElementById("orca-legend").style.display = "none"
+                        }// if
+
+                        /////////////////////////////////////////////////
                         // Create a deep copy of the data in values
                         let data_raw = []
                         data_raw.push(JSON.parse(JSON.stringify(values[0]))) // commits
@@ -228,8 +235,25 @@
                         // It expects one dataset of all the commits made to the repository
                         ORCAVisual(values)
 
+                        /////////////////////////////////////////////////
+                        // Very specific to this example, but let people click on the ORCA names and have those commits fixed in the visual
+                        document.querySelectorAll(".orca-name").forEach(function (span) {
+                            span.addEventListener("click", function (event) {
+                                event.stopPropagation()
+                                let name = event.target.innerText
+                                // Call your function here with the name as an argument
+                                clickOrcaContributor(name)
+                            })
+                        })// orca-name
+
+                        function clickOrcaContributor(name) {
+                            // Your code here
+                            console.log(name)
+                            ORCAVisual.highlight(name)
+                        }// function clickOrcaContributor
+
                         /////////////////////////////////////////////
-                        // Let people download the raw data
+                        // Let people download the raw commit data
                         const download_button = document.getElementById("dataviz-download-data")
                         download_button.addEventListener("click", () => {
                             // Download all datasets
