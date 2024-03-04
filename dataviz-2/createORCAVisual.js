@@ -1,7 +1,7 @@
 // FINAL: Create README GitHub explanation
 
+// TODO: Mark the ORCA recipients
 // TODO: Can we highlight if this commit was made by someone who received ORCA? Author commit. Try a different shape, like a hexagon or square. Also add this to the legend.
-// TODO: Put a list of names of the ORCA contributors
 
 // TODO - Stretch Goal: Animation between the first and second circle pack
 

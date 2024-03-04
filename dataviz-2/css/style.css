@@ -64,7 +64,7 @@ a {
 }
 
 .double-column {
-    padding: 3em 5em 2em 5em;
+    padding: 1em 5em 1em 5em;
 
     font-size: 1.2em;
 
@@ -183,6 +183,32 @@ a {
 #interaction-note {
     font-style: italic;
     font-size: 0.8em;
+}
+
+/*************************************/
+/*************** ORCA ****************/
+/*************************************/
+
+ul {
+  font-size: 0.75em;
+  line-height: 160%;
+}
+
+li {
+    list-style: none;
+}
+
+li::before {
+    content: "•";
+    color: var(--color-insertions);
+    display: inline-block;
+    width: 1em;
+    margin-left: -1em;
+}
+
+.orca-name {
+    font-weight: 700;
+    font-style: italic;
 }
 
 /*************************************/
