@@ -67,15 +67,7 @@
             </div>
 
             <!-- Loading & Interaction message -->
-            <div id="loading"><span id="loading-message">Crunching all the commits...</span></div>
-
-            <!-- Search box -->
-            <div id="search-box-outer" class="search-box">
-                <div id="search-box-inner">
-                    <p><b>Search for contributors</b></p>
-                    <input id="search-box" class="search-box-input" placeholder="Name...">
-                </div>
-            </div>
+            <div id="loading"><p id="loading-message">Crunching all the commits...</p></div>
 
             <!-- The visual will be drawn here -->
             <div id="chart-container">
@@ -96,6 +88,14 @@
                         <p class="tooltip-header">commit hash</p>
                         <p id="tooltip-commit-hash"></p>
                     </div>
+                </div>
+            </div>
+
+            <!-- Search box -->
+            <div id="search-box-outer" class="search-box">
+                <div id="search-box-inner">
+                    <p id="search-box-title">Search for a contributor</p>
+                    <input id="search-box" class="search-box-input" placeholder="Name...">
                 </div>
             </div>
 
@@ -263,7 +263,7 @@
                         /////////////////////////////////////////////
                         const setupSearchBox = (data, ORCAVisual) => {
                             const search_box = document.getElementById("search-box")
-                            const awesomplete_box = new Awesomplete(search_box, { maxItems: 45 })
+                            const awesomplete_box = new Awesomplete(search_box, { maxItems: 60 })
     
                             //Create a search box with autocomplete and other awesome features
                             //https://leaverou.github.io/awesomplete/

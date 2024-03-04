@@ -5,18 +5,19 @@
 html {
     --color-repository: #a682e8;
     --color-insertions: #64d6d3;
-    --color-insertions-transparent: #64d6d385;
+    --color-insertions-transparent: #64d6d375;
     --color-deletions: #ea9df5;
     --color-merges: #f2a900;
     --color-overlap: #4070c4;
     --color-text: #4d4950;
     --color-background: #f7f7f7;
     --color-gradient: linear-gradient(to right, var(--color-deletions), var(--color-repository), var(--color-insertions)) 1;
+    --body-font: 'Atkinson Hyperlegible', sans-serif
 }
 
 body {
     margin: 0;
-    font-family: 'Atkinson Hyperlegible', sans-serif;
+    font-family: var(--body-font);
     background-color: var(--color-background);
 }
 
@@ -126,6 +127,7 @@ a {
     padding: 3em 5em 0em 5em;
     display: grid;
     justify-content: center;
+    margin-bottom: 1em;
 
     @media only screen and (max-width: 600px) {
         padding: 3em 2em 0em 2em;
@@ -189,21 +191,23 @@ a {
 /*************** ORCA ****************/
 /*************************************/
 
-ul {
-  font-size: 0.75em;
-  line-height: 160%;
-}
-
-li {
-    list-style: none;
-}
-
-li::before {
-    content: "•";
-    color: var(--color-insertions);
-    display: inline-block;
-    width: 1em;
-    margin-left: -1em;
+#orca-names {
+    & ul {
+        font-size: 0.75em;
+        line-height: 160%;
+    }
+      
+    & li {
+        list-style: none;
+      }
+      
+    & li::before {
+        content: "•";
+        color: var(--color-insertions);
+        display: inline-block;
+        width: 1em;
+        margin-left: -1em;
+    }
 }
 
 .orca-name {
@@ -262,26 +266,24 @@ li::before {
     font-style: italic;
     font-size: 1em;
     /* opacity: 0.8; */
-    margin-top: 0;
-    margin-bottom: 0em;
-    padding-top: 2em;
-    padding-bottom: 0.5em;
+    margin: 0 auto;
+    max-width: min(90vw, 500px);
+    padding-top: 1em;
+    padding-bottom: 0em;
 
     position: sticky;
     top: 0;
     z-index: 2;
+}
 
-    & span {
-        /* margin-top: 2em; */
-        /* background: var(--color-overlap); */
-        /* background: linear-gradient(to right, var(--color-insertions), var(--color-overlap)); */
-        /* color: var(--color-background); */
-        background-color: var(--color-background);
-        border: 3px solid var(--color-insertions);
-        border-image: linear-gradient(to right, var(--color-merges), var(--color-deletions), var(--color-insertions)) 1;
-        padding: 0.4em 1em;
-        font-weight: 700;
-    }
+#loading-message {
+    background-color: var(--color-background);
+    border: 3px solid var(--color-insertions);
+    border-image: linear-gradient(to right, var(--color-merges), var(--color-deletions), var(--color-insertions)) 1;
+    padding: 0.4em 1em;
+    font-weight: 700;
+    text-align: center;
+    margin: 0;
 }
 
 /*************************************/
@@ -341,6 +343,74 @@ li::before {
 #canvas-hover {
     position: relative;
     z-index: 1
+}
+
+/*************************************/
+/************* SEARCH BOX ************/
+/*************************************/
+
+/***** Search box above bubble pack visuals *****/
+
+.search-box {
+    position: relative;
+    margin: 1em auto 0 auto;
+    border-top: 3px solid var(--color-insertions);
+}
+
+.search-box {
+    max-width: 300px;
+}
+
+.search-box > div {
+    padding: 0.8em 1.6em 1em 1.3em;
+}
+
+.search-box .awesomplete {
+    font-size: 0.8em;
+}
+
+.search-box #search-box-title {
+    padding: 0em 0em 0.5em 0em;
+    font-size: 1.0em;
+    font-weight: 700;
+    margin: 0;
+}
+
+.search-box input {
+    font-family: var(--body-font);
+    border: none;
+    padding: 0.5em 0em 0.5em 0.5em;
+    font-size: 1.1em;
+    width: 100%;
+    /* background: #e7e6e4; */
+    background: var(--color-insertions-transparent);
+}
+
+.search-box input:focus { 
+    outline: none !important;
+}
+
+.search-box .awesomplete > ul {
+    line-height: 160%
+}
+
+.search-box .awesomplete mark {
+    background: var(--color-deletions);
+}
+.search-box .awesomplete > ul > li:hover {
+    background: var(--color-insertions-transparent);
+    font-weight: 700;
+}
+.search-box .awesomplete > ul > li[aria-selected="true"] {
+    background: var(--color-insertions-transparent);
+    font-weight: 700;
+}
+.search-box .awesomplete li:hover mark {
+    background: var(--color-deletions);
+}
+.search-box .awesomplete li[aria-selected="true"] mark {
+    background: var(--color-deletions);
+    color: inherit;
 }
 
 /*************************************/

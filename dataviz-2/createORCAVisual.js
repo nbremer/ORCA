@@ -1,6 +1,6 @@
 // FINAL: Create README GitHub explanation
+// FINAL: Remove savePNG function
 
-// TODO: Add search box to search for a specific person
 // TODO - Stretch Goal: Animation between the first and second circle pack
 
 /////////////////////////////////////////////////////////////////////
