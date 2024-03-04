@@ -39,6 +39,8 @@
                         
                         <p>Each commit is represented as a small circle. They're grouped together by (commit) month, giving an overview of which periods had relatively few updates while other time periods saw a lot of activity.</p>
 
+                        <p id="interaction-note"><b>Hover</b> of a circle to get more information about the commit and also see all the other commits made by the same author email. <b>Click</b> on a circle to fix the visual on all the commits from that author email. Click anywhere else to reset.</p>
+
                     </div>
                 </div>
 
@@ -57,10 +59,10 @@
 
                     <p id="legend-note"><span class="insertions">◑</span> size doesn't scale <i>completely</i> linearly with number of lines <span class="deletions">◐</span></p>
                 </div>
-
-                <!-- Loading message -->
-                <p id="loading"><span id="loading-message">Crunching all the commits...</span></p>
             </div>
+
+            <!-- Loading message -->
+            <div id="loading"><span id="loading-message">Crunching all the commits...</span></div>
 
             <!-- The visual will be drawn here -->
             <div id="chart-container">

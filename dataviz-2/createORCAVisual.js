@@ -1,7 +1,9 @@
-// FINAL: Update GitHub explanation
+// FINAL: Create README GitHub explanation
 
-// TODO: Annotations / marking for noteworthy contributions?
-// TODO: Need a bbox simulation to not get overlapping annotations?
+// TODO: Can we highlight if this commit was made by someone who received ORCA? Author commit. Try a different shape, like a hexagon or square. Also add this to the legend.
+// TODO: Put a list of names of the ORCA contributors
+
+// TODO - Stretch Goal: Animation between the first and second circle pack
 
 /////////////////////////////////////////////////////////////////////
 /////////////// Visualization designed & developed by ///////////////
@@ -35,8 +37,12 @@ async function createORCAVisual(container) {
 
     // Hover options
     let delaunay
+    let delaunay_points
     let HOVER_ACTIVE = false
     let HOVERED_NODE = null
+    let CLICK_ACTIVE = false
+    let CLICKED_NODE = null
+    let MESSAGE_SET = false
 
     // Drawing
     let INITIAL_CIRCLE_DRAW = true
@@ -137,6 +143,7 @@ async function createORCAVisual(container) {
     let formatYear = d3.utcFormat("%Y")
     // let formatDateExact = d3.utcFormat("%b %d, %Y")
 
+    let formatNumber = d3.format(",.0f")
     // let formatDigit = d3.format(",.2s")
     // let formatDigit = d3.format(",.2r")
 
@@ -174,6 +181,7 @@ async function createORCAVisual(container) {
         })//forEach
 
         ////////////// Set Sizes and Draw a first Pass //////////////
+        delaunay_points = commits
         chart.resize()
         // Make sure that the initial draw is done
         await delay(0)
@@ -230,13 +238,21 @@ async function createORCAVisual(container) {
         sizeCanvas(canvas_hover, context_hover)
 
         // Reset the delaunay for the mouse events
-        if(!FIRST_DRAW) delaunay = d3.Delaunay.from(commits.map(d => [d.x_base, d.y_base]))
+        if(!FIRST_DRAW) {
+            if(CLICK_ACTIVE) delaunay_points = commits.filter(n => n.author_email === CLICKED_NODE.author_email)
+            else delaunay_points = commits
+            doDelaunay(delaunay_points)
+            // delaunay = d3.Delaunay.from(commits.map(d => [d.x_base, d.y_base]))
+        }// if
 
         // In case a resize happens while the loading is still happening
         if(FIRST_DRAW) INITIAL_CIRCLE_DRAW = true
 
         // Draw the visual
         draw()
+        // Draw the possible click/hover state on top
+        if(CLICK_ACTIVE) drawHoverState(context_hover, CLICKED_NODE)
+        else if(HOVER_ACTIVE) drawHoverState(context_hover, HOVERED_NODE)
 
         INITIAL_CIRCLE_DRAW = false
     }//function resize
@@ -467,7 +483,9 @@ async function createORCAVisual(container) {
             draw()
 
             // Update the delaunay for the mouse events (during the loading animation)
-            delaunay = d3.Delaunay.from(commits.filter(d => d.commit_circle_simulation).map(d => [d.x_base, d.y_base]))
+            delaunay_points = commits
+            if(CLICK_ACTIVE) delaunay_points = commits.filter(n => n.author_email === CLICKED_NODE.author_email)
+            delaunay = d3.Delaunay.from(delaunay_points.filter(d => d.commit_circle_simulation).map(d => [d.x_base, d.y_base]))
 
             // When the last month has run
             if(i === commits_by_month.length-1) {
@@ -510,12 +528,8 @@ async function createORCAVisual(container) {
             // Do a final resize
             chart.resize()
 
-            // Hide the loading message
-            // document.getElementById("loading-message").innerHTML = "Done!"
-            d3.select("#loading-message")
-                .transition().duration(500)
-                .delay(1000)
-                .style("opacity", 0)
+            // Hide the loading message, only if no hover of click is active
+            if(!HOVER_ACTIVE && !CLICK_ACTIVE) hideMessage(500, 1000)
 
             console.log("Done drawing")
         }// else
@@ -527,7 +541,7 @@ async function createORCAVisual(container) {
     function determineMonthPositionsAlongTimeline() {
         // Loop over all the months and place them in a grid of N columns
         const padding = 50
-        const padding_row = 120
+        const padding_row = 100
         
         let along_X = 0
         let along_Y = 0
@@ -869,26 +883,85 @@ async function createORCAVisual(container) {
                 initializeHoverEvent(event, mx, my)
             })
             // .on("touchmove", hideTooltip)
-        	.on("click", clickOnNode)
+        	.on("click", function(event) {
+                event.stopPropagation() // Not sure if this is needed
 
-        d3.select("body").on("click", hideTooltip)
-        d3.select("#tooltip-close").on("click", hideTooltip)
+                // Get the position of the mouse on the canvas
+                let [mx, my] = d3.pointer(event, this);
+                initializeClickEvent(event, mx, my)
+            })
+
+        d3.select("body").on("click", resetClick)
+        d3.select("#tooltip-close").on("click", resetClick)
 
     }// function setupInteraction
 
     /////////////////////////////////////////////////////////////////
-    function initializeHoverEvent(event, mx, my, type) {
+    function initializeHoverEvent(event, mx, my) {
         let [d, FOUND] = findNode(mx, my);
 
         // Draw the hover state on the top canvas
         if(FOUND) {
+            // Draw the normal hover state
             HOVER_ACTIVE = true
             HOVERED_NODE = d
-            drawHoverState(context_hover, d, type)
+            drawHoverState(context_hover, d)
+        } else if(!FOUND && CLICK_ACTIVE) {
+            // If nothing is found but a click is active, draw the "hover state" once more, minus a few items 
+            // e.g. the ring around hovered node and the tooltip
+            HOVER_ACTIVE = false
+            if(HOVERED_NODE !== null) drawHoverState(context_hover, HOVERED_NODE)
+            HOVERED_NODE = null
+            hideTooltip(event)
         } else {
+            // Otherwise, reset
+            HOVER_ACTIVE = false
+            HOVERED_NODE = null
             hideTooltip(event)
         }// else
     }// function initializeHoverEvent
+
+    /////////////////////////////////////////////////////////////////
+    //////////////////////// Click Functions ////////////////////////
+    /////////////////////////////////////////////////////////////////
+
+    function initializeClickEvent(event, mx, my) {
+        let [d, FOUND] = findNode(mx, my);
+
+        // Draw the hover state on the top canvas
+        if(FOUND) {
+            CLICK_ACTIVE = true
+            CLICKED_NODE = d
+
+            // Reset the delaunay for the hover now that a click is active
+            // Take only the commits that were done by the same author
+            delaunay_points = commits.filter(n => n.author_email === d.author_email)
+            if(FIRST_DRAW) {
+                delaunay = d3.Delaunay.from(delaunay_points.filter(d => d.commit_circle_simulation).map(d => [d.x_base, d.y_base]))
+            } else {
+                doDelaunay(delaunay_points)
+            }// else
+
+            drawHoverState(context_hover, d)
+        } else {
+            resetClick()
+        }// else
+    }// function initializeClickEvent
+
+    function resetClick() {
+        CLICK_ACTIVE = false
+        CLICKED_NODE = null
+
+        hideTooltip()
+        
+        // Reset the delaunay to all the nodes
+        delaunay_points = commits
+        doDelaunay(delaunay_points)
+    }// function resetClick
+
+    /////////////////////////////////////////////////////////////////
+    ///////////////// General Interaction Functions /////////////////
+    /////////////////////////////////////////////////////////////////
 
     /////////////////////////////////////////////////////////////////
     // Turn the mouse position into a canvas x and y location and see if it's close enough to a node
@@ -898,57 +971,56 @@ async function createORCAVisual(container) {
 
         //Get the closest hovered node
         let point = delaunay.find(mx, my)
-        let d = commits[point]
+        let d = delaunay_points[point]
+        // let d = commits[point]
 
         // Get the distance from the mouse to the node
         let dist = sqrt((d.x_base - mx)**2 + (d.y_base - my)**2)
         // If the distance is too big, don't show anything
         let FOUND = dist < d.r + 40
 
-        if(FOUND) {
-            // console.log(d)
-            // console.log(d.files_changed, d.line_insertions, d.line_deletions, d.lines_changed, d.commit_year, d.commit_month)
-        }// if
-
         return [d, FOUND]
     }// function findNode
 
     /////////////////////////////////////////////////////////////////
-    //////////////////////// Click Functions ////////////////////////
-    /////////////////////////////////////////////////////////////////
-
-    function clickOnNode(event) {
-        event.stopPropagation() // Not sure if this is needed
-    }// function clickOnNode
-
-    /////////////////////////////////////////////////////////////////
-    ///////////////// General Interaction Functions /////////////////
-    /////////////////////////////////////////////////////////////////
-
-    /////////////////////////////////////////////////////////////////
     // Draw the hovered node and its links and neighbors and a tooltip
-    function drawHoverState(context, d, type) {
+    function drawHoverState(context, d) {
         context.clearRect(0, 0, WIDTH, HEIGHT)
 
+        // Draw a partly transparent circle on top of each month's commit circle
         context.fillStyle = COLOR_BACKGROUND
         context.globalAlpha = 0.7
-        drawCircle(context, d.month_data.x, d.month_data.y, d.month_data.r, true, false)
+        commits_by_month.forEach((d, i) => {
+            drawCircle(context, d.x, d.y, d.r, true, false)
+        })//forEach
         context.globalAlpha = 1
         
         // Show the number of commits
-        monthDateLabel(context_hover, d.month_data, d.month_data.index, true)
+        if(HOVER_ACTIVE) monthDateLabel(context_hover, d.month_data, d.month_data.index, true)
 
-        // Draw the hovered commit circle
-        drawCommitCircle(context, d)
+        // Draw the circle for all the commits made by this same author
+        let author_commits = commits.filter(n => n.author_email === d.author_email)
+        author_commits.forEach(n => {
+            // Draw the hovered commit circle
+            drawCommitCircle(context, n)
+        })// forEach
+        // drawCommitCircle(context, d)
 
         // Show a ring around the hovered node
-        drawHoverRing(context, d)
+        if(HOVER_ACTIVE) drawHoverRing(context, d)
 
         // Update and show the tooltip
         if(container.offsetWidth > 500) showTooltipMousemove(d)
         else showTooltipTouch(d)
         // if(type === "mousemove") showTooltipMousemove(d)
         // else if(type === "touch") showTooltipTouch(d)
+
+        // Update the message on top
+        if(CLICK_ACTIVE === false || (CLICK_ACTIVE && MESSAGE_SET === false)) {
+            document.getElementById("loading-message").innerHTML = `Highlighting all ${formatNumber(author_commits.length)} commits by ${d.author_name}`
+            showMessage(0)
+            MESSAGE_SET = true
+        }// if
 
     }// function drawHoverState
 
@@ -1035,17 +1107,23 @@ async function createORCAVisual(container) {
     /////////////////////////////////////////////////////////////////
     // Hide the tooltip
     function hideTooltip(event) {
-        event.stopPropagation()
+        if(event) event.stopPropagation()
         
         //Hide tooltip
         d3.select("#tooltip")
             // .transition("tooltip").duration(200)
             .style("opacity", 0)
+            
+        if(!CLICK_ACTIVE) {
+            // Hide the message
+            hideMessage(400, 0)
+            MESSAGE_SET = false
+            // Reset
+            HOVER_ACTIVE = false
+            HOVERED_NODE = null
+            context_hover.clearRect(0, 0, WIDTH, HEIGHT)
+        }// if
 
-        // Reset
-        HOVER_ACTIVE = false
-        HOVERED_NODE = null
-        context_hover.clearRect(0, 0, WIDTH, HEIGHT)
     }// function hideTooltip
 
     /////////////////////////////////////////////////////////////////
@@ -1199,15 +1277,32 @@ async function createORCAVisual(container) {
 
         return [start_position, end_position]
     }//function renderText
-    
+
     /////////////////////////////////////////////////////////////////
     //////////////////////// Helper Functions ///////////////////////
     /////////////////////////////////////////////////////////////////
+
+    function showMessage(duration = 200) {
+        d3.select("#loading-message")
+            .transition().duration(duration)
+            .style("opacity", 1)
+    }// function showMessage
+
+    function hideMessage(duration, delay) {
+        d3.select("#loading-message")
+            .transition().duration(duration)
+            .delay(delay)
+            .style("opacity", 0)
+    }// function hideMessage
 
     // Add a delay so "stuff" is drawn to the canvas
     function delay(time) {
         return new Promise(resolve => setTimeout(resolve, time))
     }// function delay
+
+    function doDelaunay(points) {
+        delaunay = d3.Delaunay.from(points.map(n => [n.x_base, n.y_base]))
+    }// function doDelaunay
 
     function mod (x, n) { return ((x % n) + n) % n }
 

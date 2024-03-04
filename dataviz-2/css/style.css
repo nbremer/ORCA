@@ -17,6 +17,7 @@ html {
 body {
     margin: 0;
     font-family: 'Atkinson Hyperlegible', sans-serif;
+    background-color: var(--color-background);
 }
 
 .repository {
@@ -179,6 +180,11 @@ a {
     font-size: 1.1em;
 }
 
+#interaction-note {
+    font-style: italic;
+    font-size: 0.8em;
+}
+
 /*************************************/
 /******* EXPLANATION / LEGEND ********/
 /*************************************/
@@ -228,19 +234,27 @@ a {
     font-style: italic;
     font-size: 1em;
     /* opacity: 0.8; */
-    margin-top: 2em;
+    margin-top: 0;
     margin-bottom: 0em;
+    padding-top: 2em;
     padding-bottom: 0.5em;
 
+    position: sticky;
+    top: 0;
+    z-index: 2;
+
     & span {
-        background: var(--color-overlap);
+        /* margin-top: 2em; */
+        /* background: var(--color-overlap); */
         /* background: linear-gradient(to right, var(--color-insertions), var(--color-overlap)); */
-        color: var(--color-background);
+        /* color: var(--color-background); */
+        background-color: var(--color-background);
+        border: 3px solid var(--color-insertions);
+        border-image: linear-gradient(to right, var(--color-merges), var(--color-deletions), var(--color-insertions)) 1;
         padding: 0.4em 1em;
         font-weight: 700;
     }
 }
-
 
 /*************************************/
 /************** CREDITS **************/
@@ -320,6 +334,8 @@ a {
     border-top: 6px solid var(--color-insertions);
     opacity: 0;
     transition: opacity 100ms ease-in;
+
+    z-index: 3;
 }
 
 #tooltip p {
