@@ -8,6 +8,7 @@
         <link rel="shortcut icon" href="#">
 
         <!-- Styling -->
+        <link rel="stylesheet" href="css/chart.css">
         <link rel="stylesheet" href="css/style.css">
         <link rel="stylesheet" href="css/awesomplete.css">
 		
@@ -43,7 +44,7 @@
                         
                         <p id="orca-note">Commits made by <a id="explanation-link" href="#orca-names">ORCA</a> supported contributors are shown as small hexagons. For more info on what the "Open Retrospective Compensation Agreement" is, see <a id="explanation-link" href="#orca-names">farther down</a>.</p>
 
-                        <p id="interaction-note"><b>Hover</b> of a circle to get more information about the commit and also see all the other commits made by the same author (based on a commit matching on either the name or email from the hovered/clicked commit). <b>Click</b> on a circle to fix the visual on all the commits from that author. Click anywhere else to reset.</p>
+                        <p id="interaction-note"><b>Hover</b> of a circle to get more information about the commit and also see all the other commits made by the same author (based on a commit matching on either the name or email from the hovered/clicked commit). <b>Click</b> on a circle to fix the visual on all the commits from that author. Click anywhere else to reset. At the bottom of the visual you can <b>search</b> for a contributor by name.</p>
 
                     </div>
                 </div>
@@ -150,7 +151,7 @@
                     <p>You can find more information about what kind of git log options you have in the <a href="https://git-scm.com/docs/pretty-formats" target="_blank">pretty-formats</a> and <a href="https://git-scm.com/docs/git-log" target="_blank">git log</a> documentation.</p>
                 </div>
                 <div>
-                    <p>It's this dataset that contains all of the information that is used in this visual and its almost perfect to use as-is. However, the number of files changes, line insertions and line deletions are added as a separate row each time. Something such as <span class="code">2 files changed, 13 insertions(+), 26 deletions(-)</span>. Therefore, to get this final bit in a <span class="code">csv</span> ready format, I had to run the <span class="code">.txt</span> file through R for some final minor data preparation.</p>
+                    <p>It's this dataset that contains all of the information that is used in this visual and its almost perfect to use as-is. However, the number of files changed, line insertions and line deletions are added as a separate row each time. Something such as <span class="code">2 files changed, 13 insertions(+), 26 deletions(-)</span>. Therefore, to get this final bit in a <span class="code">csv</span> ready format, I had to run the <span class="code">txt</span> file through R for some final minor data preparation.</p>
                     <p style="font-style: italic;">Why the weird <span class="code">^</span> around some of the fields. Honestly, because it was the only way I could get the textual fields, such as the commit title, to be read properly in R. Otherwise some of the rows would split up into new columns due to the usage of a variety of <span class="code">", ', `, #</span> and other marks. I therefore used the <span class="code">^</span> to act as a <span class="code">quote</span>.</p>
                 </div>
             </div>
@@ -225,7 +226,7 @@
                         }// if
 
                         /////////////////////////////////////////////
-                        // Create a deep copy of the data in values
+                        // Create a deep copy of the data for the download option
                         let data_raw = []
                         data_raw.push(JSON.parse(JSON.stringify(values[0]))) // commits
 

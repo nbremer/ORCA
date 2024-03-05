@@ -1,6 +1,6 @@
-// FINAL: Create README GitHub explanation
 // FINAL: Remove savePNG function
 
+// TODO - Stretch Goal: Opacity animation on hover
 // TODO - Stretch Goal: Animation between the first and second circle pack
 
 /////////////////////////////////////////////////////////////////////
@@ -87,34 +87,6 @@ async function createORCAVisual(container) {
     container.appendChild(canvas)
     container.appendChild(canvas_animation)
     container.appendChild(canvas_hover)
-    
-    // // Set some important stylings of each canvas
-    // container.style.position = "relative"
-    // container.style["background-color"] = COLOR_BACKGROUND
-
-    // styleCanvas(canvas)
-    // styleCanvas(canvas_animation)
-    // styleCanvas(canvas_hover)
-
-    // styleBackgroundCanvas(canvas)
-    // styleBackgroundCanvas(canvas_animation)
-
-    // canvas_hover.style.position = "relative"
-    // canvas_hover.style.z_index = "1"
-
-    // function styleCanvas(canvas) {
-    //     canvas.style.display = "block"
-    //     canvas.style.margin = "0"
-    // }// function styleCanvas
-
-    // function styleBackgroundCanvas(canvas) {
-    //     canvas.style.position = "absolute"
-    //     canvas.style.top = "0"
-    //     canvas.style.left = "0"
-    //     canvas.style.pointer_events = "none"
-    //     canvas.style.z_index = "0"
-    //     // canvas.style.transition = "opacity 100ms ease-in"
-    // }// function styleBackgroundCanvas
 
     /////////////////////////////////////////////////////////////////
     /////////////////////////// Set Sizes ///////////////////////////
@@ -356,8 +328,8 @@ async function createORCAVisual(container) {
             d.values.sort((a, b) => b.radius - a.radius)
             // Add a little bit of randomness to the ordering again
             for(let i = 0; i < 2; i++) d.values.sort((a, b) => 0.5 - rng())
-            if(d.n_commits > 250) d.values.sort((a, b) => 0.5 - rng())
-            if(d.n_commits > 400) d.values.sort((a, b) => 0.5 - rng())
+            // if(d.n_commits > 250) d.values.sort((a, b) => 0.5 - rng())
+            // if(d.n_commits > 400) d.values.sort((a, b) => 0.5 - rng())
 
             let total_files = 0
             let total_insertions = 0

@@ -1,0 +1,167 @@
+html {
+    --color-repository: #a682e8;
+    --color-insertions: #64d6d3;
+    --color-insertions-transparent: #64d6d375;
+    --color-deletions: #ea9df5;
+    --color-merges: #f2a900;
+    --color-overlap: #4070c4;
+    --color-text: #4d4950;
+    --color-background: #f7f7f7;
+    --color-gradient: linear-gradient(to right, var(--color-deletions), var(--color-repository), var(--color-insertions)) 1;
+    --body-font: 'Atkinson Hyperlegible', sans-serif
+}
+
+body {
+    margin: 0;
+    font-family: var(--body-font);
+    background-color: var(--color-background);
+}
+
+/*************************************/
+/*************** CHART ***************/
+/*************************************/
+
+/* The positioning of the different canvases is required */
+/* to allow the visual to work properly */
+#chart-container {
+    position: relative;
+    background-color: var(--color-background);
+    padding-bottom: 2em;
+}
+
+#chart-container canvas {
+    display: block;
+    margin: 0;
+}
+
+#canvas, #canvas-animation {
+    position: absolute;
+    top: 0;
+    pointer-events: none;
+    z-index: 0;
+}
+
+#canvas-hover {
+    position: relative;
+    z-index: 1
+}
+
+/*************************************/
+/******* LOADING / INTERACTION *******/
+/*************************************/
+
+#loading {
+    text-align: center;
+    font-style: italic;
+    font-size: 1em;
+    margin: 0 auto;
+    max-width: min(90vw, 500px);
+    padding-top: 1em;
+    padding-bottom: 0em;
+
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+#loading-message {
+    background-color: var(--color-background);
+    border: 3px solid var(--color-insertions);
+    border-image: linear-gradient(to right, var(--color-merges), var(--color-deletions), var(--color-insertions)) 1;
+    padding: 0.4em 1em;
+    font-weight: 700;
+    text-align: center;
+    margin: 0;
+}
+
+/*************************************/
+/************** TOOLTIP **************/
+/*************************************/
+
+#tooltip {
+    position: absolute;
+    /* display: none; */
+    /* opacity: 0; */
+    text-align: center;  
+    background: white;
+    pointer-events: none;
+    z-index: 2;
+    cursor: default;
+    max-width: 300px;
+    box-shadow: 0 1px 5px rgba(0,0,0,0.1);
+    -moz-box-shadow: 0 1px 5px rgba(0,0,0,0.1);  
+    border-top: 6px solid var(--color-insertions);
+    opacity: 0;
+    transition: opacity 100ms ease-in;
+
+    z-index: 3;
+}
+
+#tooltip p {
+    margin: 0;
+}
+
+.tooltip-container {
+    position: relative;
+    padding: 1em 1em 1.5em 1em;
+    color: var(--color-text);
+}
+
+#tooltip-close {
+    position: absolute;
+    z-index: 2;
+    right: 0;
+    top: 0;
+    width: 30px;
+    height: 30px;
+    line-height: 30px;
+    font-size: 20px;
+    cursor: pointer;
+    text-align: center;
+    pointer-events: all;
+    color: var(--color-insertions);
+}
+
+.tooltip-header {
+    font-style: italic;
+    opacity: 0.5;
+    font-size: 0.7em;
+    letter-spacing: 0.03em;
+}
+
+#tooltip-author-name {
+    font-weight: 700;
+    font-size: 1.1em;
+    padding-bottom: 0.5em;
+}
+
+#tooltip-commit-time {
+    /* opacity: 0.8; */
+    font-size: 0.8em;
+    padding-bottom: 0.9em;
+}
+
+#tooltip-commit-title {
+    opacity: 0.7;
+    font-style: italic;
+    font-size: 0.8em;
+    padding-bottom: 1em;
+}
+
+#tooltip-commit-release {
+    font-weight: 700;
+    padding-bottom: 1em;
+}
+
+.tooltip-changes {
+    font-size: 0.8em;
+}
+
+#tooltip-commit-changes {
+    padding-bottom: 1em;
+}
+
+#tooltip-commit-hash {
+    font-size: 0.6em;
+    opacity: 0.8;
+}
