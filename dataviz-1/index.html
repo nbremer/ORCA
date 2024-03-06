@@ -130,7 +130,8 @@
 
             <div id="chart-extra">
                 <button id="dataviz-download-data">Download the RAW data</button>
-                <p id="dataviz-credit">Visualization Designed & Created by Nadieh Bremer | <a href="https://www.visualcinnamon.com/" target="_blank">Visual Cinnamon</a></p>
+                <p id="dataviz-credit">Visualization Designed & Created by Nadieh Bremer | <a href="https://www.visualcinnamon.com/" target="_blank">Visual Cinnamon</a> <br>
+                Made possible through the <a href="https://future.mozilla.org/mieco/" target="_blank">MIECO program</a> of Mozilla.</p>
             </div>
         </div>
 
@@ -327,39 +328,6 @@
                     }// if
                 }, 300)
             })//on resize
-
-            /////////////////////////////////////////////////////////
-            //////////////////////// Save PNG ///////////////////////
-            /////////////////////////////////////////////////////////
-
-            //Save as PNG on "s" and other key functions
-            window.onkeydown = function (e) {
-                //Save at the current size
-                if (e.which === 83) { //"s" key
-                    e.preventDefault()
-                    savePNG()
-                }//if "s"
-            }//onkeydown
-
-            async function savePNG() {
-                let time = new Date()
-                let date_time = `${time.getFullYear()}-${pad(time.getMonth() + 1)}-${pad(time.getDate())} at ${pad(time.getHours())}.${pad(time.getMinutes())}.${pad(time.getSeconds())}`
-
-                let download_link = document.createElement("a")
-                canvas.toBlob(function(blob) {
-                    let url = URL.createObjectURL(blob)
-                    download_link.href = url
-                    download_link.download = `ORCA - ${date_time}.png`
-                    download_link.click()
-                    console.log("Saved image")
-                })//toBlob
-
-                //Pad with zero's on date/time
-                function pad(value) {
-                    if (value < 10) return '0' + value
-                    else return value
-                }//function pad
-            }//savePNG
 
         </script>
 	</body>

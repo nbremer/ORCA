@@ -308,6 +308,7 @@ pre {
     margin-bottom: 2em;
     opacity: 0.8;
     font-size: 0.9em;
+    line-height: 180%;
 }
 
 /*************************************/
@@ -358,7 +359,8 @@ pre {
 }
 
 .search-box .awesomplete mark {
-    background: var(--color-deletions);
+    background: none;
+    /* background: var(--color-deletions); */
 }
 .search-box .awesomplete > ul > li:hover {
     background: var(--color-insertions-transparent);
@@ -369,9 +371,11 @@ pre {
     font-weight: 700;
 }
 .search-box .awesomplete li:hover mark {
-    background: var(--color-deletions);
+    background: none;
+    /* background: var(--color-deletions); */
 }
 .search-box .awesomplete li[aria-selected="true"] mark {
-    background: var(--color-deletions);
+    background: none
+    /* background: var(--color-deletions); */
     color: inherit;
 }

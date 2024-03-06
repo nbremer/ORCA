@@ -1,5 +1,3 @@
-// FINAL: Remove savePNG function
-
 // TODO - Stretch Goal: Opacity animation on hover
 // TODO - Stretch Goal: Animation between the first and second circle pack
 
@@ -1341,7 +1339,6 @@ async function createORCAVisual(container) {
 
     // Highlight all the commits made by a certain contributor
     chart.highlight = function (value, fix = false) {
-        console.log("highlight")
         // See if this contributor can be found in the commit data
         let d = commits.find(d => d.author_name === value)
         // If something is found, run the click function

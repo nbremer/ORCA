@@ -323,6 +323,7 @@ li#item-remaining::before {
     margin-bottom: 2em;
     opacity: 0.8;
     font-size: 0.9em;
+    line-height: 180%;
 }
 
 #dataviz-credit a {

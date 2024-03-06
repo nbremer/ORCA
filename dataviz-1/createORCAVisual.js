@@ -1,5 +1,4 @@
 // TODO: Mark the ORCA recipients
-// TODO: Put a list of names of the ORCA contributors
 
 // TODO MAYBE: Add to tooltip with information about the person being - in short prose - first commit, last commit, number of repos that they have (use colors from the visual)
 // TODO MAYBE: Make tooltip scale independent?

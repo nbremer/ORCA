@@ -173,7 +173,8 @@
 
             <div id="chart-extra">
                 <button id="dataviz-download-data">Download the RAW data</button>
-                <p id="dataviz-credit">Visualization Designed & Created by Nadieh Bremer | <a href="https://www.visualcinnamon.com/" target="_blank">Visual Cinnamon</a></p>
+                <p id="dataviz-credit">Visualization Designed & Created by Nadieh Bremer | <a href="https://www.visualcinnamon.com/" target="_blank">Visual Cinnamon</a> <br>
+                Made possible through the <a href="https://future.mozilla.org/mieco/" target="_blank">MIECO program</a> of Mozilla.</p>
             </div>
         </div>
 
@@ -285,29 +286,30 @@
                             //https://leaverou.github.io/awesomplete/
                             // Create a list of the unique author names from the data using a Set
                             const uniqueAuthorNames = [...new Set(data.map(d => d.author_name))]
-                            // Create a list of the unique author names and count the number of commits they made
-                            // uniqueAuthorNames.forEach(name => {
-                            //     // Find all the email addresses used by this author
-                            //     let emails = [...new Set(data.filter(d => d.author_name === name).map(d => d.author_email))]
-
-                            //     let author_commits = values[0].filter(n.author_name.toLowerCase() === d.author_name.toLowerCase())
-
-
-                            //     // name.count = data.filter(d => d.author_name === name).length
-                            // })
                             
                             const data_list = uniqueAuthorNames.map(function(d,i) { 
                                 let author_commits = values[0].filter(n => n.author_name.toLowerCase() === d.toLowerCase())
                                 return { 
                                     id: i, 
                                     name: d, 
-                                    label: `${d} - ${author_commits.length} commit${author_commits.length > 1 ? "s" : ""}`
+                                    label: `${d} - ${author_commits.length} commit${author_commits.length > 1 ? "s" : ""}`,
+                                    // value: d
                                 } 
                             })
                             // Sort them alphabetically
                             awesomplete_box.list = data_list.map(d => d.label)
                             awesomplete_box.sort = (a, b) => a.localeCompare(b)
-                            
+
+                            // Custom filter function for the results of awesomeplete
+                            // because I added the number of commits to the label
+                            const filterOnLabel = function (text, input) {
+                                const regExpEscape = (s) => s.replace(/[-\\^$*+?.()|[\]{}]/g, "\\$&")
+
+                                let label = text.label.split(" - ")[0]
+                                return RegExp("^" + regExpEscape(input.trim()), "i").test(label)
+                            }// function filterOnLabel
+                            awesomplete_box.filter = filterOnLabel
+
                             //Reset the visual when the search box is focused
                             search_box.addEventListener("focus", function (e) {
                                 event.stopPropagation()
@@ -419,40 +421,6 @@
                 })//on resize
 
             })//createORCAVisual
-
-            /////////////////////////////////////////////////////////
-            //////////////////////// Save PNG ///////////////////////
-            /////////////////////////////////////////////////////////
-
-            //Save as PNG on "s" and other key functions
-            window.onkeydown = function (e) {
-                //Save at the current size
-                if (e.which === 83) { //"s" key
-                    e.preventDefault()
-                    savePNG()
-                }//if "s"
-            }//onkeydown
-
-            async function savePNG() {
-                let time = new Date()
-                let date_time = `${time.getFullYear()}-${pad(time.getMonth() + 1)}-${pad(time.getDate())} at ${pad(time.getHours())}.${pad(time.getMinutes())}.${pad(time.getSeconds())}`
-
-                let download_link = document.createElement("a")
-                // Get the element with id canvas
-                document.getElementById("canvas").toBlob(function(blob) {
-                    let url = URL.createObjectURL(blob)
-                    download_link.href = url
-                    download_link.download = `ORCA - ${date_time}.png`
-                    download_link.click()
-                    console.log("Saved image")
-                })//toBlob
-
-                //Pad with zero's on date/time
-                function pad(value) {
-                    if (value < 10) return '0' + value
-                    else return value
-                }//function pad
-            }//savePNG
 
         </script>
 	</body>
