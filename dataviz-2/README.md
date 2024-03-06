@@ -18,7 +18,8 @@ Finally, there is the custom **createORCAVisual.js** file that needs to be inclu
 <!-- JavaScript libraries -->
 <script src="lib/d3.v7.js"></script>
 <script src="lib/seedRandom.min.js"></script>
-<script src="lib/awesomplete.min.js"></script> <!-- not required -->
+<!-- not required -->
+<script src="lib/awesomplete.min.js"></script>
 
 <!-- Custom JavaScript file -->
 <script src="createORCAVisual.js"></script>
@@ -28,21 +29,25 @@ Finally, there is the custom **createORCAVisual.js** file that needs to be inclu
 <link rel="stylesheet" href="css/chart.css">
 <!-- not required, mainly used to style the showcase example page -->
 <link rel="stylesheet" href="css/style.css">
-<!-- not required, only used to style parts of the search box -->
+<!-- not required, only used to style (parts of) the search box -->
 <link rel="stylesheet" href="css/awesomplete.css"> 
 ```
 
 As you can see at the end, there are also several `css` files loaded. Only the first one is required for the visual and its interactions to function properly. The other two are used to style the showcase example page and the search box at the bottom of the visual.
 
 In the body, you will need the following HTML structure:
+
 ```html
 <!-- Loading & Interaction message -->
-<div id="loading"><p id="loading-message">Crunching all the commits...</p></div>
+<!-- This should be placed right above the container that holds the visual -->
+<div id="loading">
+    <p id="loading-message">Crunching all the commits...</p>
+</div>
 
 <!-- The visual will be drawn here -->
 <div id="chart-container">
 
-    <!-- Tooltip -->
+    <!-- The Tooltip needs to be placed within the container that holds the visual -->
     <div id="tooltip">
         <div class="tooltip-container">
             <span id="tooltip-close">&times;</span>

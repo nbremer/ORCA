@@ -167,6 +167,7 @@ a {
     margin-top: 0.2em;
     font-style: normal;
 }
+
 #chart-title #last-commit-date {
     font-size: 0.9em;
     padding-top: 1em;
@@ -223,11 +224,11 @@ a {
 #legend-note {
     text-align: center;
     margin: 1.5em auto 0.5em auto;
-    font-size: 0.8em;
-    opacity: 0.8;
+    font-size: 0.9em;
+    /* opacity: 0.8; */
 
     @media only screen and (max-width: 600px) {
-        max-width: 200px;
+        /* max-width: 300px; */
         margin: 1.5em auto 2em auto;
     }
 }
@@ -236,7 +237,7 @@ a {
 /*************** ORCA ****************/
 /*************************************/
 
-#orca-names {
+#orca-explanation {
     & ul {
         font-size: 0.75em;
         line-height: 160%;
@@ -247,11 +248,15 @@ a {
       }
       
     & li::before {
-        content: "•";
-        color: var(--color-insertions);
+        content: "⬢";
+        color: var(--color-repository);
         display: inline-block;
         width: 1em;
         margin-left: -1em;
+        font-size: 0.7em;
+        position: relative;
+        top: -3px;
+        left: -3px;
     }
 }
 
@@ -259,6 +264,18 @@ a {
     font-weight: 700;
     /* font-style: italic; */
     cursor: pointer;
+}
+
+/*************************************/
+/************* DATA NOTES ************/
+/*************************************/
+
+pre {
+    white-space:pre-line;
+    font-family: 'Fira Code', monospace;
+    background-color: var(--color-insertions-transparent);
+    font-size: 0.9em;
+    padding: 0em 0.8em;
 }
 
 /*************************************/

@@ -44,7 +44,7 @@
                         
                         <p id="orca-note">Commits made by <a id="explanation-link" href="#orca-names">ORCA</a> supported contributors are shown as small hexagons. For more info on what the "Open Retrospective Compensation Agreement" is, see <a id="explanation-link" href="#orca-names">farther down</a>.</p>
 
-                        <p id="interaction-note"><b>Hover</b> of a circle to get more information about the commit and also see all the other commits made by the same author (based on a commit matching on either the name or email from the hovered/clicked commit). <b>Click</b> on a circle to fix the visual on all the commits from that author. Click anywhere else to reset. At the bottom of the visual you can <b>search</b> for a contributor by name.</p>
+                        <p id="interaction-note"><b>Hover</b> of a circle to get more information about the commit and also see all the other commits made by the same author (based on matching by author name). <b>Click</b> on a circle to fix the visual on all the commits from that author. Click anywhere else to reset. At the bottom of the visual you can <b>search</b> for a contributor by name.</p>
 
                     </div>
                 </div>
@@ -58,17 +58,22 @@
                         <img class="legend" src="img/legend_insertions.png" alt="Circles with a turquoise outer ring have more line insertions than deletions">
                         <img class="legend" src="img/legend_deletions.png" alt="Circles with a pink outer ring have more line deletions than insertions">
                         <img class="legend" src="img/legend_similar.png" alt="Dark blue circles have about the same number of insertions and deletions">
-                        <img class="legend" id="orca-legend" src="img/legend_orca.png" alt="A hexagon is a commit made by an ORCA recipient">
                         <img class="legend" src="img/legend_no_change.png" alt="A small yellow circle represent a commit where no files were changed">
+                    </div>
+                    <p id="legend-note"><span class="insertions">⏺</span> <b>Note</b> | Size doesn't scale <i>completely</i> linearly with number of lines changed <span class="deletions">⏺</span></p>
+                    <div id="legend-image">
                         <img class="legend" src="img/legend_version.png" alt="A colored ring around a commit shows a version release">
+                        <img class="legend" id="orca-legend" src="img/legend_orca.png" alt="A hexagon is a commit made by an ORCA recipient">
                     </div>
 
-                    <p id="legend-note"><span class="insertions">◑</span> size doesn't scale <i>completely</i> linearly with number of lines <span class="deletions">◐</span></p>
+
                 </div>
             </div>
 
             <!-- Loading & Interaction message -->
-            <div id="loading"><p id="loading-message">Crunching all the commits...</p></div>
+            <div id="loading">
+                <p id="loading-message">Crunching all the commits...</p>
+            </div>
 
             <!-- The visual will be drawn here -->
             <div id="chart-container">
@@ -100,16 +105,16 @@
                 </div>
             </div>
 
-            <div id="orca-names" class="double-column">
-                <p class="header"><strong>ORCA RECIPIENTS</strong></p>
+            <div id="orca-explanation" class="double-column">
+                <p class="header"><strong>ORCA</strong></p>
                 <div>
                     <p style="font-weight: 700;">What is ORCA</p>
                     <p><b>ORCA</b> (the <b>"Open Retrospective Compensation Agreement"</b>) is an experimental retroactive funding model for open source contributors to receive financial compensation for their contributions. ORCA recipients receive an award that reflects the value of their contribution to the hosting organization’s activities.</p>
-                    <p style="font-weight: 700;">More text to come from Mozilla / Adam...?</p>
+                    <p><b>More text to come from Mozilla / Adam...?</b> Think about: Explaining why ORCA is needed. What it can achieve. How you can apply it. More explanation about what it is. How Mozilla gave ORCA to pdfjs and why it was only for those who did not get any compensation through their employee (such as Mozilla).</p>
                 </div>
                 <div>
-                    <p style="font-weight: 700;">The recipients</p>
-                    <p>Below is a list of the people that have received ORCA from Mozilla for making  noteworthy contributions to <span class="repo-name repository">mozilla/pdf.js</span>. These people have not been compensated through other means, such as being an employee of Mozilla.</p>
+                    <p style="font-weight: 700;">The ORCA recipients for <span class="repo-name repository">mozilla/pdf.js</span></p>
+                    <p>Below is a list of the people that have received ORCA from Mozilla for making  noteworthy contributions to <span class="repo-name-only">pdf.js</span>. These people have not been compensated through other means, such as being an employee of Mozilla.</p>
                     <ul>
                         <li><span class="orca-name">Jonas Jenwald</span> | A major contributor, who has a huge impact on the project.</li>
                         <li><span class="orca-name">Tim van der Meij</span> | A major contributor, who has a huge impact on the project.</li>
@@ -137,9 +142,10 @@
                 </div>
                 <div>
                     <p style="font-weight: 700;">The Approach</p>
-                    <p>First I use <span class="code">d3.packSiblings</span> on all the commits of a month to pack them into a circle. This is a good start (but often visually not good enough for a case like this where all of the circles have different radii). Next, I use <span class="code">d3.packEnclose</span> to get the radius of the smallest enclosing circle that fits all of the commit circles. These two functions run really fast and with the information of the smallest enclosing circle, I draw the blue timeline with the month circles on top.</p>
-                    <p>With the timeline drawn I then loop over each month's commits again and now run a proper <span class="code">d3.forceSimulation</span> for each month. Once a month is done, I let the circles slowly appear in an animation and move on to the next circle to run the simulation and afterwards let it appear. Doing this for all of the months takes several seconds, but due to the "fading in" of each month, it turns the result into an intriguing animation.</p>
-                    <p>After all the months have gone through the force simulation, many of them can get a smaller enclosing circle (because the simulation does a better job of packing the circles in a tight ball than the initial (fast) packing approach). In the end, I therefore quickly run the <span class="code">d3.packEnclose</span> one more time and draw the visual in its end state, with nicely fitting circles around each month.</p>
+                    <p><b>Step 1</b> | First I use <span class="code">d3.packSiblings</span> on all the commits of a month to pack them into a circle. This is a good start (but often visually not good enough for a case like this where all of the circles have different radii).</p>
+                    <p><b>Step 2</b> | Next, I use <span class="code">d3.packEnclose</span> to get the radius of the smallest enclosing circle that fits all of the commit circles. These two functions run really fast and with the information of the smallest enclosing circle, I draw the blue timeline with the month circles on top.</p>
+                    <p><b>Step 3</b> | With the timeline drawn I then loop over each month's commits again and now run a proper <span class="code">d3.forceSimulation</span> for each month. Once a month is done, I let the circles slowly appear in an animation and move on to the next circle to run the simulation and afterwards let it appear. Doing this for all of the months takes several seconds, but due to the "fading in" of each month, it turns the result into an intriguing animation.</p>
+                    <p><b>Step 4</b> | After all the months have gone through the force simulation, many of them can get a smaller enclosing circle (because the simulation does a better job of packing the circles in a tight ball than the initial (fast) packing approach). In the end, I therefore quickly run the <span class="code">d3.packEnclose</span> one more time and draw the visual in its end state, with nicely fitting circles around each month.</p>
                 </div>
 
             </div>
@@ -147,7 +153,16 @@
             <div id="data-explanation" class="double-column">
                 <p class="header"><strong>DATA DETAILS</strong></p>
                 <div>
-                    <p>Thanks to a lot of help to figure it out, I used the following (terminal) code to get the git commit history of a repository: <span class="code">( echo "commit_hash", "decorations","committer_email", "committer_name", "commit_time", "author_email", "author_name", "author_time", "commit_title"; git log --pretty='format:commit, %H, ^%D^, %ce, ^%cN^, %ci, %ae, ^%aN^, %ai, ^%s^' --shortstat --tags  -M20 -C20 origin/master ) > log.txt</span> (you need to be in the repo folder to run this). </p>
+                    <p>I used the following (terminal) code to get the git commit history of a repository (Thanks to Adam Bouhenguel, the initiator of ORCA). You need to be in the repository's folder to run this. </p>
+                    <pre>
+                        <code>
+                            ( echo "commit_hash", "decorations","committer_email", "committer_name", "commit_time", "author_email", "author_name", "author_time", "commit_title";
+
+                            git log --pretty='format:commit, %H, ^%D^, %ce, ^%cN^, %ci, %ae, ^%aN^, %ai, ^%s^' --shortstat --tags  -M20 -C20 origin/master ) 
+
+                            &gt log.txt
+                        </code>
+                    </pre>
                     <p>You can find more information about what kind of git log options you have in the <a href="https://git-scm.com/docs/pretty-formats" target="_blank">pretty-formats</a> and <a href="https://git-scm.com/docs/git-log" target="_blank">git log</a> documentation.</p>
                 </div>
                 <div>
@@ -269,9 +284,27 @@
                             //Create a search box with autocomplete and other awesome features
                             //https://leaverou.github.io/awesomplete/
                             // Create a list of the unique author names from the data using a Set
-                            // Sort them alphabetically
                             const uniqueAuthorNames = [...new Set(data.map(d => d.author_name))]
-                            const data_list = uniqueAuthorNames.map(function(d,i) { return { id: i, label: d } })
+                            // Create a list of the unique author names and count the number of commits they made
+                            // uniqueAuthorNames.forEach(name => {
+                            //     // Find all the email addresses used by this author
+                            //     let emails = [...new Set(data.filter(d => d.author_name === name).map(d => d.author_email))]
+
+                            //     let author_commits = values[0].filter(n.author_name.toLowerCase() === d.author_name.toLowerCase())
+
+
+                            //     // name.count = data.filter(d => d.author_name === name).length
+                            // })
+                            
+                            const data_list = uniqueAuthorNames.map(function(d,i) { 
+                                let author_commits = values[0].filter(n => n.author_name.toLowerCase() === d.toLowerCase())
+                                return { 
+                                    id: i, 
+                                    name: d, 
+                                    label: `${d} - ${author_commits.length} commit${author_commits.length > 1 ? "s" : ""}`
+                                } 
+                            })
+                            // Sort them alphabetically
                             awesomplete_box.list = data_list.map(d => d.label)
                             awesomplete_box.sort = (a, b) => a.localeCompare(b)
                             
@@ -303,7 +336,7 @@
                             function revealHoveredItem() {
                                 let label = this.textContent
                                 let chosen = data_list.find(d => d.label === label)
-                                ORCAVisual.highlight(chosen.label)
+                                ORCAVisual.highlight(chosen.name)
                             }//function revealHoveredItem
     
                             //When the list is closed
@@ -322,14 +355,14 @@
                                 search_box.blur()
                                 let label = text.text.label
                                 let chosen = data_list.find(d => d.label === label)
-                                ORCAVisual.highlight(chosen.label, true)
+                                ORCAVisual.highlight(chosen.name, true)
                             })//on select
     
                             //When highlighting an element in the list using the up/down arrow
                             search_box.addEventListener("awesomplete-highlight", function (text) {
                                 let label = text.text.label
                                 let chosen = data_list.find(d => d.label === label)
-                                ORCAVisual.highlight(chosen.label)
+                                ORCAVisual.highlight(chosen.name)
                             })//on list highlight
                         }// function setupSearchBox
 

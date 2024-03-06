@@ -215,7 +215,8 @@ async function createORCAVisual(container) {
 
         // Reset the delaunay for the mouse events
         if(!FIRST_DRAW) {
-            if(CLICK_ACTIVE) delaunay_points = commits.filter(n => n.author_email === CLICKED_NODE.author_email || n.author_name.toLowerCase() === CLICKED_NODE.author_name.toLowerCase())
+            if(CLICK_ACTIVE) delaunay_points = commits.filter(n => n.author_name.toLowerCase() === CLICKED_NODE.author_name.toLowerCase())
+            // if(CLICK_ACTIVE) delaunay_points = commits.filter(n => n.author_email === CLICKED_NODE.author_email || n.author_name.toLowerCase() === CLICKED_NODE.author_name.toLowerCase())
             else delaunay_points = commits
             doDelaunay(delaunay_points)
             // delaunay = d3.Delaunay.from(commits.map(d => [d.x_base, d.y_base]))
@@ -466,7 +467,8 @@ async function createORCAVisual(container) {
 
             // Update the delaunay for the mouse events (during the loading animation)
             delaunay_points = commits
-            if(CLICK_ACTIVE) delaunay_points = commits.filter(n => n.author_email === CLICKED_NODE.author_email || n.author_name.toLowerCase() === CLICKED_NODE.author_name.toLowerCase())
+            if(CLICK_ACTIVE) delaunay_points = commits.filter(n => n.author_name.toLowerCase() === CLICKED_NODE.author_name.toLowerCase())
+            // if(CLICK_ACTIVE) delaunay_points = commits.filter(n => n.author_email === CLICKED_NODE.author_email || n.author_name.toLowerCase() === CLICKED_NODE.author_name.toLowerCase())
             delaunay = d3.Delaunay.from(delaunay_points.filter(d => d.commit_circle_simulation).map(d => [d.x_base, d.y_base]))
 
             // When the last month has run
@@ -947,7 +949,8 @@ async function createORCAVisual(container) {
 
         // Reset the delaunay for the hover now that a click is active
         // Take only the commits that were done by the same author
-        delaunay_points = commits.filter(n => n.author_email === d.author_email || d.author_name.toLowerCase() === n.author_name.toLowerCase())
+        delaunay_points = commits.filter(n => d.author_name.toLowerCase() === n.author_name.toLowerCase())
+        // delaunay_points = commits.filter(n => n.author_email === d.author_email || d.author_name.toLowerCase() === n.author_name.toLowerCase())
         if(FIRST_DRAW) {
             delaunay = d3.Delaunay.from(delaunay_points.filter(d => d.commit_circle_simulation).map(d => [d.x_base, d.y_base]))
         } else {
@@ -1008,8 +1011,8 @@ async function createORCAVisual(container) {
         if(HOVER_ACTIVE) monthDateLabel(context_hover, d.month_data, d.month_data.index, true)
 
         // Draw the circle for all the commits made by this same author
-        let author_commits = commits.filter(n => n.author_email === d.author_email || n.author_name.toLowerCase() === d.author_name.toLowerCase())
-        // console.log(author_commits)
+        let author_commits = commits.filter(n => n.author_name.toLowerCase() === d.author_name.toLowerCase())
+        // let author_commits = commits.filter(n => n.author_email === d.author_email || n.author_name.toLowerCase() === d.author_name.toLowerCase())
         author_commits.forEach(n => {
             // Draw the hovered commit circle
             drawCommitCircle(context, n)

@@ -137,6 +137,14 @@ p {
     font-style: normal;
 }
 
+#chart-title #last-commit-date {
+    font-size: 0.9em;
+    padding-top: 1em;
+    font-style: italic;
+    opacity: 0.6;
+    padding-bottom: 3em;
+}
+
 #chart-intro-text {
     grid-column-start: 2;
     grid-column-end: 2;
@@ -257,6 +265,35 @@ li#item-remaining::before {
 /**************** ORCA ***************/
 /*************************************/
 
+
+#orca-explanation {
+    & ul {
+        font-size: 0.75em;
+        line-height: 160%;
+    }
+      
+    & li {
+        list-style: none;
+      }
+      
+    & li::before {
+        content: "⬢";
+        color: var(--color-repo-main);
+        display: inline-block;
+        width: 1em;
+        margin-left: -1em;
+        font-size: 0.7em;
+        position: relative;
+        top: -3px;
+        left: -3px;
+    }
+}
+
+.orca-name {
+    font-weight: 700;
+    /* font-style: italic; */
+    cursor: pointer;
+}
 
 /*************************************/
 /************** CREDITS **************/

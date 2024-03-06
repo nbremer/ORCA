@@ -30,9 +30,10 @@
                 <div id="chart-title">
                     <h1>The Top Contributor Network of</h1>
                     <h1><span id="title-repo-name" class="central-repo">mozilla/pdf.js</span></h1>
+                    <p id="last-commit-date"></p>
                 </div>
                 <div id="chart-intro-text">
-                    <p>The <span class="repo-name central-repo">mozilla/pdf.js</span> repository has seen many improvements from its <span id="repo-num-contributors"></span><span class="contributor">contributors</span> since it was created<span id="repo-start-date"></span>.</p>
+                    <p>The <span class="repo-name central-repo">mozilla/pdf.js</span> repository has seen many improvements from its <span id="repo-num-contributors"></span><span class="contributor">contributors</span> since it was created<span id="first-commit-date"></span>.</p>
 
                     <p>The visual below shows all of the contributors to <span class="repo-name-only">pdf.js</span> and focuses on the <span class="top-contributor-num"></span>contributors that have made the most commits and/or are supported through <strong>ORCA</strong> (the <strong>"Open Retrospective Compensation Agreement"</strong>). Revealing how they are involved with<span id="top-repo-num"> other</span> <span class="repository">repositories</span> as well.</p>
 
@@ -98,8 +99,27 @@
             </div>
 
             <div id="orca-explanation" class="double-column">
-                <p class="header"><strong>WHAT IS ORCA</strong></p>
-                <p>Explain ORCA...</p>
+                <p class="header"><strong>ORCA</strong></p>
+                <div>
+                    <p style="font-weight: 700;">What is ORCA</p>
+                    <p><b>ORCA</b> (the <b>"Open Retrospective Compensation Agreement"</b>) is an experimental retroactive funding model for open source contributors to receive financial compensation for their contributions. ORCA recipients receive an award that reflects the value of their contribution to the hosting organization’s activities.</p>
+                    <p><b>More text to come from Mozilla / Adam...?</b> Think about: Explaining why ORCA is needed. What it can achieve. How you can apply it. More explanation about what it is. How Mozilla gave ORCA to pdfjs and why it was only for those who did not get any compensation through their employee (such as Mozilla).</p>
+                </div>
+                <div>
+                    <p style="font-weight: 700;">The ORCA recipients for <span class="repo-name central-repo">mozilla/pdf.js</span></p>
+                    <p>Below is a list of the people that have received ORCA from Mozilla for making  noteworthy contributions to <span class="repo-name-only">pdf.js</span>. These people have not been compensated through other means, such as being an employee of Mozilla.</p>
+                    <ul>
+                        <li><span class="orca-name">Jonas Jenwald</span> | A major contributor, who has a huge impact on the project.</li>
+                        <li><span class="orca-name">Tim van der Meij</span> | A major contributor, who has a huge impact on the project.</li>
+                        <li><span class="orca-name">Takashi Tamura</span> | Fixing Typescript support and improving build configuration.</li>
+                        <li><span class="orca-name">Jani Pehkonen</span> | Implementing visibility expressions for optional content, and fixing a bug with Encoding, and providing an icon for “Find Current Outline Item”.</li>
+                        <li><span class="orca-name">Michael Wu</span> | Fixing Typescript definitions.</li>
+                        <li><span class="orca-name">Christophe Coevoet</span> | Fixing Typescript build system.</li>
+                        <li><span class="orca-name">Ben Wagner</span> | Fixing bugs with gradient color stops and PostScript trigonomic operators.</li>
+                        <li><span class="orca-name">Jane-Kotovich</span> | Fixing bugs in XFA and JavaScript support.</li>
+                        <li><span class="orca-name">Dominik Hufnagel</span> | Fixing bugs in form support (font size and color, and checkboxes).</li>
+                    </ul>
+                </div>
             </div>
 
             <div id="chart-notes" class="double-column">
@@ -184,7 +204,7 @@
                     if(values[3]) {
                         let num_contributors = values[0].length + values[3].length
                         document.getElementById("repo-num-contributors").innerHTML = `~${formatDigit(num_contributors)} `
-                    }
+                    }// if
                     
                     // How many contributors are there in the inner two rings
                     document.querySelectorAll(".top-contributor-num").forEach(d => d.innerHTML = `${formatDigit(values[0].length)} `)
@@ -197,12 +217,23 @@
                     ORCAVisual(values)
 
                     /////////////////////////////////////////////////
-                    // Get the start date of the central repository
+                    // Get the start date of the central repository & the most recent commit date in this repository
                     // Find the REPOSITORY_FULL in the links dataset
                     let central_repo = values[1].find(d => d.repo === REPOSITORY_FULL)
                     let formatDate = d3.timeFormat("%B %Y")
-                    // let start_date = new Date(values[1][0].created_at)
-                    document.getElementById("repo-start-date").innerHTML = ` in ${formatDate(central_repo.createdAt)}`
+                    let formatDateLong = d3.utcFormat("%B %-e, %Y")
+                    // First commit date
+                    document.getElementById("first-commit-date").innerHTML = ` in ${formatDate(central_repo.createdAt)}`
+                    // Latest commit date
+                    // // It should be as simple as this:
+                    // document.getElementById("last-commit-date").innerHTML = `Up to ${formatDateLong(central_repo.updatedAt)}`
+                    // However, the dataset underlying the contributors is not as up to date as the repositories. So we need to get the "most recent" commit date from the links dataset
+                    // If both the repo and contribution are up to date, it's better to use the line above and not what I do here below
+                    // Get all the objects from values[2] where the target is the central repository
+                    let links_to_central = values[2].filter(d => d.target.data && d.target.data.repo === REPOSITORY_FULL)
+                    // Now get the most recent commit date from the links to the central repository
+                    let most_recent_commit = d3.max(links_to_central, d => d.commit_sec_max)
+                    document.getElementById("last-commit-date").innerHTML = `Including commits up to ${formatDateLong(most_recent_commit)}`
 
                     /////////////////////////////////////////////////
                     // Bar chart
