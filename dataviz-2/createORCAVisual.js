@@ -896,7 +896,9 @@ async function createORCAVisual(container) {
                 initializeClickEvent(event, mx, my)
             })
 
-        d3.select("body").on("click", function(event) { if(!FIX_CLICK) resetClick(event) })
+        d3.select("body").on("click", function(event) { 
+            if(!FIX_CLICK) resetClick(event) 
+        })
         d3.select("#tooltip-close").on("click", resetClick)
 
     }// function setupInteraction
@@ -941,7 +943,7 @@ async function createORCAVisual(container) {
         }// else
     }// function initializeClickEvent
 
-    function setClick(d) {
+    function setClick(d, origin = "body") {
         CLICK_ACTIVE = true
         CLICKED_NODE = d
 
@@ -955,7 +957,7 @@ async function createORCAVisual(container) {
             doDelaunay(delaunay_points)
         }// else
 
-        drawHoverState(context_hover, d)
+        drawHoverState(context_hover, d, false, origin)
     }// function setClick
 
     function resetClick(event) {
@@ -994,8 +996,14 @@ async function createORCAVisual(container) {
 
     /////////////////////////////////////////////////////////////////
     // Draw the hovered node and its links and neighbors and a tooltip
-    function drawHoverState(context, d, hide_tooltip = false) {
+    function drawHoverState(context, d, hide_tooltip = false, origin = "body") {
         context.clearRect(0, 0, WIDTH, HEIGHT)
+
+        // Clear the search box, if present
+        if(origin === "body") {
+            let search_box = document.getElementById("search-box")
+            if(search_box) search_box.value = ''
+        }// if
 
         // Draw a partly transparent circle on top of each month's commit circle
         context.fillStyle = COLOR_BACKGROUND
@@ -1245,7 +1253,7 @@ async function createORCAVisual(container) {
         if(show_commits) {
             context.globalAlpha = 0.7
             setFont(context, 22, 400, "italic")
-            context.fillText(`${d.n_commits} commits`, d.x, y)
+            context.fillText(`has ${d.n_commits} commits`, d.x, y)
         }// if
 
         context.globalAlpha = 1
@@ -1345,7 +1353,7 @@ async function createORCAVisual(container) {
         if(d !== undefined) {
             if(fix) FIX_CLICK = true //workaround for the click event not firing on search box
             MESSAGE_SET = false
-            setClick(d)
+            setClick(d, "search")
             hideTooltip()
         }// if
         return chart
