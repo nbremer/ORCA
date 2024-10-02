@@ -149,7 +149,7 @@
             <div id="data-explanation" class="double-column">
                 <p class="header"><strong>DATA DETAILS</strong></p>
                 <div>
-                    <p>I used the following (terminal) code to get the git commit history of a repository (Thanks to Adam Bouhenguel, the initiator of ORCA). You need to be in the repository's folder to run this. </p>
+                    <p>I used the following (terminal) code to get the git commit history of a repository (Thanks to Adam Bouhenguel, the initiator of ORCA). You need to be in the repository's folder to run this (clone it to a folder through <span class="code">git clone https://github.com/mozilla/pdf.js.git</span>). </p>
                     <pre>
                         <code>
                             ( echo "commit_hash", "decorations","committer_email", "committer_name", "commit_time", "author_email", "author_name", "author_time", "commit_title";
@@ -162,7 +162,8 @@
                     <p>You can find more information about what kind of git log options you have in the <a href="https://git-scm.com/docs/pretty-formats" target="_blank">pretty-formats</a> and <a href="https://git-scm.com/docs/git-log" target="_blank">git log</a> documentation.</p>
                 </div>
                 <div>
-                    <p>It's this dataset that contains all of the information that is used in this visual and its almost perfect to use as-is. However, the number of files changed, line insertions and line deletions are added as a separate row each time. Something such as <span class="code">2 files changed, 13 insertions(+), 26 deletions(-)</span>. Therefore, to get this final bit in a <span class="code">csv</span> ready format, I had to run the <span class="code">txt</span> file through R for some final minor data preparation.</p>
+                    <p>It's this dataset that contains all of the information that is used in this visual and its almost perfect to use as-is. However, the number of files changed, line insertions and line deletions are added as a separate row each time. Something such as <span class="code">2 files changed, 13 insertions(+), 26 deletions(-)</span>. Therefore, to get this final bit in a <span class="code">csv</span> ready format, I had to run the <span class="code">txt</span> file through R for some final minor data preparation (you can find this file in the <i>data</i> folder of this visual's <a href="https://github.com/nbremer/ORCA/tree/main/commit-history" target="_blank">repository</a>).</p>
+                    <p>You can find </p>
                     <p style="font-style: italic;">Why the weird <span class="code">^</span> around some of the fields. Honestly, because it was the only way I could get the textual fields, such as the commit title, to be read properly in R. Otherwise some of the rows would split up into new columns due to the usage of a variety of <span class="code">", ', `, #</span> and other marks. I therefore used the <span class="code">^</span> to act as a <span class="code">quote</span>.</p>
                 </div>
             </div>
