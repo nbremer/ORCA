@@ -13,7 +13,7 @@
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400;1,700&family=Fira+Code:wght@300..700&display=swap" rel="stylesheet">
 
         <!-- JavaScript libraries -->
         <script src="lib/d3.v7.js"></script>
@@ -47,7 +47,7 @@
                         <div id="legend-bar-chart">
                             <ul>
                                 <li id="item-orca"><span id="num-orca"></span>contributors that are supported via ORCA<span id="num-orca-commits"></span></li>
-                                <li id="item-non-orca"><span id="num-non-orca"></span>top contributors not supported via ORCA<span id="num-non-orca-commits"></span></li>
+                                <li id="item-non-orca"><span id="num-non-orca"></span>top contributors<span id="item-not-ORCA-text"> not supported via ORCA</span><span id="num-non-orca-commits"></span></li>
                                 <li id="item-remaining"><span id="num-remaining"></span>remaining contributors<span id="num-remaining-commits"></span></li>
                             </ul>
                         </div>
@@ -84,7 +84,7 @@
                     
                     <p><strong>FULLY OPAQUE vs TRANSPARENT REPOSITORIES</strong> | If you look closer you might notice that some <span class="repository">repository</span> circles are partly transparent and have a smaller central opaque dot in the center. These are repositories that are not "impacted" by any <span class="contributor">contributor</span> in this visualization that has received ORCA. The fully opaque <span class="repository">repository</span> circles, on the other hand, have at least one <span class="contributor">contributor</span> that has received ORCA for their work on <span class="repo-name-only">pdf.js</span> (hover over the repository to see how many ORCA recipients are connected to it).</p>
                     
-                    <p><strong>INNER & OUTER PURPLE RINGS</strong> | The top <span class="contributor">contributors</span> are placed in a circle around the <span class="central-repo">central repository</span>. They are ordered by their first commit time to it, starting from the top ("noon") and going clockwise. Furthermore, they are divided into two rings. Contributors that are placed in the inner (slightly darker) purple ring have received ORCA for their contributions to <span id="title-repo-name" class="central-repo">mozilla/pdf.js</span>. Whereas the outer ring shows other top contributors (based on the number of commits), who have not received ORCA.</p>
+                    <p><strong>INNER & OUTER PURPLE RINGS</strong> | The top <span class="contributor">contributors</span> are placed in a circle around the <span class="central-repo">central repository</span>. They are ordered by their first commit time to it, starting from the top ("noon") and going clockwise. <span class="orca-note">Furthermore, they are divided into two rings. Contributors that are placed in the inner (slightly darker) purple ring have received ORCA for their contributions to <span id="title-repo-name" class="central-repo">mozilla/pdf.js</span>. Whereas the outer ring shows other top contributors (based on the number of commits), who have not received ORCA.</span></p>
                 </div>
                 <div>
                     <p><strong>LINES</strong> | The lines connect <span class="contributor">contributors</span> to the <span class="repository">repositories</span> that they have made commits to (only showing repositories with at least 30 stars). When multiple <span class="repository">repositories</span> from the same <span class="owner">owner</span> are present in the visual, a circle for that owner is shown to which their repositories are connected.</p>
@@ -106,24 +106,28 @@
 
                     <p style="font-weight: 700;">Why ORCA</p>
                     <p>The importance of open source projects in today’s software development ecosystem highlights the growing need for new funding models to sustain the work of volunteers around the globe. ORCA is a way for companies to recognize and fund non-employee contributors to the projects that enable their businesses, which is an important contribution to the longevity of the community.</p>
-
-                    <p style="font-weight: 700;">ORCA in Practice</p>
-                    <p>ORCA provides organizations with a streamlined process for committing funds back to their contributor base. To participate in funding with ORCA, a company begins by opening a contributor fund as a share of their revenue. Each quarter, teams identify the highest-impact work from non-employees to selected projects, and use their contributor fund to commit funds to pay the contributors. Through ORCA, open source contributors are recognized for the way that their work unlocks business potential and accelerates innovation through working in the open.</p>
                 </div>
                 <div>
-                    <p style="font-weight: 700;">The ORCA recipients for <span class="repo-name central-repo">mozilla/pdf.js</span></p>
-                    <p>Below is a list of the people that have received ORCA from Mozilla for making  noteworthy contributions to <span class="repo-name-only">pdf.js</span>. These people have not been compensated through other means, such as being an employee of Mozilla.</p>
-                    <ul>
-                        <li><span class="orca-name">Jonas Jenwald</span> | A major contributor, who has a huge impact on the project.</li>
-                        <li><span class="orca-name">Tim van der Meij</span> | A major contributor, who has a huge impact on the project.</li>
-                    </ul>
+                    <p style="font-weight: 700;">ORCA in Practice</p>
+                    <p>ORCA provides organizations with a streamlined process for committing funds back to their contributor base. To participate in funding with ORCA, a company begins by opening a contributor fund as a share of their revenue. Each quarter, teams identify the highest-impact work from non-employees to selected projects, and use their contributor fund to commit funds to pay the contributors. Through ORCA, open source contributors are recognized for the way that their work unlocks business potential and accelerates innovation through working in the open.</p>
+
+                    <div id="orca-recipients">
+                        <p style="font-weight: 700;">The ORCA recipients for <span class="repo-name central-repo">mozilla/pdf.js</span></p>
+                        <p>Below is a list of the people that have received ORCA from Mozilla for making  noteworthy contributions to <span class="repo-name-only">pdf.js</span>. These people have not been compensated through other means, such as being an employee of Mozilla.</p>
+                        <ul>
+                            <li><span class="orca-name">Jonas Jenwald</span> | A major contributor, who has a huge impact on the project.</li>
+                            <li><span class="orca-name">Tim van der Meij</span> | A major contributor, who has a huge impact on the project.</li>
+                        </ul>
+                    </div>
                 </div>
             </div>
 
             <div id="chart-notes" class="double-column">
-                <p class="header"><strong>DATA NOTES</strong></p>
-                <p><strong>NOTE 1</strong> | Only repositories that have at least 30 stars have been taken into account. Contributors could have made commits to repositories with fewer stars (or private ones). Those repositories are not visualized here.</p>
-                <p><strong>NOTE 2</strong> | During the data preparation and analysis phase we tried to group the top contributors to a <i>unique</i> person by grouping all commits coming from the same email address and/or coming from the exact same name. The name that was used the most for all these commits is taken as the contributor's "name".</p>
+                <p class="header"><strong>DATA & VISIAL NOTES</strong></p>
+                <p>Only repositories that have at least 30 stars have been taken into account. Contributors could have made commits to repositories with fewer stars (or private ones). Those repositories are not visualized here.</p>
+                <p>During the data preparation and analysis phase we tried to group the top contributors to a <i>unique</i> person by grouping all commits coming from the same email address and/or coming from the exact same name. The name that was used the most for all these commits is taken as the contributor's "name".</p>
+                <p>You can find the code and explanation on how to apply it to other repositories in this visual's <a href="https://github.com/nbremer/ORCA/tree/main/top-contributor-network" target="_blank">GitHub repository</a>.</p>
+                <p id="terraform-note">Try adding <span class="code">/?repo=terraform</span> to the URL to see this visual applied to a different repository.</p>
             </div>
 
             <div id="chart-extra">
@@ -155,12 +159,17 @@
             ///////////////////////// START /////////////////////////
             /////////////////////////////////////////////////////////
 
+            // Hide the ORCA Recipients explanation if the repository is not pdfjs
+            if(REPOSITORY !== "pdfjs") document.getElementById("orca-recipients").style.display = `none`
+            if(REPOSITORY === "terraform") document.getElementById("terraform-note").style.display = `none`
+
             ////////////////// Datasets to Read in //////////////////
             let promises = []
             promises.push(d3.csv(`data/${REPOSITORY}/top_contributors.csv`))
             promises.push(d3.csv(`data/${REPOSITORY}/repositories.csv`))
             promises.push(d3.csv(`data/${REPOSITORY}/links.csv`))
             promises.push(d3.csv(`data/${REPOSITORY}/remaining_contributors.csv`)) // not required
+            if (REPOSITORY === "pdfjs") promises.push(d3.csv(`data/${REPOSITORY}/orca_recipients.csv`))  // not required
 
             /////////////////// Fonts to activate ///////////////////
             const FONT_FAMILY = "Atkinson Hyperlegible"
@@ -196,11 +205,25 @@
                     data_raw.push(JSON.parse(JSON.stringify(values[0]))) // top contributors
                     data_raw.push(JSON.parse(JSON.stringify(values[1]))) // repositories
                     data_raw.push(JSON.parse(JSON.stringify(values[2]))) // links
-                    data_raw.push(JSON.parse(JSON.stringify(values[3]))) // remaining contributors
+                    if(values[3]) data_raw.push(JSON.parse(JSON.stringify(values[3]))) // possible remaining contributors
+                    if(values[4]) data_raw.push(JSON.parse(JSON.stringify(values[4]))) // possible orca recipients
 
                     /////////////////////////////////////////////////
                     // Very specific to this example, but get some statistics on the data and put this in the intro text
-                    if(values[3]) {
+                    // First check that the values[3] belongs to the remaining contributors and not the orca recipients
+                    const remainingContributorsPresent = values[3] && values[3][0].author_name !== undefined
+                    let orcaPresent = false
+                    if(remainingContributorsPresent && (values[4] && values[4][0].name !== undefined)) orcaPresent = true
+                    else if(!remainingContributorsPresent && (values[3] && values[3][0].name !== undefined)) orcaPresent = true
+
+                    if(!orcaPresent) {
+                        // Hide all those with a class of orca-note
+                        document.querySelectorAll(".orca-note").forEach(d => d.style.display = `none`)
+                        // document.getElementById("orca-note").style.display = `none`
+                    }// if
+
+                    /////////////////////////////////////////////////
+                    if(remainingContributorsPresent) {
                         let num_contributors = values[0].length + values[3].length
                         document.getElementById("repo-num-contributors").innerHTML = `~${formatDigit(num_contributors)} `
                     }// if
@@ -236,7 +259,7 @@
 
                     /////////////////////////////////////////////////
                     // Bar chart
-                    if(values[3]) { // Is the dataset with remaining contributors present?
+                    if(remainingContributorsPresent) { // Is the dataset with remaining contributors present?
                         // Update the bar chart in the intro
                         let bar_chart = document.getElementById("commit-bar-chart")
                         // Get the sum of commits made by the remaining contributors
@@ -264,6 +287,12 @@
                         document.getElementById("num-non-orca-commits").innerHTML = ` [having made ${formatDigit(sum_non_orca)} commits]`
                         document.getElementById("num-remaining").innerHTML = `${formatDigit(values[3].length)} `
                         document.getElementById("num-remaining-commits").innerHTML = ` [having made ${formatDigit(sum_remaining)} commits]`
+
+                        // Hide the ORCA bar if there are no ORCA recipients
+                        if(!orcaPresent) {
+                            document.getElementById("item-orca").style.display = `none`
+                            document.getElementById("item-not-ORCA-text").style.display = `none`
+                        }// if
 
                         // Reveal the bar chart
                         document.getElementById("bar-chart-wrapper").style.opacity = `1`

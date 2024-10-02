@@ -43,15 +43,16 @@ Next, you read in the datasets and supply it to the function. The specifics of t
 
 ```js
 ////////////////// Datasets to Read in //////////////////
-// It requires three datasets (and one optional one) of
+// It requires three datasets (and two optional ones) of
 // contributors (authors), repositories, links between contributors and repositories,
-// and remaining contributors, in that order
+// and remaining contributors and possible ORCA recipients, in that order
 
 let promises = []
 promises.push(d3.csv(`data/pdfjs/top_contributors.csv`))
 promises.push(d3.csv(`data/pdfjs/repositories.csv`))
 promises.push(d3.csv(`data/pdfjs/links.csv`))
 promises.push(d3.csv(`data/pdfjs/remaining_contributors.csv`)) // optional
+promises.push(d3.csv(`data/pdfjs/orca_recipients.csv`)) // optional
 
 // Read in the data and create the visual
 Promise.all(promises).then(values => {
@@ -72,7 +73,6 @@ This visual is roughly optimized to show somewhere between 20-40 contributors. I
 This dataset requires the following fields:
 
 * **author_name** | The name of the author / contributor.
-* **orca_received** | Has this contributor received ORCA for their involvement with the _central repository_? This should be a boolean, either `true` or `false`. (_While ORCA is still getting deployed, this field is optional and if not supplied each contributor will be randomly assigned a `true` or `false`._)
 * **repositories** | _[optional]_ | The number of repositories that this contributor has made commits to.
 * **commit_sec_min** | _[optional]_ | The datetime of the first commit made by the contributor on GitHub. It can either be given as a UNIX timestamp integer or as a string in the following format `"%Y-%m-%dT%H:%M:%SZ"` (e.g. `"2014-07-31T21:09:00Z"`).
 * **commit_sec_max** | _[optional]_ | The datetime of the most recent commit made by the contributor on GitHub. Should be given in the same format as _commit_sec_min_.
@@ -120,6 +120,15 @@ This dataset requires the following fields:
 * **commit_count** | The number of commits that this contributor has made to the central repository.
 * **commit_sec_min** | The datetime of the first commit made by this contributor to the central repository. It can either be given as a UNIX timestamp integer or as a string in the following format `"%Y-%m-%dT%H:%M:%SZ"` (e.g. `"2014-07-31T21:09:00Z"`).
 * **commit_sec_max** | The datetime of the most recent commit made by this contributor to the central repository. Should be given in the same format as _commit_sec_min_.
+
+<a href="#orca_recipients" name="orca_recipients">#</a> <b>orca_recipients.csv</b> _[optional]_
+
+The _orca_recipients.csv_ dataset contains the names about the (possible) contributors that have received ORCA.
+
+This dataset has the following fields:
+
+* **name** | The name of the author / contributor that received ORCA - should match their _author_name_ in the _top_contributors.csv_ dataset.
+* **contribution** | _[optional]_ | A short description of the contribution of the ORCA recipient to the repository.
 
 ## API Reference
 

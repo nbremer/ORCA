@@ -90,7 +90,22 @@ p {
     font-size: 0.8em;
 }
 
+.code {
+    font-family: 'Fira Code', monospace;
+    background-color: #64d6d375;
+    font-size: 0.9em;
+    padding: 0.2em 0.4em;
+}
 
+a {
+    border-bottom: 3px solid var(--color-repo);
+    border-image:linear-gradient(to right, var(--color-repo), var(--color-contributor)) 1;
+    /* padding: 0.1em 0.3em; */
+    font-weight: 700;
+    cursor: pointer;
+    color: var(--color-text);
+    text-decoration: none;
+}
 
 /*************************************/
 /*************** INTRO ***************/

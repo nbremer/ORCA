@@ -15,7 +15,7 @@
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400;1,700&family=Fira+Code:wght@300..700&display=swap" rel="stylesheet">
 
         <!-- JavaScript libraries -->
         <script src="lib/d3.v7.js"></script>
@@ -42,7 +42,7 @@
                         
                         <p>Each commit is represented as a small circle. They're grouped together by commit month, giving an overview of which periods had relatively few updates while other time periods saw a lot of activity.</p>
                         
-                        <p id="orca-note">Commits made by <a id="explanation-link" href="#orca-names">ORCA</a> supported contributors are shown as small hexagons. For more info on what the "Open Retrospective Compensation Agreement" is, see <a id="explanation-link" href="#orca-names">farther down</a>.</p>
+                        <p id="orca-note">Commits made by <a id="explanation-link" href="#orca-explanation">ORCA</a> supported contributors are shown as small hexagons. For more info on what the "Open Retrospective Compensation Agreement" is, see <a id="explanation-link" href="#orca-explanation">farther down</a>.</p>
 
                         <p id="interaction-note"><b>Hover</b> of a circle to get more information about the commit and also see all the other commits made by the same author (based on matching by author name). <b>Click</b> on a circle to fix the visual on all the commits from that author. Click anywhere else to reset. At the bottom of the visual you can <b>search</b> for a contributor by name.</p>
 
@@ -135,6 +135,7 @@
                     <p>I find that the best way to get a nice round grouping of circles, is to use <span class="code">d3.forceSimulation</span>. However, for the case of <span class="repo-name repository">mozilla/pdf.js</span>, there are over 100 months to run such a simulation for. This made the page too slow to load if I let the force simulation run for each month first.</p>
                     <p>I could have pre-calculated the positions and then used these final positions to instantly create the visual for any viewer. However, I want this visual, its code, to be able to handle the commit history of (almost) any repository. Therefore, I couldn't use any pre-calculation.</p>
                     <p>I tried many approaches to make the calculations faster to still have all the calculations performed at the start (e.g. web workers). However, nothing proved fast enough. In the end, I instead combined several functions and a loading animation to make the "perceived" performance seem fast enough (although perhaps not on mobile).</p>
+                    <p>You can read more about how to take this visualization and apply it to another dataset in the visual's GitHub <a href="https://github.com/nbremer/ORCA/tree/main/commit-history" target="_blank">repository</a>.</p>
                 </div>
                 <div>
                     <p style="font-weight: 700;">The Approach</p>
@@ -162,7 +163,7 @@
                     <p>You can find more information about what kind of git log options you have in the <a href="https://git-scm.com/docs/pretty-formats" target="_blank">pretty-formats</a> and <a href="https://git-scm.com/docs/git-log" target="_blank">git log</a> documentation.</p>
                 </div>
                 <div>
-                    <p>It's this dataset that contains all of the information that is used in this visual and its almost perfect to use as-is. However, the number of files changed, line insertions and line deletions are added as a separate row each time. Something such as <span class="code">2 files changed, 13 insertions(+), 26 deletions(-)</span>. Therefore, to get this final bit in a <span class="code">csv</span> ready format, I had to run the <span class="code">txt</span> file through R for some final minor data preparation (you can find this file in the <i>data</i> folder of this visual's <a href="https://github.com/nbremer/ORCA/tree/main/commit-history" target="_blank">repository</a>).</p>
+                    <p>It's this dataset that contains all of the information that is used in this visual and its almost perfect to use as-is. However, the number of files changed, line insertions and line deletions are added as a separate row each time. Something such as <span class="code">2 files changed, 13 insertions(+), 26 deletions(-)</span>. Therefore, to get this final bit in a <span class="code">csv</span> ready format, I had to run the <span class="code">txt</span> file through R for some final minor data preparation (you can find this R file in the <i>data</i> folder of this visual's <a href="https://github.com/nbremer/ORCA/tree/main/commit-history" target="_blank">repository</a>).</p>
                     <p>You can find </p>
                     <p style="font-style: italic;">Why the weird <span class="code">^</span> around some of the fields. Honestly, because it was the only way I could get the textual fields, such as the commit title, to be read properly in R. Otherwise some of the rows would split up into new columns due to the usage of a variety of <span class="code">", ', `, #</span> and other marks. I therefore used the <span class="code">^</span> to act as a <span class="code">quote</span>.</p>
                 </div>
@@ -176,16 +177,9 @@
         </div>
 
         <script>
-            let params = new URLSearchParams(window.location.search)
-            const REPOSITORY = [
-                "pdfjs",
-                "visualcinnamon"
-            ].indexOf(params.get("repo")) === -1 ? "pdfjs" : params.get("repo")
-
-            let REPOSITORY_FULL = "mozilla/pdf.js" // Default
-            if (REPOSITORY === "visualcinnamon") REPOSITORY_FULL = "nbremer/visualcinnamon"
-
-            let REPOSITORY_NAME = REPOSITORY_FULL.substring(REPOSITORY_FULL.indexOf("/") + 1)
+            const REPOSITORY = "pdfjs" // Default
+            const REPOSITORY_FULL = "mozilla/pdf.js" // Default
+            const REPOSITORY_NAME = REPOSITORY_FULL.substring(REPOSITORY_FULL.indexOf("/") + 1)
 
             // Replace the "title-repo-name" with the repository name
             document.getElementById("title-repo-name").innerHTML = REPOSITORY_FULL
@@ -231,10 +225,11 @@
 
                         /////////////////////////////////////////////
                         // If no ORCA data was supplied, hide the parts of the page that are related to it
+                        // Check if the ORCA data was supplied
                         if(!values[1]) {
                             // Hide the DIVs and other elements related to ORCA
                             document.getElementById("orca-note").style.display = "none"
-                            document.getElementById("orca-names").style.display = "none"
+                            document.getElementById("orca-explanation").style.display = "none"
                             document.getElementById("orca-legend").style.display = "none"
                         }// if
 

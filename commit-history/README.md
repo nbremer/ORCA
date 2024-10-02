@@ -144,7 +144,7 @@ The _orca_recipients.csv_ dataset contains information about those contributors 
 
 This dataset requires the following fields:
 
-* **name** | The name of the ORCA recipient.
+* **name** | The name of the ORCA recipient - should match the author name of the commits.
 * **email** | The email of the ORCA recipient.
 * **contribution** | _[optional]_ | A short description of the contribution of the ORCA recipient to the repository.
 

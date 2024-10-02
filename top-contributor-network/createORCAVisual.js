@@ -15,11 +15,6 @@ const createORCAVisual = (container) => {
     ///////////////////// CONSTANTS & VARIABLES /////////////////////
     /////////////////////////////////////////////////////////////////
 
-    // NOTE: Because there is no ORCA data yet, this is a dummy factor that will randomly determine roughly how many contributors are randomly selected to receive ORCA
-    // Should be taken out once there is actual data
-    const ORCA_LEVEL = Math.random()
-    console.log("Random ORCA level this time:", ORCA_LEVEL)
-
     const PI = Math.PI
     const TAU = PI * 2
 
@@ -34,7 +29,7 @@ const createORCAVisual = (container) => {
     let REPO_CENTRAL = "mozilla/pdf.js"
 
     // Datasets
-    let contributors, remainingContributors
+    let contributors, remainingContributors, orcaRecipients
     let repos
     let nodes = [], nodes_central
     let links
@@ -60,6 +55,7 @@ const createORCAVisual = (container) => {
     const CONTRIBUTOR_PADDING = 20 // The padding between the contributor nodes around the circle (at SF = 1)
 
     let REMAINING_PRESENT = false // Is the dataset of remaining contributors present?
+    let ORCA_PRESENT = false // Is the dataset of ORCA recipients present?
 
     /////////////////////////////////////////////////////////////////
     ///////////////////////////// Colors ////////////////////////////
@@ -179,8 +175,19 @@ const createORCAVisual = (container) => {
         repos = values[1]
         links = values[2]
         if(values[3]) {
-            remainingContributors = values[3]
-            REMAINING_PRESENT = true
+            // Check if there is a column called "author_name" in the dataset
+            if(values[3][0].author_name !== undefined) {
+                remainingContributors = values[3]
+                REMAINING_PRESENT = true
+                if(values[4]) {
+                    orcaRecipients = values[4]
+                    ORCA_PRESENT = true
+                }// if
+            // Otherwise check if there is a column called "name", because then this is the ORCA recipient dataset
+            } else if(values[3][0].name !== undefined) {
+                orcaRecipients = values[3]
+                ORCA_PRESENT = true
+            }// else if
         }// if
         prepareData()
         // console.log("Data prepared")
@@ -266,7 +273,7 @@ const createORCAVisual = (container) => {
 
         /////////////////////////////////////////////////////////////
         // Draw two rings that show the placement of the ORCA receiving contributors versus the non-ORCA receiving contributors
-        drawOrcaRings(context, SF)
+        drawBigRings(context, SF)
 
         /////////////////////////////////////////////////////////////
         // Draw all the links as lines
@@ -351,8 +358,9 @@ const createORCAVisual = (container) => {
         contributors.forEach(d => {
             d.contributor_name = d.author_name
 
-            // TODO: NOTE | Because this data isn't available yet, make it random
-            if(d.orca_received === undefined) d.orca_received = Math.random() <= ORCA_LEVEL ? true : false
+            // If the ORCA dataset is present, check if this contributor is in it
+            if(ORCA_PRESENT) d.orca_received = orcaRecipients.find(o => o.name === d.author_name) ? true : false
+            else d.orca_received = false
 
             d.color = COLOR_CONTRIBUTOR
 
@@ -954,8 +962,8 @@ const createORCAVisual = (container) => {
         sum_radius += contributors.length * CONTRIBUTOR_PADDING
         // This sum should be the circumference of the circle around the central node, what radius belongs to this -> 2*pi*R
         RADIUS_CONTRIBUTOR = sum_radius / TAU
-        RADIUS_CONTRIBUTOR_NON_ORCA = RADIUS_CONTRIBUTOR * 1.3
-        ORCA_RING_WIDTH = ((RADIUS_CONTRIBUTOR+RADIUS_CONTRIBUTOR_NON_ORCA)/2 - RADIUS_CONTRIBUTOR) * 2
+        RADIUS_CONTRIBUTOR_NON_ORCA = RADIUS_CONTRIBUTOR * (ORCA_PRESENT ? 1.3 : 1)
+        ORCA_RING_WIDTH = ((RADIUS_CONTRIBUTOR * 2.3)/2 - RADIUS_CONTRIBUTOR) * 2 // Not too sure about this in how well it holds up for other data
 
         // Fix the contributor nodes in a ring around the central node
         // const angle = TAU / (nodes.filter(d => d.type === "contributor").length)
@@ -1157,7 +1165,7 @@ const createORCAVisual = (container) => {
     /////////////////////////////////////////////////////////////////
     // Run a force simulation to place the remaining contributors somewhere outside the outer NON-ORCA ring
     function remainingContributorSimulation() {
-        let LW = ((RADIUS_CONTRIBUTOR+RADIUS_CONTRIBUTOR_NON_ORCA)/2 - RADIUS_CONTRIBUTOR) * 2
+        let LW = ((RADIUS_CONTRIBUTOR * 2.3)/2 - RADIUS_CONTRIBUTOR) * 2
         let R = RADIUS_CONTRIBUTOR_NON_ORCA + LW * 2
 
         // Initial random position, but outside of the ORCA ring
@@ -1225,8 +1233,8 @@ const createORCAVisual = (container) => {
     /////////////////////////////////////////////////////////////////
     ////////////////////// Background Elements //////////////////////
     /////////////////////////////////////////////////////////////////
-    // Draw two rings around the central node to show those that receive ORCA vs those that do not
-    function drawOrcaRings(context, SF) {
+    // Draw two rings around the central node to show those that receive ORCA (if present) vs the other top contributors
+    function drawBigRings(context, SF) {
         // Draw the ORCA rings
         context.fillStyle = context.strokeStyle = COLOR_PURPLE //COLOR_REPO_MAIN //spectral.mix("#e3e3e3", COLOR_REPO_MAIN, 0.75) 
         let LW = ORCA_RING_WIDTH
@@ -1234,16 +1242,18 @@ const createORCAVisual = (container) => {
         context.lineWidth = 1.5 * SF
         // context.lineWidth = LW * SF
 
-        // Inner ring of those receiving ORCA
-        context.beginPath()
-        context.moveTo(0 + (RADIUS_CONTRIBUTOR + LW/2 - O) * SF, 0)
-        context.arc(0, 0, (RADIUS_CONTRIBUTOR + LW/2 - O) * SF, 0, TAU)
-        context.moveTo(0 + (RADIUS_CONTRIBUTOR - LW/2) * SF, 0)
-        context.arc(0, 0, (RADIUS_CONTRIBUTOR - LW/2) * SF, 0, TAU, true)
-        context.globalAlpha = 0.06
-        context.fill()
-        context.globalAlpha = 0.2
-        // context.stroke()
+        if(ORCA_PRESENT) {
+            // Inner ring of those receiving ORCA
+            context.beginPath()
+            context.moveTo(0 + (RADIUS_CONTRIBUTOR + LW/2 - O) * SF, 0)
+            context.arc(0, 0, (RADIUS_CONTRIBUTOR + LW/2 - O) * SF, 0, TAU)
+            context.moveTo(0 + (RADIUS_CONTRIBUTOR - LW/2) * SF, 0)
+            context.arc(0, 0, (RADIUS_CONTRIBUTOR - LW/2) * SF, 0, TAU, true)
+            context.globalAlpha = 0.06
+            context.fill()
+            context.globalAlpha = 0.2
+            // context.stroke()
+        }// if
         
         // Second ring of those not receiving ORCA
         context.beginPath()
@@ -1251,22 +1261,24 @@ const createORCAVisual = (container) => {
         context.arc(0, 0, (RADIUS_CONTRIBUTOR_NON_ORCA + LW/2) * SF, 0, TAU)
         context.moveTo(0 + (RADIUS_CONTRIBUTOR_NON_ORCA - LW/2 + O) * SF, 0)
         context.arc(0, 0, (RADIUS_CONTRIBUTOR_NON_ORCA - LW/2 + O) * SF, 0, TAU, true)
-        context.globalAlpha = 0.03
+        context.globalAlpha = ORCA_PRESENT ? 0.03 : 0.05
         context.fill()
         context.globalAlpha = 0.1
         // context.stroke()
 
         // Add the title along the two bands
-        context.textAlign = "center"
-        context.textBaseline = "bottom"
-        context.globalAlpha = 0.5
-        setFont(context, 16 * SF, 700, "italic")
-        drawTextAlongArc(context, "contributors supported through ORCA", TAU * 0.9, (RADIUS_CONTRIBUTOR - (LW/2 - O - 2)) * SF, "up", 1.5 * SF) 
-        
-        context.textBaseline = "top"
-        drawTextAlongArc(context, "other top contributors", TAU * 0.9, (RADIUS_CONTRIBUTOR_NON_ORCA + (LW/2 - O - 2)) * SF, "up", 1.5 * SF) 
+        if(ORCA_PRESENT) {
+            context.textAlign = "center"
+            setFont(context, 16 * SF, 700, "italic")
+            context.globalAlpha = 0.5
+            context.textBaseline = "bottom"
+            drawTextAlongArc(context, "contributors supported through ORCA", TAU * 0.9, (RADIUS_CONTRIBUTOR - (LW/2 - O - 2)) * SF, "up", 1.5 * SF) 
+ 
+            context.textBaseline = "top"
+            drawTextAlongArc(context, `other top contributors`, TAU * 0.9, (RADIUS_CONTRIBUTOR_NON_ORCA + (LW/2 - O - 2)) * SF, "up", 1.5 * SF) 
+        }// if
         context.globalAlpha = 1
-    }// function drawOrcaRings
+    }// function drawBigRings
 
     /////////////////////////////////////////////////////////////////
     ///////////////////// Node Drawing Functions ////////////////////
@@ -1275,6 +1287,8 @@ const createORCAVisual = (container) => {
     function drawNode(context, SF, d) {
         // Is this a node that is a repo that is not impacted by ORCA?
         let REPO_NOT_ORCA = d.type === "repo" && !d.data.orca_impacted
+        // If this is the central node, it should always look fully opaque (like an ORCA node)
+        if (d.id === REPO_CENTRAL) REPO_NOT_ORCA = false
 
         // Draw a circle for the node
         context.shadowBlur = HOVER_ACTIVE ? 0 : max(2, d.r * 0.2) * SF
