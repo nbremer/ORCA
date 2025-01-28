@@ -132,7 +132,7 @@
                 <div>
                     <p style="font-weight: 700;">The Complexity</p>
                     <p>This section is for those that would like to learn a little about how this visual works on a technical level. In general, I used many of <a href="https://d3js.org/" target="_blank">d3.js</a>'s handy layout functions. The actual drawing happens with an HTML5 canvas, because with thousands of small circles to be drawn, SVG would perform too slowly. Especially since there is also an animation and hover & click events.</p>
-                    <p>I find that the best way to get a nice round grouping of circles, is to use <span class="code">d3.forceSimulation</span>. However, for the case of <span class="repo-name repository">mozilla/pdf.js</span>, there are over 100 months to run such a simulation for. This made the page too slow to load if I let the force simulation run for each month first.</p>
+                    <p>I find that the best way to get a nice round grouping of circles, is to use <span class="code">d3.forceSimulation</span>. However, in some cases, there are over a 100 months to run such a simulation for. This made the page too slow to load if I let the force simulation run for each month first.</p>
                     <p>I could have pre-calculated the positions and then used these final positions to instantly create the visual for any viewer. However, I want this visual, its code, to be able to handle the commit history of (almost) any repository. Therefore, I couldn't use any pre-calculation.</p>
                     <p>I tried many approaches to make the calculations faster to still have all the calculations performed at the start (e.g. web workers). However, nothing proved fast enough. In the end, I instead combined several functions and a loading animation to make the "perceived" performance seem fast enough (although perhaps not on mobile).</p>
                     <p>You can read more about how to take this visualization and apply it to another dataset in the visual's GitHub <a href="https://github.com/nbremer/ORCA/tree/main/commit-history" target="_blank">repository</a>.</p>
@@ -160,11 +160,12 @@
                             &gt log.txt
                         </code>
                     </pre>
+                    <p>You may need to update the name of <span class="code">origin/master</span> depending on the name of the branch (e.g. it could be <span class="code">origin/main</span>.</p>
                     <p>You can find more information about what kind of git log options you have in the <a href="https://git-scm.com/docs/pretty-formats" target="_blank">pretty-formats</a> and <a href="https://git-scm.com/docs/git-log" target="_blank">git log</a> documentation.</p>
                 </div>
                 <div>
                     <p>It's this dataset that contains all of the information that is used in this visual and its almost perfect to use as-is. However, the number of files changed, line insertions and line deletions are added as a separate row each time. Something such as <span class="code">2 files changed, 13 insertions(+), 26 deletions(-)</span>. Therefore, to get this final bit in a <span class="code">csv</span> ready format, I had to run the <span class="code">txt</span> file through R for some final minor data preparation (you can find this R file in the <i>data</i> folder of this visual's <a href="https://github.com/nbremer/ORCA/tree/main/commit-history" target="_blank">repository</a>).</p>
-                    <p>You can find </p>
+                    <p id="d3-note">Try adding <span class="code">/?repo=d3</span> to the URL to see this visual applied to a different repository.</p>
                     <p style="font-style: italic;">Why the weird <span class="code">^</span> around some of the fields. Honestly, because it was the only way I could get the textual fields, such as the commit title, to be read properly in R. Otherwise some of the rows would split up into new columns due to the usage of a variety of <span class="code">", ', `, #</span> and other marks. I therefore used the <span class="code">^</span> to act as a <span class="code">quote</span>.</p>
                 </div>
             </div>
@@ -172,13 +173,20 @@
             <div id="chart-extra">
                 <button id="dataviz-download-data">Download the RAW data</button>
                 <p id="dataviz-credit">Visualization Designed & Created by Nadieh Bremer | <a href="https://www.visualcinnamon.com/" target="_blank">Visual Cinnamon</a> <br>
-                Made possible through the <a href="https://future.mozilla.org/mieco/" target="_blank">MIECO program</a> of Mozilla.</p>
+                Made possible through the <a href="https://builders.mozilla.org/" target="_blank">MIECO/Builder program</a> of Mozilla.</p>
             </div>
         </div>
 
         <script>
-            const REPOSITORY = "pdfjs" // Default
-            const REPOSITORY_FULL = "mozilla/pdf.js" // Default
+            let params = new URLSearchParams(window.location.search)
+            const REPOSITORY = [
+                "pdfjs",
+                "d3"
+            ].indexOf(params.get("repo")) === -1 ? "pdfjs" : params.get("repo")
+
+            let REPOSITORY_FULL = "mozilla/pdf.js" // Default
+            if (REPOSITORY === "d3") REPOSITORY_FULL = "d3/d3"
+
             const REPOSITORY_NAME = REPOSITORY_FULL.substring(REPOSITORY_FULL.indexOf("/") + 1)
 
             // Replace the "title-repo-name" with the repository name
@@ -188,6 +196,9 @@
             document.querySelectorAll(".repo-name").forEach(d => d.innerHTML = REPOSITORY_FULL)
             document.querySelectorAll(".repo-name-only").forEach(d => d.innerHTML = REPOSITORY_NAME)
 
+            // Very specific to this example
+            if(REPOSITORY === "d3") document.getElementById("d3-note").style.display = `none`
+
             /////////////////////////////////////////////////////////
             ///////////////////////// START /////////////////////////
             /////////////////////////////////////////////////////////
@@ -195,7 +206,12 @@
             ////////////////// Datasets to Read in //////////////////
             let promises = []
             promises.push(d3.csv(`data/${REPOSITORY}/commits.csv`))
-            promises.push(d3.csv(`data/${REPOSITORY}/orca_recipients.csv`))  // not required
+            promises.push(
+                    d3.csv(`data/${REPOSITORY}/orca_recipients.csv`) // not required
+                        .catch(error => {
+                            return null
+                        })
+            )
 
             /////////////////// Fonts to activate ///////////////////
             const FONT_FAMILY = "Atkinson Hyperlegible"
