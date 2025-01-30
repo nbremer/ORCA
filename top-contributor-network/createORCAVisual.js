@@ -331,7 +331,7 @@ const createORCAVisual = (container) => {
         // If this means that the ring won't fit, make the SF smaller        
         let OUTER_RING = RADIUS_CONTRIBUTOR_NON_ORCA + ORCA_RING_WIDTH/2*2
         if(WIDTH/2 < OUTER_RING * SF) SF = WIDTH / (2*OUTER_RING)
-        console.log("SF:", SF)
+        // console.log("SF:", SF)
 
         // Reset the delaunay for the mouse events
         nodes_delaunay = nodes
