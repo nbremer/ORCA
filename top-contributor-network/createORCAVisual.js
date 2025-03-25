@@ -304,7 +304,7 @@ const createORCAVisual = (container) => {
     /////////////////////////////////////////////////////////////////
     chart.resize = () => {
         // Screen pixel ratio
-        PIXEL_RATIO = window.devicePixelRatio
+        PIXEL_RATIO = Math.max(2, window.devicePixelRatio)
 
         // It's the width that determines the size
         WIDTH = round(width * PIXEL_RATIO)

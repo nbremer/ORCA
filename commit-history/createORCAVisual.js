@@ -192,7 +192,7 @@ async function createORCAVisual(container) {
     /////////////////////////////////////////////////////////////////
     chart.resize = () => {
         // Screen pixel ratio
-        PIXEL_RATIO = window.devicePixelRatio
+        PIXEL_RATIO = Math.max(2, window.devicePixelRatio)
 
         WIDTH = round(width * PIXEL_RATIO)
         MARGIN.width = WIDTH * 0.08
